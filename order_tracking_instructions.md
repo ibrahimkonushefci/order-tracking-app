@@ -165,7 +165,8 @@ My three products currently use three different `brand.json` shapes. This projec
 
 - While an order has any unresolved reported payment, **its debt reminder suggestions are paused**, and it is not counted as overdue for the amount reported.
 - **Meaning of "Konfirmo" in v1 (explicit): the owner or office has received the cash in hand from the installer** (handover). It does *not* mean "the customer paid"; that was already recorded when the installer reported it. The confirm button reads "Konfirmo: i mora paratë nga {installerName}".
-- **"Refuzo"** (reject, with a required reason) is for when the amount is wrong or the cash never arrived. The amount returns to the customer's remaining balance and reminder suggestions resume. Both actions are logged.
+- **"Refuzo"** (reject, with a required reason) is **only for correcting an erroneous report**: wrong amount, recorded on the wrong order, or the customer didn't actually pay. The amount returns to the customer's remaining balance and reminder suggestions resume. Both actions are logged.
+- **Cash the installer hasn't handed over is never the customer's debt again.** If the customer paid the installer, the customer has paid, even if the money never reaches the office. The amount stays under **"Para te montuesit, pa dorëzuar"** for that installer, with how many days it has been outstanding, until it is confirmed. It is not rejected, it doesn't restore the customer's balance, and it never triggers a reminder to the customer. Settling it is between the owner and the installer, outside the app in v1.
 - The dashboard shows "Para te montuesit, pa dorëzuar" (cash with installers, not handed over) as an amount per installer. That's about trust inside the company, not about the customer's debt.
 - Later (not v1): separate "customer paid" and "handed to office" into two events with partial handovers.
 
@@ -188,7 +189,7 @@ For debts that existed before the app. The owner often knows only "Blerimi më k
 
 #### Corrections
 - **Confirmed payments are never edited or deleted.** The owner corrects a mistake with a **reversal** (a linked negative entry with a required reason), then records the correct payment if needed. Both the original and the reversal stay visible in the order's history.
-- Reported payments are corrected through "Refuzo" (above).
+- Erroneous reported payments are corrected through "Refuzo" (above). Cash not handed over is not a correction; it stays with the installer.
 
 ### 5. Installation schedule & field view
 - **Schedule as a list by day, grouped by team.** Assign date + team + arrival window ("08:00–10:00") with pickers. No drag-and-drop, no capacity planning.
@@ -217,7 +218,7 @@ For debts that existed before the app. The owner often knows only "Blerimi më k
 - Must look beautiful on a phone. The customer shows this page to their family.
 
 ### 8. Settings
-- Brand, stage names/order, product types, message templates, reminder days, teams, users and roles, show-balance toggle.
+- Brand, stage labels and visibility (order is fixed), product types, message templates, reminder days, teams, users and roles, show-balance toggle.
 
 ### 9. Export
 - Owner-only **"Shkarko në Excel"**: customers, orders and payments as an `.xlsx` file. This answers "if you disappear, where is my data?"
@@ -274,6 +275,7 @@ The field team sees only the amount to collect on their jobs, never prices or de
 - Tests:
   - balance calculation: discount, adjustments, reported vs. confirmed cash, rejection, reversal
   - the €800 case: reported €800 → remaining for the customer €0, no reminder, money in office €0
+  - cash not handed over for weeks → the customer stays at €0 remaining and gets no reminder; only "Refuzo" restores the balance
   - opening balances with a known and an unknown due date
   - overdue logic and reminder suggestions (paused, reported, unknown due date, "no reminders" flag, demo date offset)
   - stage transitions by key: skipping, moving back, fulfilment methods, renamed/hidden labels don't change behaviour
@@ -284,7 +286,8 @@ The field team sees only the amount to collect on their jobs, never prices or de
 
 Barely visible in a sales demo, but required before real money and real customers are in the app:
 - **Database backups**: Neon point-in-time restore plus a nightly `pg_dump` to separate storage (a backup bucket, not the app's own database), kept 30 days.
-- **File backups**: versioning on the R2 photo bucket plus a nightly copy to a backup bucket.
+- **File storage is append-only**: every upload gets a new unique key and is never overwritten in place. Deleting a photo in the app only marks it deleted; the file is removed later by a cleanup job after the backup retention period.
+- **File backups**: R2 doesn't support bucket versioning (Cloudflare lists `GetBucketVersioning`/`PutBucketVersioning` as unimplemented), so use a nightly copy of the photo bucket into **dated backup folders** in a separate backup bucket, kept for **30 days**. Earlier copies must survive if a file in the app bucket is later overwritten or deleted.
 - **Tested restore**: a written restore procedure, actually run once on a copy (database + files + users + settings) before go-live, then every 3 months. A backup that has never been restored doesn't count.
 - **Payment corrections** only through reversals (see Corrections). The Excel export stays as the owner's own copy, but it is not the backup.
 - **Tracking link revoke/regenerate** working and tested.
@@ -292,7 +295,7 @@ Barely visible in a sales demo, but required before real money and real customer
 
 ## Work plan
 
-The project is built in phases; see [PHASES.md](PHASES.md). The first phase is an interactive HTML prototype. In the app build phases, keep the app running after each milestone.
+The project is built in phases; see [PHASES.md](PHASES.md). The first phase is an interactive HTML prototype in `prototype/`; once I approve it, the app's design follows it. In the app build phases, keep the app running after each phase, and end every phase with the report described in PHASES.md (what was built, how to run it, what to test manually, what's next).
 
 Before you start coding the app, give me the plan, the data model (Drizzle schema) and the folder structure. At the end, write a `README.md` covering:
 - how to run it locally (offline, PGlite)
