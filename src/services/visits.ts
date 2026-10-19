@@ -4,12 +4,12 @@
  * a measurement, a repair, a project part ("Sa u montuan?") and the €800 phone call
  * ("Montimi u krye": the payment, where the money is, and "Porosia është e kryer").
  */
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { isProject } from '@/domain/balances';
 import { VISIT_TYPES, type VisitType } from '@/domain/visits';
-import { installer, orders, visit } from '@/db/schema';
+import { history, installer, orders, visit } from '@/db/schema';
 import type { Db } from '@/db/connect';
-import { fmtDate } from '@/lib/dates';
+import { addDays, fmtDate } from '@/lib/dates';
 import { allow, FieldError, log, NotFoundError, th, throwIf, tw, type Actor, type DbOrTx, type Tx } from './common';
 import { checkInstaller, markDoneIn, mustLoad, recordPartIn, stageLabels, type DoneInput, type PartInput } from './orders';
 
@@ -140,7 +140,7 @@ export async function completeVisit(db: Db, actor: Actor, orderId: string, visit
         .set({ doneAt: today, note: note ? (v.note ? `${v.note} · ${note}` : note) : v.note })
         .where(eq(visit.id, visitId));
       await log(tx, actor, 'order', orderId, th('visitDone', { what: tw(`visitDone.${v.type}`), who, note: note ? ` · ${note}` : '' }));
-      if (v.type === 'repair' && input.finishRemaining && o.remainingWork) await clearRemaining(tx, actor, o);
+      if (v.type === 'repair' && input.finishRemaining && o.remainingWork) await clearRemaining(tx, actor, o, visitId);
       if (v.type === 'repair') return { kind: 'repair' as const };
       return { kind: 'measure' as const };
     }
@@ -204,17 +204,58 @@ export async function editDoneVisit(db: Db, actor: Actor, orderId: string, visit
   });
 }
 
+/** What "Puna u përfundua" on a repair cleared, kept on its history line so "Nuk u krye" can put it back. */
+const CLEARED = 'repairCleared';
+export interface RepairCleared {
+  note: string;
+  /** The "Punë të mbetura" pause it lifted, if any. */
+  until: string | null;
+}
+
+/** The unfinished work this repair visit cleared when it was marked done (the latest time), or null. */
+export async function repairCleared(db: DbOrTx, companyId: string, orderId: string, visitId: string): Promise<RepairCleared | null> {
+  const rows = await db
+    .select({ old: history.oldValue })
+    .from(history)
+    .where(and(eq(history.companyId, companyId), eq(history.recordType, 'order'), eq(history.recordId, orderId), eq(history.field, CLEARED)))
+    .orderBy(desc(history.at));
+  for (const r of rows) {
+    try {
+      const c = JSON.parse(r.old ?? '') as { visit?: string; note?: string; until?: string | null };
+      if (c.visit === visitId && c.note) return { note: c.note, until: c.until ?? null };
+    } catch {
+      /* not ours */
+    }
+  }
+  return null;
+}
+
+export interface ReopenVisitInput {
+  /** Installation/delivery on a done order: the order goes back to active too. */
+  reopenOrder?: boolean;
+  /** Repair on a done order: "Ka ende punë të mbetura" with its note, and the reminder pause. */
+  restoreRemaining?: boolean;
+  remainingNote?: string;
+  pause?: boolean;
+}
+
 /**
  * "Nuk u krye" on a visit marked done by mistake (both roles): it becomes planned again on
  * its date (a past date shows under "Nga ditët e kaluara"). Payments are never touched: a
  * payment recorded with it stays until it is edited or deleted in "Pagesat", so marking the
  * visit done again only offers what is still left. With `reopenOrder`, a done order goes
- * back to the active stage, exactly like the stage control.
+ * back to the active stage, exactly like the stage control. With `restoreRemaining`, a repair
+ * puts "Ka punë të mbetura" back (the note it cleared, editable) and, with `pause`, the
+ * reminder pause: until its old date if that is still ahead, else 14 days, as when it is set.
+ * Remaining work or a pause set since then is kept as it is.
  */
-export async function reopenVisit(db: Db, actor: Actor, orderId: string, visitId: string, input: { reopenOrder?: boolean }) {
+export async function reopenVisit(db: Db, actor: Actor, orderId: string, visitId: string, input: ReopenVisitInput, today: string) {
   allow(actor, 'edit');
   return db.transaction(async tx => {
     const { o, v } = await mustLoadDone(tx, actor, orderId, visitId);
+    const restore = !!input.restoreRemaining && v.type === 'repair' && o.stage === 'done' && !o.remainingWork;
+    const note = text(input.remainingNote, 500);
+    if (restore && !note) throw new FieldError('remainingNote', 'remainingRequired');
     await tx.update(visit).set({ doneAt: null }).where(eq(visit.id, visitId));
     await log(tx, actor, 'order', orderId, th('visitReopened', { visit: `${tw(`visit.${v.type}`)} · ${fmtDate(v.doneAt)} · ${await nameOf(tx, v.installerId)}` }), {
       field: 'visit',
@@ -227,14 +268,32 @@ export async function reopenVisit(db: Db, actor: Actor, orderId: string, visitId
       await tx.update(orders).set({ stage: 'active', doneAt: null, payTerm: null, dueDate: null }).where(eq(orders.id, orderId));
       await log(tx, actor, 'order', orderId, th('stage', { from: label('done'), to: label('active') }), { field: 'stage', old: 'done', new: 'active' });
     }
-    return { reopenedOrder: stage };
+    let paused = false;
+    if (restore) {
+      await tx.update(orders).set({ remainingWork: note }).where(eq(orders.id, orderId));
+      await log(tx, actor, 'order', orderId, th('remaining', { note }), { field: 'remainingWork', old: null, new: note });
+      if (input.pause && !(o.pausedUntil && o.pausedUntil >= today)) {
+        const was = (await repairCleared(tx, actor.companyId, orderId, visitId))?.until;
+        const until = was && was > today ? was : addDays(today, 14);
+        const reason = tw('remainingReason');
+        await tx.update(orders).set({ pausedUntil: until, pauseReason: reason }).where(eq(orders.id, orderId));
+        await log(tx, actor, 'order', orderId, th('paused', { until: fmtDate(until), reason }));
+        paused = true;
+      }
+    }
+    return { reopenedOrder: stage, restoredRemaining: restore, paused };
   });
 }
 
-async function clearRemaining(tx: Tx, actor: Actor, o: { id: string; remainingWork: string | null; pausedUntil: string | null; pauseReason: string | null }) {
+async function clearRemaining(tx: Tx, actor: Actor, o: { id: string; remainingWork: string | null; pausedUntil: string | null; pauseReason: string | null }, visitId: string) {
+  const lifts = !!o.pausedUntil && o.pauseReason === tw('remainingReason');
   await tx.update(orders).set({ remainingWork: null }).where(eq(orders.id, o.id));
-  await log(tx, actor, 'order', o.id, th('remainingDone', { note: o.remainingWork ?? '' }));
-  if (o.pausedUntil && o.pauseReason === tw('remainingReason')) {
+  await log(tx, actor, 'order', o.id, th('remainingDone', { note: o.remainingWork ?? '' }), {
+    field: CLEARED,
+    old: JSON.stringify({ visit: visitId, note: o.remainingWork, until: lifts ? o.pausedUntil : null }),
+    new: null,
+  });
+  if (lifts) {
     await tx.update(orders).set({ pausedUntil: null, pauseReason: null }).where(eq(orders.id, o.id));
     await log(tx, actor, 'order', o.id, th('unpaused'));
   }

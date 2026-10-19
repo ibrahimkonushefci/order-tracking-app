@@ -227,3 +227,58 @@ test('demo date +7: a reminder logged then waits 7 simulated days, also after "K
   await expect(blerim().getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
   await expect(blerim()).toContainText('Kujtesa e fundit: sot');
 });
+
+test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" and its pause back', async ({ page, browser }, info) => {
+  const shot = (name: string) => page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: true });
+  await login(page, 'teuta@druri.test');
+  await page.goto('/settings');
+  await page.getByRole('button', { name: '+7 ditë' }).click();
+  await expect(page.getByText(/\(\+7 ditë\)/)).toBeVisible();
+  await openOrder(page, 'Mimoza Rexhepi');
+  await page.getByText('Faqja e klientit', { exact: true }).click();
+  const path = new URL((await page.locator('.mono-box .ellipsis').textContent())!.trim()).pathname;
+  const customer = await (await browser.newContext()).newPage();
+  const mimoza = () => page.locator('.debt', { hasText: 'Mimoza Rexhepi' });
+
+  // Riparimi u krye with "Puna u përfundua": the flag and its pause go, the €150 is due.
+  await page.getByRole('button', { name: 'Riparimi u krye' }).click();
+  let sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('checkbox', { name: /Puna u përfundua/ })).toBeChecked();
+  await sheet.getByRole('button', { name: 'Po, u krye' }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(page.locator('.alert')).toHaveCount(0);
+  await customer.goto(path);
+  await expect(customer.getByRole('heading', { level: 1 })).toHaveText('Puna përfundoi. Faleminderit!');
+  await page.goto('/debts');
+  await expect(mimoza().getByRole('link', { name: /Kujtesë/ })).toBeVisible();
+
+  // Nuk u krye: the note and the pause until 29.10 are offered, pre-ticked.
+  await openOrder(page, 'Mimoza Rexhepi');
+  await page.getByText('Të kryera (1)').click();
+  await page.getByRole('button', { name: 'Ndrysho vizitën e kryer' }).click();
+  sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: 'Nuk u krye' }).click();
+  await expect(sheet.getByRole('checkbox', { name: /Ka ende punë të mbetura/ })).toBeChecked();
+  await expect(sheet.getByLabel('Çfarë ka mbetur?')).toHaveValue(/Një derë duhet rregulluar/);
+  await expect(sheet.getByRole('checkbox', { name: 'Pauzo kujtesat për borxh deri më 29.10.2026' })).toBeChecked();
+  await shot('reopen-repair-sheet');
+  await sheet.getByRole('button', { name: 'Po, rikthe' }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Riparimi u krye' })).toBeVisible();
+  await expect(page.locator('.alert')).toContainText('Një derë duhet rregulluar');
+  await page.getByText('Historiku', { exact: true }).click();
+  await expect(page.locator('.timeline')).toContainText('Ka punë të mbetura: Një derë');
+  await expect(page.locator('.timeline')).toContainText('Kujtesat në pauzë deri më 29.10.2026: Punë të mbetura');
+  await shot('reopen-repair-order');
+
+  // The customer sees the last step in progress again; no green reminder while paused.
+  await customer.goto(path);
+  await expect(customer.getByRole('heading', { level: 1 })).not.toHaveText('Puna përfundoi. Faleminderit!');
+  await expect(customer.locator('body')).toContainText('Po përfundojmë detajet e fundit');
+  await customer.screenshot({ path: info.outputPath('reopen-repair-tracking.png'), fullPage: true });
+  await page.goto('/debts');
+  await expect(mimoza()).toContainText('Kujtesat në pauzë deri më 29.10');
+  await expect(mimoza().getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
+  await shot('reopen-repair-debts');
+  await customer.context().close();
+});

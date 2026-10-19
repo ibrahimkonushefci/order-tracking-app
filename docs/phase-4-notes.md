@@ -44,6 +44,14 @@ The independent review of Phase 4 found two problems; both are fixed, tested and
 
 **3. Found while re-testing the deployment: a wrong password crashed the login page on Vercel** ("A server error occurred") instead of "Email ose fjalëkalim i gabuar.". The production bundle holds a second copy of Better Auth's `APIError`, so `instanceof` missed it; the login action now also checks the error's name. (Dev mode was not affected, so the local tests never saw it.)
 
+**4. Undoing a repair that cleared "Ka punë të mbetura"** (found by the re-review). "Riparimi u krye" with "Puna u përfundua" clears the flag and its "Punë të mbetura" pause; "Nuk u krye" reopened the visit but left both cleared, so the tracking page said "Puna përfundoi. Faleminderit!" and the green "Kujtesë" showed for the €150.
+- The history line of "Puna u përfundua" from a repair now also keeps (internally) what it cleared: the note and the pause date.
+- "Nuk u krye" on a done repair of a done order without remaining work offers ☑ **"Ka ende punë të mbetura"** with the note (editable, required) and ☑ **"Pauzo kujtesat për borxh deri më …"**: both pre-ticked when this repair cleared them. The pause returns to its old date while that is still ahead, else 14 days from today, as when the flag is set. A repair from before this fix shows the box unticked and empty.
+- Later changes are kept: remaining work set again by hand is not overwritten, and a pause already on (e.g. "Premtoi të paguajë") stays and is only mentioned. Payments and installer cash are not touched. History: "Ka punë të mbetura: …" and "Kujtesat në pauzë deri më …: Punë të mbetura" after "Vizita u rikthye si e pakryer: …".
+- Same roles as "Nuk u krye" (both). Other visit types ignore it.
+- Consequences checked: tracking page back to "Po përfundojmë detajet e fundit" (last step in progress), Borxhet shows the pause and no green "Kujtesë", the order alert shows the remaining work again; done again, it clears again.
+- Tested: 3 unit tests (restore with pause, a pause that ran out → 14 days, no pause tick, a later manual pause or remaining work kept, note required, other types ignored) and 1 Playwright test on laptop and phone (demo +7, repair done, tracking + green Kujtesë, "Nuk u krye" → restored, tracking + Borxhet re-checked).
+
 **Verified:** lint, typecheck, 108 unit tests (new: done-visit edit/reopen with the order and payments, project parts and cancelled orders refused, demo +7 / +13 / +14 and back to today, the Kosovo day boundary, installer "dërguar" on the demo date) and 54 Playwright tests on laptop and phone (new: "Nuk u krye" → reopened order → done again with a single €2.800 payment; demo +7 reminder → no green button, also after "Kthe në sot"). The demo test fails without the fix. The production build passes. On the updated test deployment the same Playwright suite passes except "works offline", which by design only allows localhost requests.
 
 ## Test deployment

@@ -353,9 +353,9 @@ export async function editDoneVisitAction(orderId: string, visitId: string, f: F
 
 export async function reopenVisitAction(orderId: string, visitId: string, f: FormData) {
   const tt = await getTranslations('toast');
-  return run(async (db, a) => {
-    const r = await V.reopenVisit(db, a, orderId, visitId, { reopenOrder: on(f, 'reopenOrder') });
-    return { toast: r.reopenedOrder ? tt('visitReopenedOrder') : tt('visitReopened') };
+  return run(async (db, a, today) => {
+    const r = await V.reopenVisit(db, a, orderId, visitId, { reopenOrder: on(f, 'reopenOrder'), restoreRemaining: on(f, 'restoreRemaining'), remainingNote: s(f, 'remainingNote'), pause: on(f, 'pause') }, today);
+    return { toast: r.reopenedOrder ? tt('visitReopenedOrder') : r.restoredRemaining ? tt('visitReopenedRemaining') : tt('visitReopened') };
   });
 }
 

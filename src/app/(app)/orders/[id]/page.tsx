@@ -24,12 +24,13 @@ import {
 import { PaymentButton } from '@/components/sheets/payment';
 import { Linkified, mapsLink } from '@/components/linkify';
 import { getCompany } from '@/db/queries';
-import { fmtDate, fmtDateTime, isoOf } from '@/lib/dates';
+import { addDays, fmtDate, fmtDateTime, isoOf } from '@/lib/dates';
 import { ago, fmtDay, lateSpan } from '@/lib/fmt';
 import { eur } from '@/lib/money';
 import { fmtPhone } from '@/lib/phone';
 import { lastReminder } from '@/domain/debts';
 import { loadHistory, loadOrder } from '@/services/book';
+import { repairCleared } from '@/services/visits';
 import { pageContext } from '@/server/context';
 import { listInstallers } from '@/db/queries';
 import { DoneVisitEditButton, VisitButton, VisitDoneButton } from '@/components/sheets/visit';
@@ -220,6 +221,14 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
     o.payments.filter(p => !p.deletedAt && p.date === date).map(p => `${eur(p.amount)} ${p.heldBy ? tm('withShort', { name: instName(p.heldBy) }).replace(/^T/, 't') : w('office')}`);
   const visitsOpen = o.visits.filter(v => !v.doneAt).sort((a, b) => a.date.localeCompare(b.date));
   const visitsDone = o.visits.filter(v => v.doneAt).sort((a, b) => b.doneAt!.localeCompare(a.doneAt!));
+  /* "Nuk u krye" on a done repair offers to put "Ka punë të mbetura" back (the note it cleared, if any). */
+  const restorable = o.stage === 'done' && !o.remainingWork ? visitsDone.filter(v => v.type === 'repair' && !v.quantity) : [];
+  const cleared = new Map(await Promise.all(restorable.map(async v => [v.id, await repairCleared(db, companyId, o.id, v.id)] as const)));
+  const restoreFor = (v: (typeof o.visits)[number]) => {
+    if (!cleared.has(v.id)) return undefined;
+    const c = cleared.get(v.id);
+    return { checked: !!c, note: c?.note ?? '', pause: !c || !!c.until, until: c?.until && c.until > today ? c.until : addDays(today, 14), pausedUntil: pauseOn ? o.pausedUntil : null };
+  };
   const visitRow = (v: (typeof o.visits)[number]) => {
     const sub = [instName(v.installerId)];
     if (v.quantity) sub.push(`${v.quantity} ${o.unit ?? ''} · ${eur(partValue(o, v))}`);
@@ -252,7 +261,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
             <Badge tone="success" icon="check">
               {t('visitDone')}
             </Badge>
-            <DoneVisitEditButton o={vo} visit={{ ...visitView(v), doneAt: v.doneAt }} installers={activeInst} today={today} payments={paysOn(v.doneAt)} />
+            <DoneVisitEditButton o={vo} visit={{ ...visitView(v), doneAt: v.doneAt }} installers={activeInst} today={today} payments={paysOn(v.doneAt)} restore={restoreFor(v)} />
           </>
         ) : v.doneAt ? (
           <Badge tone="success" icon="check">

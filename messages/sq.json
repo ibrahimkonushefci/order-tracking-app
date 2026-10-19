@@ -902,7 +902,8 @@
     "demoDate": "Data e demos: {date}",
     "doneVisitSaved": "Vizita u ndryshua.",
     "visitReopened": "Vizita u rikthye si e planifikuar.",
-    "visitReopenedOrder": "Vizita dhe porosia u rikthyen si të pakryera."
+    "visitReopenedOrder": "Vizita dhe porosia u rikthyen si të pakryera.",
+    "visitReopenedRemaining": "Vizita u rikthye; puna e mbetur u shënua sërish."
   },
   "visit": {
     "planTitle": "Planifiko vizitë",
@@ -944,7 +945,12 @@
     "reopenPays": "Pagesat nuk ndryshojnë: {list}. Nëse paratë nuk janë marrë, ndryshojeni ose fshijeni pagesën te Pagesat.",
     "reopenOrder": "Porosia nuk është e kryer ende",
     "reopenOrderSub": "Porosia kthehet në punë dhe afati i pagesës hiqet.",
-    "reopenYes": "Po, rikthe"
+    "reopenYes": "Po, rikthe",
+    "reopenRemaining": "Ka ende punë të mbetura",
+    "reopenRemainingSub": "Klienti sheh sërish “Po përfundojmë detajet e fundit”.",
+    "reopenRemainingWhat": "Çfarë ka mbetur?",
+    "reopenPause": "Pauzo kujtesat për borxh deri më {date}",
+    "reopenPauseKept": "Kujtesat janë tashmë në pauzë deri më {date}."
   },
   "visitDone": {
     "finishRemaining": "Puna u përfundua",

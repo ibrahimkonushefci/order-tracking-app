@@ -225,7 +225,21 @@ function VisitSheet({ o, visit, installers, jobs, today, date: initialDate, onCl
  * Correcting an ordinary visit marked done (project parts use "Montimet e kryera"): the day,
  * the installer and the note, or "Nuk u krye" to plan it again. Payments are listed, never changed.
  */
-export function DoneVisitEditButton(props: { o: VisitOrderView; visit: VisitView & { doneAt: string }; installers: InstallerOpt[]; today: string; payments: string[] }) {
+/** A done repair on a done order without remaining work: what "Nuk u krye" offers to put back. */
+export interface RestoreRemaining {
+  /** Pre-ticked when this repair cleared "Ka punë të mbetura". */
+  checked: boolean;
+  note: string;
+  /** Pre-tick the pause: the repair lifted one (or nothing is known). */
+  pause: boolean;
+  until: string;
+  /** A pause already on: it is kept. */
+  pausedUntil: string | null;
+}
+
+type DoneVisitProps = { o: VisitOrderView; visit: VisitView & { doneAt: string }; installers: InstallerOpt[]; today: string; payments: string[]; restore?: RestoreRemaining };
+
+export function DoneVisitEditButton(props: DoneVisitProps) {
   const t = useTranslations('visit');
   const [open, setOpen] = useState(false);
   return (
@@ -238,11 +252,12 @@ export function DoneVisitEditButton(props: { o: VisitOrderView; visit: VisitView
   );
 }
 
-function DoneVisitSheet({ o, visit: v, installers, today, payments, onClose }: { o: VisitOrderView; visit: VisitView & { doneAt: string }; installers: InstallerOpt[]; today: string; payments: string[]; onClose: () => void }) {
+function DoneVisitSheet({ o, visit: v, installers, today, payments, restore, onClose }: DoneVisitProps & { onClose: () => void }) {
   const t = useTranslations('visit');
   const w = useTranslations('words');
   const [inst, setInst] = useState(v.installerId ?? 'none');
   const [reopen, setReopen] = useState(false);
+  const [again, setAgain] = useState(!!restore?.checked);
   const { errors, pending, submit } = useAction(f => A.editDoneVisitAction(o.id, v.id, f), onClose);
   const back = useAction(f => A.reopenVisitAction(o.id, v.id, f), onClose);
   const fmt = (iso: string) => iso.split('-').reverse().join('.');
@@ -265,6 +280,32 @@ function DoneVisitSheet({ o, visit: v, installers, today, payments, onClose }: {
                 <span className="check__sub">{t('reopenOrderSub')}</span>
               </span>
             </label>
+          ) : null}
+          {restore ? (
+            <>
+              <label className="check">
+                <input type="checkbox" name="restoreRemaining" value="1" checked={again} onChange={e => setAgain(e.target.checked)} />
+                <span>
+                  {t('reopenRemaining')}
+                  <span className="check__sub">{t('reopenRemainingSub')}</span>
+                </span>
+              </label>
+              {again ? (
+                <>
+                  <Field name="remainingNote" label={t('reopenRemainingWhat')} req errors={back.errors} htmlFor="rv-note">
+                    <textarea className="textarea" id="rv-note" name="remainingNote" defaultValue={restore.note} />
+                  </Field>
+                  {restore.pausedUntil ? (
+                    <div className="help">{t('reopenPauseKept', { date: fmt(restore.pausedUntil) })}</div>
+                  ) : (
+                    <label className="check">
+                      <input type="checkbox" name="pause" value="1" defaultChecked={restore.pause} />
+                      <span>{t('reopenPause', { date: fmt(restore.until) })}</span>
+                    </label>
+                  )}
+                </>
+              ) : null}
+            </>
           ) : null}
           {payments.length ? (
             <div className="callout callout--warning">

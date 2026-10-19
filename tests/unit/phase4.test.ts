@@ -17,8 +17,8 @@ import { allJobs, availability, dative, installerSummary, jobsOf, pastUndone } f
 import { activePayments } from '@/domain/balances';
 import { loadBook, loadHistory, loadOrder, type Book } from '@/services/book';
 import { FieldError, FieldErrors, type Actor } from '@/services/common';
-import { completeVisit, editDoneVisit, removeVisit, reopenVisit, saveVisit } from '@/services/visits';
-import { editPart } from '@/services/orders';
+import { completeVisit, editDoneVisit, removeVisit, reopenVisit, repairCleared, saveVisit } from '@/services/visits';
+import { editPart, pauseOrder, setRemainingWork } from '@/services/orders';
 import { logCustomerMessage, logInstallerMessage, newTrackingLink, saveInstaller, saveTemplates, setClientContact } from '@/services/messages';
 import { ForbiddenError } from '@/auth/permissions';
 import { addDays } from '@/lib/dates';
@@ -383,7 +383,7 @@ describe('correcting a visit marked done', () => {
     const { id, v } = await naimDone();
     const before = (await loadOrder(db, owner.companyId, id))!;
     const payCount = activePayments(before.payments).length;
-    const r = await reopenVisit(db, office, id, v.id, { reopenOrder: true });
+    const r = await reopenVisit(db, office, id, v.id, { reopenOrder: true }, TODAY);
     expect(r.reopenedOrder).toBe(true);
     let o = (await loadOrder(db, owner.companyId, id))!;
     expect(o.visits.find(x => x.id === v.id)!.doneAt).toBeNull();
@@ -414,24 +414,96 @@ describe('correcting a visit marked done', () => {
     const gv = granit.visits[0];
     await completeVisit(db, office, granit.id, gv.id, { pay: 'no', note: 'priza 2×' }, TODAY);
     expect(pastUndone(allJobs((await book()).orders), TODAY).some(x => x.v.id === gv.id)).toBe(false);
-    const r = await reopenVisit(db, owner, granit.id, gv.id, {});
+    const r = await reopenVisit(db, owner, granit.id, gv.id, {}, TODAY);
     expect(r.reopenedOrder).toBe(false);
     const after = await book();
     expect(pastUndone(allJobs(after.orders), TODAY).some(x => x.v.id === gv.id)).toBe(true);
     expect(byName(after, 'Granit Morina').stage).toBe('new');
     // Only a done visit can be reopened.
-    expect(await err(reopenVisit(db, owner, granit.id, gv.id, {}))).toMatch(/not found: visit/);
+    expect(await err(reopenVisit(db, owner, granit.id, gv.id, {}, TODAY))).toMatch(/not found: visit/);
   });
 
   it('project parts keep their own correction ("Montimet e kryera"); a cancelled order refuses', async () => {
     const ru = byName(await book(), 'Ndërtimi Rugova sh.p.k.');
     const part = ru.visits.find(x => x.doneAt && x.quantity)!;
     expect(await err(editDoneVisit(db, office, ru.id, part.id, { date: TODAY }, TODAY))).toMatch(/not found: visit/);
-    expect(await err(reopenVisit(db, office, ru.id, part.id, {}))).toMatch(/not found: visit/);
+    expect(await err(reopenVisit(db, office, ru.id, part.id, {}, TODAY))).toMatch(/not found: visit/);
     expect((await editPart(db, office, ru.id, part.id, { quantity: String(part.quantity), date: part.doneAt!, installerId: I.Faton }, TODAY)).changed).toBe(1);
     const { id, v } = await naimDone();
     await db.update(orders).set({ stage: 'cancelled' }).where(eq(orders.id, id));
-    expect(await err(reopenVisit(db, owner, id, v.id, {}))).toBe('cancelled');
+    expect(await err(reopenVisit(db, owner, id, v.id, {}, TODAY))).toBe('cancelled');
+  });
+});
+
+describe('"Nuk u krye" on a repair that cleared "Ka punë të mbetura"', () => {
+  const dmy = (iso: string) => iso.split('-').reverse().join('.');
+  const NOTE = 'Një derë duhet rregulluar; klienti paguan €150 e fundit pas rregullimit.';
+  const mimozaDone = async (today = TODAY) => {
+    const m = byName(await book(), 'Mimoza Rexhepi');
+    const rv = m.visits.find(x => x.type === 'repair')!;
+    await completeVisit(db, office, m.id, rv.id, { pay: 'no', finishRemaining: true }, today);
+    return { id: m.id, rv, payCount: activePayments(m.payments).length };
+  };
+  const mimozaRem = async (today = TODAY) => {
+    const b = await book();
+    return debts(b.orders, b.openings, today).find(x => x.name === 'Mimoza Rexhepi')!.rem;
+  };
+
+  it('puts the note and its pause back; tracking and the green "Kujtesë" follow; payments stay', async () => {
+    const { id, rv, payCount } = await mimozaDone();
+    // The bug: once cleared, the €150 is due and the green button shows.
+    expect((await mimozaRem()).ok).toBe(true);
+    expect(await repairCleared(db, owner.companyId, id, rv.id)).toEqual({ note: NOTE, until: d(10) });
+    const r = await reopenVisit(db, office, id, rv.id, { restoreRemaining: true, remainingNote: NOTE, pause: true }, TODAY);
+    expect(r).toMatchObject({ restoredRemaining: true, paused: true, reopenedOrder: false });
+    const o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o.visits.find(x => x.id === rv.id)!.doneAt).toBeNull();
+    expect(o).toMatchObject({ stage: 'done', remainingWork: NOTE, pausedUntil: d(10), pauseReason: 'Punë të mbetura' });
+    expect(activePayments(o.payments)).toHaveLength(payCount);
+    expect(headlineKey('done', !!o.remainingWork, false)).toBe('doneRemaining');
+    expect(trackingSteps('done', !!o.remainingWork).at(-1)!.state).toBe('current');
+    expect(await mimozaRem()).toMatchObject({ ok: false });
+    const h = (await loadHistory(db, 'order', id)).map(x => x.text);
+    expect(h).toContain(`Ka punë të mbetura: ${NOTE}`);
+    expect(h).toContain(`Kujtesat në pauzë deri më ${dmy(d(10))}: Punë të mbetura`);
+    // Done again: it clears again, and can be undone again.
+    await completeVisit(db, office, id, rv.id, { pay: 'no', finishRemaining: true }, TODAY);
+    expect((await loadOrder(db, owner.companyId, id))!.remainingWork).toBeNull();
+  });
+
+  it('a pause that has run out restarts for 14 days; without the pause tick only the note returns', async () => {
+    const { id, rv } = await mimozaDone();
+    const later = d(12);
+    await reopenVisit(db, owner, id, rv.id, { restoreRemaining: true, remainingNote: 'Dera e dytë', pause: true }, later);
+    let o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o).toMatchObject({ remainingWork: 'Dera e dytë', pausedUntil: addDays(later, 14) });
+    await completeVisit(db, office, id, rv.id, { pay: 'no', finishRemaining: true }, later);
+    await reopenVisit(db, owner, id, rv.id, { restoreRemaining: true, remainingNote: 'Dera e dytë' }, later);
+    o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o).toMatchObject({ remainingWork: 'Dera e dytë', pausedUntil: null });
+    // Remaining work shows on the debt row, but nothing pauses the reminder.
+    expect(await mimozaRem(later)).toMatchObject({ ok: true });
+  });
+
+  it('keeps later changes: a pause or remaining work set since then; a note is required', async () => {
+    const { id, rv } = await mimozaDone();
+    await pauseOrder(db, office, id, { until: d(20), reason: 'Premtoi të paguajë' }, TODAY);
+    expect(await err(reopenVisit(db, office, id, rv.id, { restoreRemaining: true, remainingNote: ' ', pause: true }, TODAY))).toBe('remainingRequired');
+    expect((await loadOrder(db, owner.companyId, id))!.visits.find(x => x.id === rv.id)!.doneAt).toBe(TODAY);
+    await reopenVisit(db, office, id, rv.id, { restoreRemaining: true, remainingNote: NOTE, pause: true }, TODAY);
+    let o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o).toMatchObject({ remainingWork: NOTE, pausedUntil: d(20), pauseReason: 'Premtoi të paguajë' });
+    // Remaining work set again by hand before the undo is not overwritten.
+    await completeVisit(db, office, id, rv.id, { pay: 'no', finishRemaining: true }, TODAY);
+    await setRemainingWork(db, office, id, { note: 'Doreza' }, TODAY);
+    const r = await reopenVisit(db, office, id, rv.id, { restoreRemaining: true, remainingNote: NOTE }, TODAY);
+    expect(r.restoredRemaining).toBe(false);
+    o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o.remainingWork).toBe('Doreza');
+    // Only repairs: another visit type ignores it.
+    const g = byName(await book(), 'Granit Morina');
+    await completeVisit(db, office, g.id, g.visits[0].id, { pay: 'no' }, TODAY);
+    expect((await reopenVisit(db, office, g.id, g.visits[0].id, { restoreRemaining: true, remainingNote: 'x' }, TODAY)).restoredRemaining).toBe(false);
   });
 });
 
