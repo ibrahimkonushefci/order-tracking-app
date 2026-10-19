@@ -5,7 +5,7 @@ I'm a freelance developer in **Kosovo**. I sell custom software to established b
 Their biggest daily pains:
 1. Customers constantly calling to ask **"When will my order be ready?"**
 2. The owner has no single clear picture of all orders, where each one stands, and which team installs what and when. Updating the installer team is done by phone calls and memory.
-3. **Unpaid balances.** Customers pay a deposit (avans), the job gets installed, and the rest is collected late or never. Everything lives in notebooks, Excel or someone's head.
+3. **Unpaid balances.** Customers pay a deposit (avans or kapar, depending on the region), the job gets installed, and the rest is collected late or never. Everything lives in notebooks, Excel or someone's head.
 
 Build a **white-label web app** that solves this: orders with clear statuses, an installation schedule, payments and debt tracking, **prepared** customer messages sent manually over WhatsApp/Viber/SMS, and a read-only tracking page for each customer.
 
@@ -29,7 +29,7 @@ Everything else supports these. Build them first and make them perfect.
 
 - **Owner (Pronari)**: sees and does everything, mostly on the phone. Dashboard first. Manages users and settings. Confirms cash collected by installers.
 - **Office (Zyra)**: creates customers and orders, records payments, schedules installations, prepares and sends messages. Can also do every field action.
-- **Field team (Terreni)**: installers, who also take measurements most of the time. Sees only their assigned jobs: address, Google Maps link, customer phone, the amount to collect. Takes measurement photos, marks jobs measured/installed, uploads photos, records cash received.
+- **Field team (Terreni)**: installers, who also take measurements most of the time. Sees only their assigned jobs: directions/reference point, address, Google Maps pin if there is one, customer phone, the amount to collect. Takes measurement photos, marks jobs measured/installed, uploads photos, records cash received.
 - **Customer (Klienti)**: no login. Opens a private tracking link.
 
 **Office and field can both do field actions** (mark measured, mark installed, add photos, record a payment). Whoever does it, it goes into the audit log with their name.
@@ -43,6 +43,10 @@ No full separate workflow per employee role in v1. These are three permission le
 - EUR. Money stored as **integer cents**.
 - Phone numbers in E.164; default +383, quick-pick for diaspora codes (+49, +41, +43, +33, +46, +1).
 - Dates `dd.MM.yyyy`, timezone `Europe/Belgrade` (same as Kosovo).
+- **Deposit term: "Avans" or "Kapar".** Some cities say avans, others kapar. A company setting picks the word used in labels, badges and customer messages (template variable `{depositWord}`), default "Avans". Search accepts both words regardless of the setting.
+
+### Channels: WhatsApp first
+Almost nobody in Kosovo uses regular SMS for business anymore, and SMS to +49/+41 numbers costs money. Everywhere the app offers a way to contact someone, **WhatsApp is the large primary button**, Viber is secondary, and **SMS is only a small fallback** (e.g. under "Më shumë"). The call button stays separate. New customers default to WhatsApp as the preferred channel.
 
 ## Tech stack (decided)
 
@@ -111,20 +115,26 @@ My three products currently use three different `brand.json` shapes. This projec
 
 ### 1. Owner dashboard (urgent things first)
 - Cards: **total outstanding (€)**, **overdue balances** (count + €), installations today / this week, **cash with installers, not handed over**, **messages ready to send**, orders at risk (promised date passed or close, or stuck too long in a stage).
-- **"Kush më ka borxh"** list: sorted by amount and days overdue, with one-tap call / WhatsApp / Viber / "prepare reminder". Each row shows its context inline instead of on extra cards: "Borxh i bartur", "Afat i panjohur", "Ka punë të mbetura: …", "Kujtesat në pauzë deri më …", "€X raportuar, pa konfirmuar".
+- **"Kush më ka borxh"** list: sorted by amount and days overdue, with one-tap WhatsApp (primary), call, Viber and "prepare reminder". Each row shows its context inline instead of on extra cards: "Borxh i bartur", "Afat i panjohur", "Ka punë të mbetura: …", "Kujtesat në pauzë deri më …", "€X raportuar, pa konfirmuar".
 - Today's installations per team.
 - No charts in v1.
 
 ### 2. Customers
-- Name, phone(s), city, address, Google Maps link, preferred language, preferred channel (WhatsApp / Viber / SMS / call), diaspora flag with country, notes.
+- Name, phone(s), preferred language, preferred channel (WhatsApp by default; Viber, SMS, call), diaspora flag with country, notes.
+- **Location**, built for villages and new outskirts where houses have no street number and older customers can't send a WhatsApp pin:
+  - city, **village / neighbourhood ("Fshati / Lagjja")**, street (optional)
+  - **"Shpjegimi i rrugës / Pikë referimi"**: a large free-text field shown prominently, e.g. "Te xhamia e vjetër, kthesa e dytë djathtas, shtëpia me fasadë të bardhë". Field teams rely on this more than street names.
+  - Google Maps pin (optional): paste a link, or the field team taps **"Ruaj vendndodhjen këtu"** at the house on the first visit, so later visits have an exact pin.
+  - A form can be saved with only city + village/neighbourhood + directions; no street or pin required.
 - **"Mos sugjero kujtesa për borxh"** (don't suggest debt reminders) flag: relatives, friends, big contractors.
 - Customer page: all orders, payments and message history.
 
 ### 3. Orders & statuses
 - **Human-friendly order number** (`2026-041`), because people say it on the phone.
 - Fields: customer, product type, description, agreed price, discount, measurement date, promised date, assigned field team, photos/attachments, internal notes.
-- **Contacts per order**: an on-site contact and a payer, each with their own phone, language and channel. They default to the customer. (Typical diaspora case: the son in Germany pays, the parents in Podujevë receive the kitchen.)
-- **Stages describe the work only. Payment is a separate status** shown as a badge and progress bar on every order: `Pa paguar / Avans / Pjesërisht / Paguar`.
+- **Contacts per order**: an on-site contact and a payer, each with their own phone, language and channel. They default to the customer.
+- **Job location per order**: defaults to the customer's location, but can differ (e.g. the parents' house in the village while the customer lives in Germany). (Typical diaspora case: the son in Germany pays, the parents in Podujevë receive the kitchen.)
+- **Stages describe the work only. Payment is a separate status** shown as a badge and progress bar on every order: `Pa paguar / Avans (or Kapar) / Pjesërisht / Paguar`.
 - **Stable stage keys.** Every stage has a fixed internal key and a fixed position. Owners can **rename** a stage's label and **hide** stages they never use, but they cannot change what a stage means or its order (there's no need to reorder, because the meanings are fixed). The tracking timeline, message suggestions, warnings and reports always use the key, never the label.
 
   | Key | Default label (sq) | Meaning |
@@ -193,7 +203,7 @@ For debts that existed before the app. The owner often knows only "Blerimi më k
 
 ### 5. Installation schedule & field view
 - **Schedule as a list by day, grouped by team.** Assign date + team + arrival window ("08:00–10:00") with pickers. No drag-and-drop, no capacity planning.
-- **Field mobile view (Terreni)**: today's and this week's jobs (including delivery jobs and return visits) → address (opens Google Maps), call customer, amount to collect, short checklist, take photos, buttons **"Matja u krye"** (measurement done, with notebook photo), **"Montuar" / "Dorëzuar"** (with after photos), **"Ka punë të mbetura"** (note what's left), **"Mora €X"** (I received €X cash).
+- **Field mobile view (Terreni)**: today's and this week's jobs (including delivery jobs and return visits) → **directions / reference point shown first and large**, then village and address, "Hap në Maps" (only when there's a pin), **"Ruaj vendndodhjen këtu"** (save the current GPS position as the pin), call customer, amount to collect, short checklist, take photos, buttons **"Matja u krye"** (measurement done, with notebook photo), **"Montuar" / "Dorëzuar"** (with after photos), **"Ka punë të mbetura"** (note what's left), **"Mora €X"** (I received €X cash).
 - Large touch targets, works on mid-range Android, at most three taps per action.
 
 ### 6. Prepared messages (manual sending)
@@ -201,7 +211,7 @@ For debts that existed before the app. The owner often knows only "Blerimi më k
 - Message types: deposit received (thanks + tracking link), in production (expected date), installation scheduled (date + arrival window), day-before installation reminder, installed (thanks + Google review link), delay notice, balance reminder (polite, then a gentler second one; never aggressive).
 - **"Gati për dërgim" (ready to send) queue**: the app computes which messages are due when the page loads (stage changes by stage key and fulfilment method, tomorrow's installations/deliveries, balance reminders at configurable days after the due date, e.g. 3 / 10 / 20). **No background scheduler or cron in v1.**
 - A balance reminder is suggested **only if all of these hold**: remaining for the customer > €0, a known due date has passed, no unresolved reported payment, reminders not paused, and the customer isn't flagged "no debt reminders". Each suppressed suggestion can show why ("pauzë deri më 12.11.2026").
-- Sending: staff tap **Send** → the app opens WhatsApp (`https://wa.me/<number>?text=...`) or SMS (`sms:<number>?body=...`) with the text prefilled, from their own phone. Viber can't reliably prefill a chat with a specific number, so for Viber the app **copies the text to the clipboard** and opens the chat (`viber://chat?number=...`). On return, the app asks "U dërgua?" (was it sent?) and logs the message in the customer's history.
+- Sending: staff tap **Send** → the app opens **WhatsApp** (`https://wa.me/<number>?text=...`) by default, from their own phone, with the text prefilled. Viber is the second option. SMS (`sms:<number>?body=...`) is only a small fallback link. Viber can't reliably prefill a chat with a specific number, so for Viber the app **copies the text to the clipboard** and opens the chat (`viber://chat?number=...`). On return, the app asks "U dërgua?" (was it sent?) and logs the message in the customer's history.
 - Messages are signed with the company and the staff member's first name (e.g. "Arben, Druri Design"): personal but professional.
 - Keep a `MessageProvider` interface so real API sending can be added later (WhatsApp Cloud API, Viber Business, SMS gateway). In v1, only `ClickToSendProvider` and, in demo mode, `MockProvider`, which shows the message in a phone-style "Sent messages" preview.
 - Settings: edit templates, turn each suggestion type on/off, set reminder days.
@@ -218,7 +228,7 @@ For debts that existed before the app. The owner often knows only "Blerimi më k
 - Must look beautiful on a phone. The customer shows this page to their family.
 
 ### 8. Settings
-- Brand, stage labels and visibility (order is fixed), product types, message templates, reminder days, teams, users and roles, show-balance toggle.
+- Brand, deposit term (Avans / Kapar), stage labels and visibility (order is fixed), product types, message templates, reminder days, teams, users and roles, show-balance toggle.
 
 ### 9. Export
 - Owner-only **"Shkarko në Excel"**: customers, orders and payments as an `.xlsx` file. This answers "if you disappear, where is my data?"
@@ -236,7 +246,7 @@ For debts that existed before the app. The owner often knows only "Blerimi më k
 | Set remaining work / pause reminders | ✓ | ✓ | remaining work only |
 | Revoke or regenerate a tracking link | ✓ | – | – |
 | Schedule installations | ✓ | ✓ | – |
-| See assigned jobs, call, Maps, photos, mark measured/installed | ✓ | ✓ | ✓ (own team only) |
+| See assigned jobs, call, Maps, save location, photos, mark measured/installed | ✓ | ✓ | ✓ (own team only) |
 | Prepare and send messages | ✓ | ✓ | – |
 | Settings, users, export | ✓ | – | – |
 
@@ -244,7 +254,7 @@ The field team sees only the amount to collect on their jobs, never prices or de
 
 ## Demo mode & seed data
 
-- One command seeds **realistic data**: ~40 customers with typical Albanian names across Kosovo cities (Prishtinë, Prizren, Pejë, Gjakovë, Ferizaj, Gjilan, Mitrovicë, Podujevë, Vushtrri, Suharekë), ~10 diaspora contacts (Germany, Switzerland, Austria), ~60 orders across all stages, realistic EUR prices for the business type, payments, **€15–30k outstanding** with some overdue, 3 field teams, a few reported cash payments waiting for confirmation (one exactly matching the balance), ~8 opening balances (some with "Afat i panjohur"), 2–3 orders with remaining work and paused reminders, some delivery/pickup orders with skipped steps, a few messages ready to send, and a message history.
+- One command seeds **realistic data**: ~40 customers with typical Albanian names across Kosovo cities (Prishtinë, Prizren, Pejë, Gjakovë, Ferizaj, Gjilan, Mitrovicë, Podujevë, Vushtrri, Suharekë), ~10 diaspora contacts (Germany, Switzerland, Austria), ~60 orders across all stages, realistic EUR prices for the business type, payments, **€15–30k outstanding** with some overdue, 3 field teams, a few reported cash payments waiting for confirmation (one exactly matching the balance), ~8 opening balances (some with "Afat i panjohur"), 2–3 orders with remaining work and paused reminders, some delivery/pickup orders with skipped steps, a few messages ready to send, and a message history. About a third of the addresses are villages with only a reference-point description and no pin.
 - Seed data adapts to `businessType` (kitchens vs. doors/floors vs. windows).
 - **Demo date control** ("Simulate: jump forward X days"): shifts the app's "today" so new reminder suggestions appear live.
 - **"Reset demo"** button. One-tap login buttons per role (only when `DEMO_MODE=true`).

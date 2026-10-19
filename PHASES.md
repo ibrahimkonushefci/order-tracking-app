@@ -6,7 +6,7 @@ The app is built as a finished-looking demo that I show and sell to owners. It d
 
 | # | Phase | Result | Status |
 |---|---|---|---|
-| 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | Not started |
+| 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | Built, waiting for review on phone + approval |
 | 2 | Foundation | Running app shell: brand, auth, roles, i18n, `/setup`, first fixtures | Not started |
 | 3 | Orders & money core | Customers, orders, stages, payments, balances, opening balances | Not started |
 | 4 | Customer-facing | Tracking page + prepared messages, on a temporary HTTPS test deployment | Not started |
@@ -40,7 +40,7 @@ Then update the status column in the table above.
 ### Test fixtures (from Phase 2 on)
 The full realistic seed dataset comes in Phase 6. Before that, keep a **small, repeatable fixture set** loaded by one command (e.g. `pnpm fixtures`), so every phase review starts from the same known records instead of recreating them by hand. All data is fictional.
 - Phase 2: one account per role (Pronari, Zyra, Terreni) and one brand.
-- Phase 3 adds: one normal order going through the stages, **the €800 reported-cash case**, an opening balance with a known due date and one with "Nuk e di", an unfinished installation with paused reminders, a pickup order with skipped steps, and a reversed payment.
+- Phase 3 adds: one normal order going through the stages, **the €800 reported-cash case**, an opening balance with a known due date and one with "Nuk e di", an unfinished installation with paused reminders, a village job with only a reference-point description and no pin, a pickup order with skipped steps, and a reversed payment.
 - Phase 4 adds: tracking links for those orders (one revoked) and a few ready-to-send messages.
 - The same fixtures are used by the automated tests and the manual checklist in the phase report.
 
@@ -52,7 +52,8 @@ The full realistic seed dataset comes in Phase 6. Before that, keep a **small, r
 
 **Build** (in `prototype/`):
 - Static HTML/CSS/JS, no backend, no build step, fake data in a JS file, works offline.
-- Albanian only. Two sample brands with a brand switcher, to prove the white-label look.
+- Albanian only. Two sample brands with a brand switcher, to prove the white-label look. One brand uses "Avans", the other "Kapar".
+- WhatsApp is the large primary contact button on every screen; Viber secondary; SMS only a small fallback.
 - Phone layout for owner/field/customer screens, tablet layout for kanban and order list. A device-frame toggle for reviewing layout on a laptop.
 - Build it with the design tokens (colors as CSS variables, spacing, type scale) the app will use, so the design can be carried over directly.
 
@@ -63,7 +64,7 @@ The full realistic seed dataset comes in Phase 6. Before that, keep a **small, r
 4. **The €800 case**: the installer reports €800 → the order shows "€800 raportuar · në pritje të konfirmimit", "Për t'u mbledhur shtesë: €0", reminder paused → office taps "Konfirmo: i mora paratë nga …". The unconfirmed amount stays under "Para te montuesit, pa dorëzuar".
 5. Opening balance form ("Borxh i bartur") with the "Kur duhej paguar?" decision, including "Nuk e di".
 6. Order list with search + kanban (tablet), including a pickup order that skips steps.
-7. Field view (phone): today's jobs, Maps, call, notebook photo, "Montuar", "Ka punë të mbetura", "Mora €X".
+7. Field view (phone): today's jobs with the **"Shpjegimi i rrugës / Pikë referimi" shown first and large**, village/address, Maps (when there's a pin), "Ruaj vendndodhjen këtu", call, notebook photo, "Montuar", "Ka punë të mbetura", "Mora €X".
 8. Ready-to-send queue → **simulated** phone-style WhatsApp preview of the message (nothing is sent).
 9. Customer tracking page **preview** (responsive), branded, simplified timeline, plus the "link no longer active" page.
 
@@ -109,7 +110,7 @@ Spec sections: 2 Customers, 3 Orders & statuses, 4 Payments & debts, Permissions
 
 Spec sections: 6 Prepared messages, 7 Customer tracking page.
 - Tracking page with simplified timeline, shared photos, balance toggle, revoke/regenerate.
-- Message templates (sq/en/de), ready-to-send queue with all suppression rules, click-to-send (WhatsApp, SMS, Viber via clipboard), "Sent messages" preview, demo date control.
+- Message templates (sq/en/de), ready-to-send queue with all suppression rules, click-to-send (WhatsApp primary, Viber via clipboard, SMS fallback), "Sent messages" preview, demo date control.
 - **Temporary HTTPS test deployment** (e.g. a Vercel preview with a separate test database), loaded with the fixtures only, so other phones can reach it. Not the sales environment.
 - Phase 4 fixtures.
 
@@ -124,7 +125,7 @@ Spec sections: 1 Owner dashboard, 5 Installation schedule & field view.
 - Schedule by day and team (installation, delivery, return visits).
 - Field mobile view with photo compression, notebook photos, cash reporting.
 
-**Done when:** a full job can go from new order to fulfilled and paid, with every field step done on a phone, and each **routine field action** (open today's job, call, open Maps, take a photo, mark measured/installed, mark remaining work, report cash) takes **three taps or fewer**. Creating an order or office work doesn't have to meet the three-tap limit.
+**Done when:** a full job can go from new order to fulfilled and paid, with every field step done on a phone, and each **routine field action** (open today's job, call, open Maps, save location, take a photo, mark measured/installed, mark remaining work, report cash) takes **three taps or fewer**. Creating an order or office work doesn't have to meet the three-tap limit.
 
 ## Phase 6: Demo-ready
 
