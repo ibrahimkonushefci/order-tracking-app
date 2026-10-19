@@ -2,7 +2,7 @@
  * Borxhet, Para te montuesit and the Sot headline (spec §1, §2, §4), from the same
  * rules as the prototype. Rows carry structured data; the screens turn it into words.
  */
-import { diffDays } from '@/lib/dates';
+import { diffDays, isoOf } from '@/lib/dates';
 import {
   isHeld,
   isProject,
@@ -92,8 +92,8 @@ export interface DebtRow {
   opening?: { forWhat: string };
 }
 
-const tsIso = (t: Date | string) => (typeof t === 'string' ? t : t.toISOString()).slice(0, 10);
-const isoOf = tsIso;
+/** A message's day in Kosovo (a reminder sent at 00:30 belongs to that day, not the UTC one). */
+const tsIso = isoOf;
 
 export function lastReminder(messages: MessageLite[]): MessageLite | null {
   return (

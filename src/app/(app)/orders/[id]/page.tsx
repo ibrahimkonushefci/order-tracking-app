@@ -32,7 +32,7 @@ import { lastReminder } from '@/domain/debts';
 import { loadHistory, loadOrder } from '@/services/book';
 import { pageContext } from '@/server/context';
 import { listInstallers } from '@/db/queries';
-import { VisitButton, VisitDoneButton } from '@/components/sheets/visit';
+import { DoneVisitEditButton, VisitButton, VisitDoneButton } from '@/components/sheets/visit';
 import { ContactPrefs, CopyLink, NewLinkButton } from '@/components/sheets/link';
 import { reminderCheck, templatesFor } from '@/domain/messages';
 import { dueVisit, nextVisit as nextVisitOf } from '@/domain/visits';
@@ -215,6 +215,9 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const canDeletePay = can(user.role, 'delete');
   const payLite = (p: (typeof o.payments)[number]) => ({ id: p.id, amount: p.amount, method: p.method, heldBy: p.heldBy, date: p.date, note: p.note });
 
+  /* Payments recorded on the day a visit was marked done, shown (never changed) when it is reopened. */
+  const paysOn = (date: string) =>
+    o.payments.filter(p => !p.deletedAt && p.date === date).map(p => `${eur(p.amount)} ${p.heldBy ? tm('withShort', { name: instName(p.heldBy) }).replace(/^T/, 't') : w('office')}`);
   const visitsOpen = o.visits.filter(v => !v.doneAt).sort((a, b) => a.date.localeCompare(b.date));
   const visitsDone = o.visits.filter(v => v.doneAt).sort((a, b) => b.doneAt!.localeCompare(a.doneAt!));
   const visitRow = (v: (typeof o.visits)[number]) => {
@@ -244,6 +247,13 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         )}
         {v.doneAt && proj && v.quantity && o.stage !== 'cancelled' ? (
           <PartEditButton o={view} part={{ id: v.id, quantity: v.quantity, date: v.doneAt, installerId: v.installerId, value: v.value }} installers={inst} today={today} canDelete={canDeletePay} />
+        ) : v.doneAt && !v.quantity && o.stage !== 'cancelled' ? (
+          <>
+            <Badge tone="success" icon="check">
+              {t('visitDone')}
+            </Badge>
+            <DoneVisitEditButton o={vo} visit={{ ...visitView(v), doneAt: v.doneAt }} installers={activeInst} today={today} payments={paysOn(v.doneAt)} />
+          </>
         ) : v.doneAt ? (
           <Badge tone="success" icon="check">
             {t('visitDone')}

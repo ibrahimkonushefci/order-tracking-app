@@ -43,6 +43,8 @@ export interface VisitOrderView {
   number: string;
   clientName: string;
   stage: 'new' | 'active' | 'done' | 'cancelled';
+  /** When the order was marked done. */
+  doneAt: string | null;
   description: string;
   /** max(0, price − paid) */
   remaining: number;
@@ -212,6 +214,89 @@ function VisitSheet({ o, visit, installers, jobs, today, date: initialDate, onCl
             <Icon name="trash" /> {t('remove')}
           </button>
         ) : null}
+      </form>
+    </Sheet>
+  );
+}
+
+/* ───────── A visit marked done: Ndrysho · Nuk u krye ───────── */
+
+/**
+ * Correcting an ordinary visit marked done (project parts use "Montimet e kryera"): the day,
+ * the installer and the note, or "Nuk u krye" to plan it again. Payments are listed, never changed.
+ */
+export function DoneVisitEditButton(props: { o: VisitOrderView; visit: VisitView & { doneAt: string }; installers: InstallerOpt[]; today: string; payments: string[] }) {
+  const t = useTranslations('visit');
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="btn btn--ghost btn--sm" onClick={() => setOpen(true)} aria-label={t('doneEditTitle')}>
+        <Icon name="edit" /> {t('doneEdit')}
+      </button>
+      {open ? <DoneVisitSheet {...props} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
+function DoneVisitSheet({ o, visit: v, installers, today, payments, onClose }: { o: VisitOrderView; visit: VisitView & { doneAt: string }; installers: InstallerOpt[]; today: string; payments: string[]; onClose: () => void }) {
+  const t = useTranslations('visit');
+  const w = useTranslations('words');
+  const [inst, setInst] = useState(v.installerId ?? 'none');
+  const [reopen, setReopen] = useState(false);
+  const { errors, pending, submit } = useAction(f => A.editDoneVisitAction(o.id, v.id, f), onClose);
+  const back = useAction(f => A.reopenVisitAction(o.id, v.id, f), onClose);
+  const fmt = (iso: string) => iso.split('-').reverse().join('.');
+  const sub = `${w(`visit.${v.type}`)} · ${fmt(v.doneAt)} · ${o.clientName} · ${o.number}`;
+  const orderToo = o.stage === 'done' && !o.project && (v.type === 'install' || v.type === 'delivery');
+
+  if (reopen)
+    return (
+      <Sheet open onClose={onClose} title={t('reopenTitle')} sub={sub}>
+        <form onSubmit={back.submit} className="form">
+          <div className="callout callout--neutral">
+            <Icon name="help" />
+            <span>{t('reopenHelp', { date: fmt(v.date) })}</span>
+          </div>
+          {orderToo ? (
+            <label className="check">
+              <input type="checkbox" name="reopenOrder" value="1" defaultChecked={o.doneAt === v.doneAt} />
+              <span>
+                {t('reopenOrder')}
+                <span className="check__sub">{t('reopenOrderSub')}</span>
+              </span>
+            </label>
+          ) : null}
+          {payments.length ? (
+            <div className="callout callout--warning">
+              <Icon name="cash" />
+              <span>{t('reopenPays', { list: payments.join(' · ') })}</span>
+            </div>
+          ) : null}
+          <FormAlert errors={back.errors} />
+          <SheetActions label={t('reopenYes')} pending={back.pending} onCancel={() => setReopen(false)} />
+        </form>
+      </Sheet>
+    );
+
+  return (
+    <Sheet open onClose={onClose} title={t('doneEditTitle')} sub={sub}>
+      <form onSubmit={submit} className="form" noValidate>
+        <Field name="date" label={t('doneDate')} req errors={errors} htmlFor="dv-date">
+          <input className="input" id="dv-date" type="date" name="date" defaultValue={v.doneAt} max={today} />
+        </Field>
+        <Field name="installerId" label={t('installer')} errors={errors}>
+          <Chips name="installerId" value={inst} onChange={setInst} options={[...installers.map(i => [i.id, i.name] as const), ['none', t('noInstaller')] as const]} />
+        </Field>
+        <Field label={t('doneNote')} opt htmlFor="dv-note">
+          <input className="input" id="dv-note" name="note" defaultValue={v.note} autoComplete="off" />
+        </Field>
+        <div className="help">{t('doneHelp')}</div>
+        <FormAlert errors={errors} />
+        <SheetActions label={t('save')} pending={pending} onCancel={onClose}>
+          <button className="btn btn--ghost btn--lg" type="button" onClick={() => setReopen(true)}>
+            <Icon name="refresh" /> {t('reopen')}
+          </button>
+        </SheetActions>
       </form>
     </Sheet>
   );

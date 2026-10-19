@@ -28,8 +28,12 @@ export interface SentInput {
   text: string;
 }
 
-/** "U dërgua? Po" for a customer message on an order or an opening balance. */
-export async function logCustomerMessage(db: Db, actor: Actor, target: { orderId: string } | { openingId: string }, input: SentInput) {
+/**
+ * "U dërgua? Po" for a customer message on an order or an opening balance. `now` is the
+ * app's moment (`appNow()`, demo offset included), so the 7-day reminder gap counts in
+ * the same days as the screens.
+ */
+export async function logCustomerMessage(db: Db, actor: Actor, target: { orderId: string } | { openingId: string }, input: SentInput, now = new Date()) {
   allow(actor, 'daily');
   const type = CUSTOMER_TYPES.find(t => t === input.type);
   if (!type) throw new FieldError('_', 'invalid');
@@ -55,6 +59,7 @@ export async function logCustomerMessage(db: Db, actor: Actor, target: { orderId
       language: langOf(input.language),
       text: body,
       sentBy: actor.id,
+      sentAt: now,
     });
     const label = type === 'deposit' ? tw('msgType.deposit', { word: await depositWord(tx, actor.companyId) }) : tw(`msgType.${type}`);
     const [kind, id] = 'orderId' in target ? (['order', target.orderId] as const) : (['opening', target.openingId] as const);
@@ -77,7 +82,7 @@ export interface InstallerSentInput {
 }
 
 /** "U dërgua? Po" for one visit or one installer's day: each visit is marked sent and logged on its order. */
-export async function logInstallerMessage(db: Db, actor: Actor, input: InstallerSentInput) {
+export async function logInstallerMessage(db: Db, actor: Actor, input: InstallerSentInput, now = new Date()) {
   allow(actor, 'daily');
   const body = text(input.text);
   if (!body) throw new FieldError('text', 'messageEmpty');
@@ -90,7 +95,6 @@ export async function logInstallerMessage(db: Db, actor: Actor, input: Installer
       .from(visit)
       .where(and(eq(visit.companyId, actor.companyId), inArray(visit.id, input.visitIds)));
     if (rows.length !== input.visitIds.length) throw new NotFoundError('visit');
-    const now = new Date();
     const byOrder = new Map<string, typeof rows>();
     for (const v of rows) {
       if (input.assign && v.installerId !== inst.id && !v.doneAt) {
@@ -112,6 +116,7 @@ export async function logInstallerMessage(db: Db, actor: Actor, input: Installer
         channel,
         text: body,
         sentBy: actor.id,
+        sentAt: now,
       });
       for (const v of vs) {
         const line =

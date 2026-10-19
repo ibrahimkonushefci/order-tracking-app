@@ -17,3 +17,13 @@ export async function appToday(): Promise<string> {
   const n = await demoOffset();
   return n ? addDays(todayIso(), n) : todayIso();
 }
+
+/**
+ * "Now" for timestamps that the app compares with `appToday()`: a message's sentAt and a
+ * visit's "dërguar". Shifted by the same demo offset, so a reminder logged on the demo date
+ * counts as sent that day. The history keeps the real time.
+ */
+export async function appNow(): Promise<Date> {
+  const n = await demoOffset();
+  return new Date(Date.now() + n * 864e5);
+}

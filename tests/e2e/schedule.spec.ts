@@ -159,3 +159,71 @@ test('"Nga ditët e kaluara": one tap "U krye" on yesterday’s measurement', as
   await page.getByRole('dialog').getByRole('button', { name: 'Po, u krye' }).click();
   await expect(page.getByText('Nga ditët e kaluara')).toHaveCount(0);
 });
+
+/* ───────── Review fixes: correcting a visit marked done, reminders on the demo date ───────── */
+
+test('a visit marked done by mistake: "Nuk u krye" reopens it and the order; doing it again adds no payment', async ({ page }) => {
+  await login(page, 'teuta@druri.test');
+  await openOrder(page, 'Naim Berisha');
+  await page.getByRole('button', { name: 'Montimi u krye' }).click();
+  let sheet = page.getByRole('dialog');
+  await sheet.getByText('Po, të gjitha €2.800').click();
+  await sheet.getByRole('button', { name: 'Ruaj' }).click();
+  await expect(page.locator('.money__value')).toHaveText('€0');
+
+  // Ndrysho on the done visit: another installer, kept in the history.
+  await page.getByText('Të kryera (1)').click();
+  await page.getByRole('button', { name: 'Ndrysho vizitën e kryer' }).click();
+  sheet = page.getByRole('dialog');
+  await sheet.getByText('Driton', { exact: true }).click();
+  await sheet.getByRole('button', { name: 'Ruaj' }).click();
+  await expect(sheet).toHaveCount(0);
+  await page.getByText('Historiku', { exact: true }).click();
+  await expect(page.locator('.timeline')).toContainText('Vizita e kryer u ndryshua:');
+  await expect(page.locator('.timeline')).toContainText('· Besnik → Montim ·');
+
+  // Nuk u krye: the visit and the order are open again; the €2.800 with Besnik stays.
+  await page.getByRole('button', { name: 'Ndrysho vizitën e kryer' }).click();
+  sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: 'Nuk u krye' }).click();
+  await expect(sheet.getByRole('checkbox', { name: /Porosia nuk është e kryer ende/ })).toBeChecked();
+  await expect(sheet).toContainText('Pagesat nuk ndryshojnë: €2.800 te Besnik');
+  await sheet.getByRole('button', { name: 'Po, rikthe' }).click();
+  await expect(page.getByRole('button', { name: 'Montimi u krye' })).toBeVisible();
+  await expect(page.locator('.stepper3 .st--active')).toHaveAttribute('aria-current', 'step');
+  await expect(page.locator('.alert--warning')).toContainText('€2.800 te Besnik');
+
+  // Marking it done again: nothing is left to pay, so no second payment.
+  await page.getByRole('button', { name: 'Montimi u krye' }).click();
+  sheet = page.getByRole('dialog');
+  await expect(sheet.getByText('Po, të gjitha', { exact: false })).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Ruaj' }).click();
+  await expect(page.locator('.stepper3 .st--done')).toHaveAttribute('aria-current', 'step');
+  await page.getByText('Pagesat dhe llogaria').click();
+  await expect(page.locator('.pay:not(.pay--deleted)', { hasText: '€2.800' })).toHaveCount(1);
+});
+
+test('demo date +7: a reminder logged then waits 7 simulated days, also after "Kthe në sot"', async ({ page }) => {
+  await login(page, 'teuta@druri.test');
+  await page.goto('/settings');
+  await page.getByRole('button', { name: '+7 ditë' }).click();
+  await expect(page.getByText(/\(\+7 ditë\)/)).toBeVisible();
+  await page.goto('/debts');
+  // Blerim's last reminder (3 days ago) is 10 days old on the demo date.
+  const blerim = () => page.locator('.debt', { hasText: 'Blerim Hasani' });
+  await blerim().getByRole('link', { name: /Kujtesë/ }).click();
+  const [popup] = await Promise.all([page.waitForEvent('popup'), page.getByRole('link', { name: 'Dërgo me WhatsApp' }).click()]);
+  await popup.close();
+  await page.getByRole('button', { name: 'Po, u dërgua' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Blerim Hasani');
+  await page.goto('/debts');
+  await expect(blerim().getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
+  await expect(blerim()).toContainText('Kujtesa e fundit: sot');
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Kthe në sot' }).click();
+  await expect(page.getByText(/\(\+7 ditë\)/)).toHaveCount(0);
+  await page.goto('/debts');
+  await expect(blerim().getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
+  await expect(blerim()).toContainText('Kujtesa e fundit: sot');
+});

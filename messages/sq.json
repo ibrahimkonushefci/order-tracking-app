@@ -453,7 +453,9 @@
     "linkReplaced": "U krijua link i ri për klientin; linku i vjetër nuk hapet më",
     "installerAdded": "Montuesi u shtua: {name}",
     "installerEdited": "Montuesi u ndryshua: {name}",
-    "templatesSaved": "Mesazhet ({lang}) u ndryshuan"
+    "templatesSaved": "Mesazhet ({lang}) u ndryshuan",
+    "doneVisitChanged": "Vizita e kryer u ndryshua: {from} → {to}",
+    "visitReopened": "Vizita u rikthye si e pakryer: {visit}"
   },
   "export": {
     "orders": "Porositë",
@@ -897,7 +899,10 @@
     "installerSaved": "Montuesi u ruajt.",
     "installerAdded": "Montuesi u shtua.",
     "templatesSaved": "Mesazhet u ruajtën.",
-    "demoDate": "Data e demos: {date}"
+    "demoDate": "Data e demos: {date}",
+    "doneVisitSaved": "Vizita u ndryshua.",
+    "visitReopened": "Vizita u rikthye si e planifikuar.",
+    "visitReopenedOrder": "Vizita dhe porosia u rikthyen si të pakryera."
   },
   "visit": {
     "planTitle": "Planifiko vizitë",
@@ -927,7 +932,19 @@
     "remove": "Hiq vizitën",
     "removeTitle": "Hiq vizitën?",
     "removeHelp": "Vizita hiqet nga orari. Në historik mbetet një rresht.",
-    "removeYes": "Hiq"
+    "removeYes": "Hiq",
+    "doneEdit": "Ndrysho",
+    "doneEditTitle": "Ndrysho vizitën e kryer",
+    "doneDate": "Data kur u krye",
+    "doneNote": "Shënim",
+    "doneHelp": "Pagesat dhe faza e porosisë nuk ndryshojnë këtu.",
+    "reopen": "Nuk u krye",
+    "reopenTitle": "Nuk u krye?",
+    "reopenHelp": "Vizita kthehet e planifikuar më {date}. Pastaj mund t’ia ndryshoni datën ose ta shënoni sërish “U krye”.",
+    "reopenPays": "Pagesat nuk ndryshojnë: {list}. Nëse paratë nuk janë marrë, ndryshojeni ose fshijeni pagesën te Pagesat.",
+    "reopenOrder": "Porosia nuk është e kryer ende",
+    "reopenOrderSub": "Porosia kthehet në punë dhe afati i pagesës hiqet.",
+    "reopenYes": "Po, rikthe"
   },
   "visitDone": {
     "finishRemaining": "Puna u përfundua",

@@ -10,14 +10,15 @@ import { loadFixtures } from '@/db/fixtures';
 import { comingFriday } from '@/db/fixtures-phase4';
 import { company, history, installer, message, orders, user, visit } from '@/db/schema';
 import { orderTotals, installedQty } from '@/domain/balances';
-import { debts, reminderCheck } from '@/domain/debts';
+import { debts, lastReminder, reminderCheck } from '@/domain/debts';
 import { fill, installerDayText, installerJobText, openingMessage, orderMessage, sendHref, templatesFor, type Sender } from '@/domain/messages';
 import { headlineKey, trackingSteps, warmDate } from '@/domain/tracking';
 import { allJobs, availability, dative, installerSummary, jobsOf, pastUndone } from '@/domain/visits';
 import { activePayments } from '@/domain/balances';
 import { loadBook, loadHistory, loadOrder, type Book } from '@/services/book';
 import { FieldError, FieldErrors, type Actor } from '@/services/common';
-import { completeVisit, removeVisit, saveVisit } from '@/services/visits';
+import { completeVisit, editDoneVisit, removeVisit, reopenVisit, saveVisit } from '@/services/visits';
+import { editPart } from '@/services/orders';
 import { logCustomerMessage, logInstallerMessage, newTrackingLink, saveInstaller, saveTemplates, setClientContact } from '@/services/messages';
 import { ForbiddenError } from '@/auth/permissions';
 import { addDays } from '@/lib/dates';
@@ -338,5 +339,147 @@ describe('"U dërgua?" logging, links, contacts, installers, templates', () => {
     expect(c.templates).toEqual({ de: { reminder: 'Hallo {customerName}' } });
     const b = await book();
     expect(orderMessage('reminder', byName(b, 'Arbëria Invest sh.p.k.'), 'de', '', S, TODAY, c.templates)).toBe('Hallo Arbëria Invest');
+  });
+});
+
+/* ───────── Review fixes (Phase 4): correcting a visit marked done, reminders on the demo date ───────── */
+
+describe('correcting a visit marked done', () => {
+  const dmy = (iso: string) => iso.split('-').reverse().join('.');
+  const naimDone = async () => {
+    const naim = byName(await book(), 'Naim Berisha');
+    const v = naim.visits.find(x => x.date === TODAY)!;
+    await completeVisit(db, office, naim.id, v.id, { pay: 'all', holder: I.Besnik, close: true }, TODAY);
+    return { id: naim.id, v };
+  };
+
+  it('Ndrysho: the day, installer and note move in Orari and the summaries; payments and stage stay', async () => {
+    const { id, v } = await naimDone();
+    const r = await editDoneVisit(db, office, id, v.id, { date: d(-1), installerId: I.Driton, note: 'U montua dje' }, TODAY);
+    expect(r.changed).toBe(1);
+    const o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o.visits.find(x => x.id === v.id)).toMatchObject({ date: d(-1), doneAt: d(-1), installerId: I.Driton, note: 'U montua dje' });
+    expect(o.stage).toBe('done');
+    expect(orderTotals(o)).toMatchObject({ owed: 0, held: 280000, paid: 380000 });
+    const b = await book();
+    const jobs = allJobs(b.orders);
+    expect(jobsOf(jobs, I.Driton, d(-1)).some(x => x.v.id === v.id)).toBe(true);
+    expect(jobsOf(jobs, I.Besnik, TODAY).some(x => x.v.id === v.id)).toBe(false);
+    // The visit counts for Driton now; the cash stays with whoever took it (Besnik) until confirmed or edited.
+    const pays = b.orders.flatMap(x => x.payments);
+    expect(installerSummary(jobs, I.Driton, pays, TODAY).done.install).toBeGreaterThanOrEqual(1);
+    expect(installerSummary(jobs, I.Besnik, pays, TODAY).held).toBe(280000);
+    const h = (await loadHistory(db, 'order', id)).map(x => x.text);
+    expect(h).toContain(`Vizita e kryer u ndryshua: Montim · ${dmy(TODAY)} · Besnik → Montim · ${dmy(d(-1))} · Driton`);
+    expect(h).toContain(`Shënimi i vizitës u ndryshua: Montim · ${dmy(d(-1))} · Driton`);
+    // Nothing changed → no history line; a future day is refused.
+    expect((await editDoneVisit(db, office, id, v.id, { date: d(-1), installerId: I.Driton, note: 'U montua dje' }, TODAY)).changed).toBe(0);
+    expect(await err(editDoneVisit(db, office, id, v.id, { date: d(1), installerId: I.Driton }, TODAY))).toBe('dateFuture');
+    // saveVisit/removeVisit still refuse a done visit: corrections go through these two.
+    expect(await err(removeVisit(db, owner, id, v.id))).toBe('visitDone');
+  });
+
+  it('"Nuk u krye" plans it again and can reopen the order; payments are kept, never duplicated', async () => {
+    const { id, v } = await naimDone();
+    const before = (await loadOrder(db, owner.companyId, id))!;
+    const payCount = activePayments(before.payments).length;
+    const r = await reopenVisit(db, office, id, v.id, { reopenOrder: true });
+    expect(r.reopenedOrder).toBe(true);
+    let o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o.visits.find(x => x.id === v.id)!.doneAt).toBeNull();
+    expect(o).toMatchObject({ stage: 'active', doneAt: null, dueDate: null, payTerm: null });
+    expect(activePayments(o.payments)).toHaveLength(payCount);
+    expect(orderTotals(o)).toMatchObject({ held: 280000, paid: 380000, owed: 0 });
+    // Customer page: back to "Në punë"; Orari: the visit is open again on its day.
+    expect(trackingSteps(o.stage as 'active', false).map(s => s.state)).toEqual(['done', 'current', 'future']);
+    let b = await book();
+    expect(allJobs(b.orders).find(x => x.v.id === v.id)!.v.doneAt).toBeNull();
+    expect(installerSummary(allJobs(b.orders), I.Besnik, b.orders.flatMap(x => x.payments), d(-1)).upcoming.some(x => x.v.id === v.id)).toBe(true);
+    const h = (await loadHistory(db, 'order', id)).map(x => x.text);
+    expect(h).toContain(`Vizita u rikthye si e pakryer: Montim · ${dmy(TODAY)} · Besnik`);
+    expect(h).toContain('Faza: E kryer → Në punë');
+    // Marking it done again: everything is already paid, so no second payment is recorded.
+    await completeVisit(db, office, id, v.id, { pay: 'all', holder: I.Besnik, close: true }, TODAY);
+    o = (await loadOrder(db, owner.companyId, id))!;
+    expect(o.stage).toBe('done');
+    expect(activePayments(o.payments)).toHaveLength(payCount);
+    expect(orderTotals(o)).toMatchObject({ held: 280000, paid: 380000, owed: 0 });
+    b = await book();
+    expect(debts(b.orders, b.openings, TODAY).some(x => x.id === id)).toBe(false);
+  });
+
+  it('reopening a past visit puts it under "Nga ditët e kaluara"; the stage stays unless asked', async () => {
+    const b = await book();
+    const granit = byName(b, 'Granit Morina');
+    const gv = granit.visits[0];
+    await completeVisit(db, office, granit.id, gv.id, { pay: 'no', note: 'priza 2×' }, TODAY);
+    expect(pastUndone(allJobs((await book()).orders), TODAY).some(x => x.v.id === gv.id)).toBe(false);
+    const r = await reopenVisit(db, owner, granit.id, gv.id, {});
+    expect(r.reopenedOrder).toBe(false);
+    const after = await book();
+    expect(pastUndone(allJobs(after.orders), TODAY).some(x => x.v.id === gv.id)).toBe(true);
+    expect(byName(after, 'Granit Morina').stage).toBe('new');
+    // Only a done visit can be reopened.
+    expect(await err(reopenVisit(db, owner, granit.id, gv.id, {}))).toMatch(/not found: visit/);
+  });
+
+  it('project parts keep their own correction ("Montimet e kryera"); a cancelled order refuses', async () => {
+    const ru = byName(await book(), 'Ndërtimi Rugova sh.p.k.');
+    const part = ru.visits.find(x => x.doneAt && x.quantity)!;
+    expect(await err(editDoneVisit(db, office, ru.id, part.id, { date: TODAY }, TODAY))).toMatch(/not found: visit/);
+    expect(await err(reopenVisit(db, office, ru.id, part.id, {}))).toMatch(/not found: visit/);
+    expect((await editPart(db, office, ru.id, part.id, { quantity: String(part.quantity), date: part.doneAt!, installerId: I.Faton }, TODAY)).changed).toBe(1);
+    const { id, v } = await naimDone();
+    await db.update(orders).set({ stage: 'cancelled' }).where(eq(orders.id, id));
+    expect(await err(reopenVisit(db, owner, id, v.id, {}))).toBe('cancelled');
+  });
+});
+
+describe('reminders on the demo date', () => {
+  const at = (iso: string, hhmm = '12:00') => new Date(`${iso}T${hhmm}:00+02:00`);
+  const valonRem = async (today: string) => {
+    const b = await book();
+    return debts(b.orders, b.openings, today).find(x => x.name === 'Valon Hoxha')!.rem;
+  };
+
+  it('a reminder logged at demo +7 suppresses the green "Kujtesë" for seven simulated days', async () => {
+    const valon = byName(await book(), 'Valon Hoxha');
+    const demo = d(7);
+    expect((await valonRem(demo)).ok).toBe(true);
+    await logCustomerMessage(db, office, { orderId: valon.id }, { type: 'reminder', channel: 'whatsapp', language: 'sq', text: 'Kujtesë' }, at(demo));
+    expect(await valonRem(demo)).toMatchObject({ ok: false, reason: 'recent', lastAt: demo });
+    expect((await valonRem(addDays(demo, 6))).ok).toBe(false);
+    expect((await valonRem(addDays(demo, 7))).ok).toBe(true);
+    // Back to the real today: the reminder is not in the past, so it is still "recent" (no green button).
+    expect(await valonRem(TODAY)).toMatchObject({ ok: false, reason: 'recent' });
+    // "Kujtesa e fundit" reads the simulated day.
+    const o = (await loadOrder(db, owner.companyId, valon.id))!;
+    expect(new Date(lastReminder(o.messages)!.sentAt).toISOString().slice(0, 10)).toBe(demo);
+  });
+
+  it('on the normal date nothing changes: a reminder sent today counts from today', async () => {
+    const valon = byName(await book(), 'Valon Hoxha');
+    await logCustomerMessage(db, office, { orderId: valon.id }, { type: 'reminder', channel: 'whatsapp', language: 'sq', text: 'Kujtesë' }, at(TODAY));
+    expect((await valonRem(TODAY)).ok).toBe(false);
+    expect((await valonRem(d(6))).ok).toBe(false);
+    expect((await valonRem(d(7))).ok).toBe(true);
+  });
+
+  it('the day of a reminder is Kosovo’s: 00:30 local is that day, not the UTC day before', () => {
+    const t = { owed: 10000, dueDate: d(-30) };
+    const late = { pausedUntil: null, messages: [{ type: 'reminder', channel: 'whatsapp' as const, sentAt: '2026-10-11T22:30:00Z' }] };
+    // 22:30 UTC on 11.10 is 00:30 on 12.10 in Kosovo: seven days later is 19.10.
+    expect(reminderCheck(t, late, false, '2026-10-18')).toMatchObject({ ok: false, reason: 'recent', lastAt: '2026-10-12' });
+    expect(reminderCheck(t, late, false, TODAY)).toMatchObject({ ok: true });
+  });
+
+  it('an installer job logged on the demo date is "dërguar" that day', async () => {
+    const naim = byName(await book(), 'Naim Berisha');
+    const v = naim.visits.find(x => x.date === TODAY)!;
+    await logInstallerMessage(db, office, { installerId: I.Besnik, visitIds: [v.id], mode: 'visit', channel: 'whatsapp', text: 'Puna' }, at(d(3)));
+    const [row] = await db.select().from(visit).where(eq(visit.id, v.id));
+    expect(row.lastSentAt!.toISOString().slice(0, 10)).toBe(d(3));
+    const [m] = await db.select().from(message).where(eq(message.orderId, naim.id));
+    expect(m.sentAt.toISOString().slice(0, 10)).toBe(d(3));
   });
 });

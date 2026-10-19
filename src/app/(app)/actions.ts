@@ -10,7 +10,7 @@ import { getCurrentUser } from '@/auth/session';
 import { ForbiddenError } from '@/auth/permissions';
 import { getDb } from '@/db/client';
 import type { Db } from '@/db/connect';
-import { appToday } from '@/server/today';
+import { appNow, appToday } from '@/server/today';
 import { eur } from '@/lib/money';
 import { FieldError, FieldErrors, NotFoundError, type Actor } from '@/services/common';
 import * as O from '@/services/orders';
@@ -343,6 +343,22 @@ export async function removeVisitAction(orderId: string, visitId: string) {
   });
 }
 
+export async function editDoneVisitAction(orderId: string, visitId: string, f: FormData) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a, today) => {
+    const r = await V.editDoneVisit(db, a, orderId, visitId, { date: s(f, 'date'), installerId: s(f, 'installerId'), note: s(f, 'note') }, today);
+    return { toast: r.changed ? tt('doneVisitSaved') : tt('nothingChanged') };
+  });
+}
+
+export async function reopenVisitAction(orderId: string, visitId: string, f: FormData) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    const r = await V.reopenVisit(db, a, orderId, visitId, { reopenOrder: on(f, 'reopenOrder') });
+    return { toast: r.reopenedOrder ? tt('visitReopenedOrder') : tt('visitReopened') };
+  });
+}
+
 export async function completeVisitAction(orderId: string, visitId: string, f: FormData) {
   const tt = await getTranslations('toast');
   return run(async (db, a, today) => {
@@ -379,7 +395,7 @@ export async function completeVisitAction(orderId: string, visitId: string, f: F
 export async function logCustomerMessageAction(kind: 'order' | 'opening', id: string, input: M.SentInput) {
   const tt = await getTranslations('toast');
   return run(async (db, a) => {
-    await M.logCustomerMessage(db, a, kind === 'order' ? { orderId: id } : { openingId: id }, input);
+    await M.logCustomerMessage(db, a, kind === 'order' ? { orderId: id } : { openingId: id }, input, await appNow());
     return { toast: tt('messageLogged'), go: kind === 'order' ? `/orders/${id}` : `/debts/${id}` };
   });
 }
@@ -387,7 +403,7 @@ export async function logCustomerMessageAction(kind: 'order' | 'opening', id: st
 export async function logInstallerMessageAction(input: M.InstallerSentInput, back: string) {
   const tt = await getTranslations('toast');
   return run(async (db, a) => {
-    await M.logInstallerMessage(db, a, input);
+    await M.logInstallerMessage(db, a, input, await appNow());
     return { toast: tt('installerLogged'), go: back.startsWith('/') ? back : '/schedule' };
   });
 }

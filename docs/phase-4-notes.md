@@ -22,9 +22,27 @@ Built 19.10.2026 on top of Phase 3 (`6996295`). The design follows the approved 
 - **Opening balances** offer only "Kujtesë për pagesë" and "Mesazh i lirë" (no tracking link, no visits).
 - **Demo date control** is in Cilësimet → "Data e demos" (+1 / +7 days / back to today), demo mode only, per browser (cookie). Sot shows "demo +N ditë" while it is on. The full demo bar comes with Phase 5.
 - **Installers** can be added and edited by both roles (they are contacts, not users); they are set inactive instead of deleted, so history keeps their name.
-- **"Hiq vizitën"** removes a planned visit (both roles) with a history line; a done visit is corrected through the order (project parts via "Montimet e kryera").
+- **"Hiq vizitën"** removes a planned visit (both roles) with a history line. A done visit is corrected on the order: ordinary visits with "Ndrysho" → "Nuk u krye" (see the review fixes below), project parts via "Montimet e kryera".
 - **A visit done without closing the order**: unticking "Porosia është e kryer" records the payment and marks the visit done, the stage stays.
 - **The tracking link** is shown with Kopjo, "Dërgo linkun", "Parapamje" and "Link i ri" in the order's "Faqja e klientit" row, as in the prototype.
+
+## Review fixes (19.10.2026)
+The independent review of Phase 4 found two problems; both are fixed, tested and redeployed.
+
+**1. Correcting a completed ordinary visit.** A measurement, repair or ordinary installation/delivery marked done had no correction path.
+- The done row on the order ("Të kryera") now has **Ndrysho** (both roles, like every edit): the day it was done (not in the future), the installer and the note. The visit moves to that day in Orari, the installer load and "Përmbledhja e montuesve". History: "Vizita e kryer u ndryshua: Montim · 19.10.2026 · Besnik → Montim · 18.10.2026 · Driton".
+- In the same sheet, **"Nuk u krye"** puts the visit back to planned on its date (a past date shows under "Nga ditët e kaluara"). For an installation/delivery on a done order it offers ☑ "Porosia nuk është e kryer ende" (pre-ticked when the order was closed on that same day): the order goes back to active, its done date and payment term are cleared, as with the stage control. History: "Vizita u rikthye si e pakryer: …" and "Faza: E kryer → Në punë".
+- **Payments and installer cash are never touched.** The sheet lists the payments recorded that day ("Pagesat nuk ndryshojnë: €2.800 te Besnik…") and points to Pagesat for a correction. Marking the visit done again offers only what is still left, so a payment can't be duplicated; nothing is removed silently.
+- Moving a done visit to another installer does not move the cash: the payment stays with whoever was recorded until it is confirmed or edited.
+- Project parts keep their own flow ("Montimet e kryera" → Ndrysho / Fshij); the new actions refuse them, and refuse a cancelled order. `saveVisit`/`removeVisit` still refuse done visits.
+- Consequences checked: Borxhet (a reopened order isn't owed until done again), the tracking page (back to "Në punë"; a past visit isn't shown as the next one), Orari and the installer summaries.
+
+**2. Reminder timing on the demo date.** Messages were stamped with the real time, so on demo +7 a fresh reminder already looked 7 days old.
+- `appNow()` (`src/server/today.ts`) is the real time shifted by the same demo offset as `appToday()`. Customer messages (`sentAt`) and installer jobs ("dërguar", `lastSentAt`) are stamped with it. History lines keep the real time.
+- The reminder rule reads a message's day in Kosovo time (it read the UTC day, so a reminder sent between 00:00 and 02:00 counted for the day before).
+- With no demo offset nothing changes. After "Kthe në sot" a reminder logged on a demo date lies in the future: it shows "Kujtesa e fundit: sot" and no green "Kujtesë" until 7 days after its demo date. The demo date is a per-browser demo tool and the data is shared, so this is accepted for the demo; a fixture reset clears it.
+
+**Verified:** lint, typecheck, 108 unit tests (new: done-visit edit/reopen with the order and payments, project parts and cancelled orders refused, demo +7 / +13 / +14 and back to today, the Kosovo day boundary, installer "dërguar" on the demo date) and 54 Playwright tests on laptop and phone (new: "Nuk u krye" → reopened order → done again with a single €2.800 payment; demo +7 reminder → no green button, also after "Kthe në sot"). The demo test fails without the fix. The production build passes and the test deployment was updated and checked.
 
 ## Test deployment
 - Vercel project (functions in `fra1`, Frankfurt) + Neon Postgres (Frankfurt), loaded with the fixtures only. `vercel.json` sets the region and runs the migrations before the build (`pnpm vercel-build`).

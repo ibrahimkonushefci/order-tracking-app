@@ -12,6 +12,7 @@ export function visitOrderView(o: FullOrder): VisitOrderView {
     number: o.number,
     clientName: o.client.name,
     stage: o.stage,
+    doneAt: o.doneAt,
     description: o.description,
     remaining: Math.max(0, tot.remaining),
     remainingWork: o.remainingWork,

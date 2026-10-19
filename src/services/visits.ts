@@ -11,7 +11,7 @@ import { installer, orders, visit } from '@/db/schema';
 import type { Db } from '@/db/connect';
 import { fmtDate } from '@/lib/dates';
 import { allow, FieldError, log, NotFoundError, th, throwIf, tw, type Actor, type DbOrTx, type Tx } from './common';
-import { checkInstaller, markDoneIn, mustLoad, recordPartIn, type DoneInput, type PartInput } from './orders';
+import { checkInstaller, markDoneIn, mustLoad, recordPartIn, stageLabels, type DoneInput, type PartInput } from './orders';
 
 export interface VisitInput {
   type: string;
@@ -148,6 +148,86 @@ export async function completeVisit(db: Db, actor: Actor, orderId: string, visit
     await log(tx, actor, 'order', orderId, th('visitDone', { what: tw(`visitDone.${v.type}`), who, note: '' }));
     const r = await markDoneIn(tx, actor, orderId, { ...input, close: input.close ?? true }, today);
     return { kind: 'job' as const, ...r };
+  });
+}
+
+/* ───────── Correcting a visit marked done ───────── */
+
+export interface DoneVisitEditInput {
+  /** The day it was done (yyyy-MM-dd, not in the future). */
+  date: string;
+  /** An installer id, or '' / 'none'. */
+  installerId?: string;
+  note?: string;
+}
+
+/** An ordinary visit marked done; project parts (with a quantity) are corrected in "Montimet e kryera". */
+async function mustLoadDone(tx: DbOrTx, actor: Actor, orderId: string, visitId: string) {
+  const o = await mustLoad(tx, actor, orderId);
+  const v = o.visits.find(x => x.id === visitId);
+  if (!v || !v.doneAt || v.quantity) throw new NotFoundError('visit');
+  if (o.stage === 'cancelled') throw new FieldError('date', 'cancelled');
+  return { o, v };
+}
+
+/**
+ * "Ndrysho" on a done visit (both roles, like any edit): the day it was done, the installer
+ * and the note. The visit moves to that day in Orari and in the installer's summary.
+ * Payments and the order's stage are not touched.
+ */
+export async function editDoneVisit(db: Db, actor: Actor, orderId: string, visitId: string, input: DoneVisitEditInput, today: string) {
+  allow(actor, 'edit');
+  return db.transaction(async tx => {
+    const { v } = await mustLoadDone(tx, actor, orderId, visitId);
+    const errors: FieldError[] = [];
+    const date = text(input.date, 10);
+    if (!isDate(date)) errors.push(new FieldError('date', 'dateRequired'));
+    else if (date > today) errors.push(new FieldError('date', 'dateFuture'));
+    const inst = input.installerId && input.installerId !== 'none' ? input.installerId : null;
+    if (inst) {
+      try {
+        await checkInstaller(tx, actor, inst);
+      } catch (e) {
+        if (!(e instanceof FieldError)) throw e;
+        errors.push(e);
+      }
+    }
+    throwIf(errors);
+    const note = text(input.note);
+    const before = `${tw(`visit.${v.type}`)} · ${fmtDate(v.doneAt)} · ${await nameOf(tx, v.installerId)}`;
+    const after = `${tw(`visit.${v.type}`)} · ${fmtDate(date)} · ${await nameOf(tx, inst)}`;
+    if (before === after && note === v.note) return { changed: 0 };
+    await tx.update(visit).set({ date, doneAt: date, installerId: inst, note }).where(eq(visit.id, visitId));
+    if (before !== after) await log(tx, actor, 'order', orderId, th('doneVisitChanged', { from: before, to: after }), { field: 'visit', old: `${v.installerId ?? ''}@${v.doneAt}`, new: `${inst ?? ''}@${date}` });
+    if (note !== v.note) await log(tx, actor, 'order', orderId, th('visitNote', { visit: after }));
+    return { changed: 1 };
+  });
+}
+
+/**
+ * "Nuk u krye" on a visit marked done by mistake (both roles): it becomes planned again on
+ * its date (a past date shows under "Nga ditët e kaluara"). Payments are never touched: a
+ * payment recorded with it stays until it is edited or deleted in "Pagesat", so marking the
+ * visit done again only offers what is still left. With `reopenOrder`, a done order goes
+ * back to the active stage, exactly like the stage control.
+ */
+export async function reopenVisit(db: Db, actor: Actor, orderId: string, visitId: string, input: { reopenOrder?: boolean }) {
+  allow(actor, 'edit');
+  return db.transaction(async tx => {
+    const { o, v } = await mustLoadDone(tx, actor, orderId, visitId);
+    await tx.update(visit).set({ doneAt: null }).where(eq(visit.id, visitId));
+    await log(tx, actor, 'order', orderId, th('visitReopened', { visit: `${tw(`visit.${v.type}`)} · ${fmtDate(v.doneAt)} · ${await nameOf(tx, v.installerId)}` }), {
+      field: 'visit',
+      old: `done@${v.doneAt}`,
+      new: 'planned',
+    });
+    const stage = !!input.reopenOrder && o.stage === 'done' && !isProject(o);
+    if (stage) {
+      const label = await stageLabels(tx, actor.companyId);
+      await tx.update(orders).set({ stage: 'active', doneAt: null, payTerm: null, dueDate: null }).where(eq(orders.id, orderId));
+      await log(tx, actor, 'order', orderId, th('stage', { from: label('done'), to: label('active') }), { field: 'stage', old: 'done', new: 'active' });
+    }
+    return { reopenedOrder: stage };
   });
 }
 
