@@ -17,7 +17,8 @@ export async function login(_prev: LoginState, form: FormData): Promise<LoginSta
   try {
     await auth.api.signInEmail({ body: parsed.data, headers: await headers() });
   } catch (e) {
-    if (e instanceof APIError) return { error: 'invalid', email };
+    // The production bundle can hold a second copy of the class, so `instanceof` alone misses it.
+    if (e instanceof APIError || (e instanceof Error && e.name === 'APIError')) return { error: 'invalid', email };
     throw e;
   }
   redirect('/');
