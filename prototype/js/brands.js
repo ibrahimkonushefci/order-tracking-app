@@ -1,5 +1,5 @@
 /* Two sample brands in the brand.json v2 shape (plus prototype-only `people`
- * and `catalog`, which in the app come from users/teams and businessType seed). */
+ * and `catalog`, which in the app come from users/installers and businessType seed). */
 window.OT = window.OT || {};
 
 OT.brands = {
@@ -25,8 +25,7 @@ OT.brands = {
     depositWord: 'Avans',
     modules: { orderTracking: true },
     demo: true,
-    hiddenStages: [],
-    people: { owner: 'Arben', office: 'Teuta', installers: ['Driton', 'Faton', 'Besnik'] },
+    people: { owner: 'Arben', office: 'Teuta', installers: [['Driton', '+38344281734'], ['Faton', '+38349660218'], ['Besnik', '+38345117390']] },
     catalog: {
       scale: 1,
       main: { type: 'Kuzhinë', descs: ['Kuzhinë në formë L, MDF mat, sipërfaqe pune kuarc', 'Kuzhinë me ishull, fronte arre', 'Kuzhinë e drejtë 3,6 m, fronte të bardha me shkëlqim', 'Kuzhinë në formë U, antracit mat'], min: 3500, max: 8500 },
@@ -34,6 +33,8 @@ OT.brands = {
       small: { type: 'Dollap banjoje', descs: ['Dollap banjoje i varur me lavaman', 'Dollap banjoje me pasqyrë dhe ndriçim'], min: 450, max: 900 },
       pickup: { type: 'Tavolinë ngrënieje', descs: ['Tavolinë lisi 180 cm + 6 karrige, nga stoku'], min: 850, max: 850 },
       delivery: { type: 'Mobilje dhome ditore', descs: ['Njësi TV + raft muri, e montuar në punëtori'], min: 700, max: 1100 },
+      // A builder's order, installed in parts (spec §3 multi-unit projects)
+      project: { client: 'Arbëria Invest sh.p.k.', type: 'Kuzhinë', desc: 'Kuzhina për 24 banesa · Kompleksi Arbëria, Lamela B', qty: 24, unit: 'banesa', unitPrice: 2800, batches: [[4, -80], [6, -60], [5, -41], [3, -15]], paid: [[20000, -120], [19600, -30]], next: 'Lamela B, kati 3: 4 kuzhina', short: '24 kuzhina' },
       photo: 'kitchen'
     }
   },
@@ -60,9 +61,7 @@ OT.brands = {
     depositWord: 'Kapar',
     modules: { orderTracking: true },
     demo: true,
-    hiddenStages: [],
-    stageLabels: { production: 'Porositur te furnitori' }, // renamed label, same key
-    people: { owner: 'Burim', office: 'Vjosa', installers: ['Gentrit', 'Valon', 'Agon'] },
+    people: { owner: 'Burim', office: 'Vjosa', installers: [['Gentrit', '+38344390521'], ['Valon', '+38349215874'], ['Agon', '+38345703126']] },
     catalog: {
       scale: 0.5,
       main: { type: 'Dyer të brendshme', descs: ['6 dyer të brendshme, laminat i bardhë, me pragje', '5 dyer të brendshme, ngjyrë lisi', '7 dyer me xham satinato'], min: 1600, max: 3600 },
@@ -70,6 +69,7 @@ OT.brands = {
       small: { type: 'Derë hyrëse', descs: ['Derë hyrëse e blinduar, antracit', 'Derë hyrëse me xham anësor'], min: 650, max: 1200 },
       pickup: { type: 'Derë e brendshme nga stoku', descs: ['2 dyer 80 cm nga stoku, pa montim'], min: 340, max: 340 },
       delivery: { type: 'Parket (vetëm dërgesë)', descs: ['Parket laminat 60 m², vetëm dërgesë'], min: 700, max: 1000 },
+      project: { client: 'Kodra Ndërtim sh.p.k.', type: 'Dyer të brendshme', desc: '100 dyer të brendshme · Banesat Kodra e Diellit, hyrja 2', qty: 100, unit: 'copë', unitPrice: 250, batches: [[5, -75], [10, -62], [8, -50], [9, -38], [8, -20]], paid: [[5000, -90], [2500, -30]], next: 'Kati 4: 10 dyer', short: '100 dyer' },
       photo: 'door'
     }
   }

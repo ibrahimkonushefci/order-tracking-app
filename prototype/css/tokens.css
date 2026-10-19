@@ -3,14 +3,17 @@
  *
  * Layers:
  *   1. Brand tokens (--brand-*): set per client from brand.json v2 `colors`.
- *      The prototype overwrites them at runtime when switching brands.
- *   2. Semantic tokens (--color-*): what components use. Derived from brand
- *      tokens + fixed neutrals/status colours. Components never use raw hex.
+ *      app.js also derives two dark-mode shades of the brand primary:
+ *      --brand-ink-dark (text, icons, active tabs) and --brand-fill-dark (buttons).
+ *   2. Semantic tokens (--color-*): what components use. Components never use raw hex.
+ *      --color-primary is for fills (buttons, selected chips);
+ *      --color-primary-ink is for brand-colored text and icons on cards.
  *   3. Scales: spacing, radius, type, shadow, motion, touch sizes.
+ *   4. Night Mode: [data-theme="dark"] on <html> swaps the semantic layer only.
  *
  * Mapping for the app: these become the shadcn/ui CSS variables
  * (--primary → --color-primary, --background → --color-canvas, etc.) and
- * Tailwind theme extensions (spacing/radius/fontSize read from these vars).
+ * Tailwind theme extensions; dark mode uses the same [data-theme="dark"] selector.
  */
 :root {
   /* 1. Brand (brand.json v2 → colors.*) */
@@ -19,42 +22,65 @@
   --brand-accent: #C8A165;
   --brand-accent-contrast: #1A1A1A;
   --brand-background: #FFFFFF;
-  --brand-text: #1A1A1A;
+  --brand-text: #0F172A;
+  --brand-ink-dark: #8EB2E6;
+  --brand-fill-dark: #3B67A3;
+  --brand-fill-dark-contrast: #FFFFFF;
 
-  /* 2. Semantic colours */
+  /* 2. Semantic colours (light) */
   --color-primary: var(--brand-primary);
   --color-primary-contrast: var(--brand-primary-contrast);
-  --color-primary-hover: color-mix(in srgb, var(--brand-primary) 88%, black);
-  --color-primary-soft: color-mix(in srgb, var(--brand-primary) 9%, white);
-  --color-primary-soft-2: color-mix(in srgb, var(--brand-primary) 16%, white);
+  --color-primary-ink: var(--brand-primary);
+  --color-primary-hover: color-mix(in srgb, var(--color-primary) 86%, black);
+  --color-primary-soft: color-mix(in srgb, var(--color-primary-ink) 7%, var(--color-surface));
+  --color-primary-soft-2: color-mix(in srgb, var(--color-primary-ink) 14%, var(--color-surface));
   --color-accent: var(--brand-accent);
   --color-accent-contrast: var(--brand-accent-contrast);
-  --color-accent-soft: color-mix(in srgb, var(--brand-accent) 18%, white);
+  --color-accent-soft: color-mix(in srgb, var(--brand-accent) 16%, var(--color-surface));
 
-  --color-canvas: #F2F3F5;          /* app background behind cards */
-  --color-surface: var(--brand-background); /* cards, sheets, header */
-  --color-surface-2: #F7F8FA;       /* inset areas inside cards */
-  --color-border: #E2E5E9;
-  --color-border-strong: #CBD0D6;
+  --color-canvas: #F6F8FA;          /* cool alabaster behind cards */
+  --color-surface: var(--brand-background);
+  --color-surface-2: #F2F5F9;       /* inset areas inside cards */
+  --color-surface-glass: rgba(255, 255, 255, .82);
+  --color-border: #EAEEF4;
+  --color-border-strong: #D3DAE4;
   --color-text: var(--brand-text);
-  --color-text-muted: #59616B;
-  --color-text-subtle: #858C95;
-  --color-focus: color-mix(in srgb, var(--brand-primary) 55%, white);
+  --color-text-muted: #546173;
+  --color-text-subtle: #8591A3;
+  --color-focus: color-mix(in srgb, var(--color-primary-ink) 50%, transparent);
 
-  /* Status: overdue / errors */
-  --color-danger: #B42318;
-  --color-danger-soft: #FDECEA;
-  /* Waiting: reported cash, pauses, at-risk */
-  --color-warning: #A15C07;
-  --color-warning-soft: #FEF3E2;
-  /* Done / paid / confirmed */
-  --color-success: #067647;
-  --color-success-soft: #E6F5EC;
-  /* Informational: opening balances, schedule */
-  --color-info: #1D5FA8;
-  --color-info-soft: #E8F1FB;
-  /* Neutral tags */
-  --color-neutral-soft: #ECEEF1;
+  /* Status: one meaning each */
+  --color-danger: #C42B1C;          /* past due */
+  --color-danger-soft: #FDEEEC;
+  --color-warning: #B25607;         /* waiting: cash with an installer, pauses, a busy day */
+  --color-warning-soft: #FEF3E3;
+  --color-warning-bar: #F2A23A;
+  --color-success: #0B7A4B;         /* paid, done, free */
+  --color-success-soft: #E6F6EE;
+  --color-success-bar: #22A06B;
+  --color-info: #1E63C4;            /* measurements, opening balances, information */
+  --color-info-soft: #EAF2FD;
+  --color-teal: #0D7C86;            /* deliveries */
+  --color-teal-soft: #E3F5F6;
+  --color-neutral-soft: #EEF1F6;
+  --color-track: #E7EBF1;           /* empty part of a bar */
+
+  /* Visit types (left accents, dots, icons) */
+  --visit-measure: var(--color-info);
+  --visit-install: var(--color-primary-ink);
+  --visit-delivery: var(--color-teal);
+  --visit-repair: var(--color-warning);
+
+  /* Stage colours in the stepper */
+  --stage-new: var(--color-info);
+  --stage-active: var(--color-primary-ink);
+  --stage-done: var(--color-success);
+
+  /* The Sot headline: a layered dark brand card */
+  --hero-bg: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--brand-accent) 28%, transparent) 0%, transparent 55%),
+             linear-gradient(160deg, color-mix(in srgb, var(--brand-primary) 92%, white) 0%, color-mix(in srgb, var(--brand-primary) 82%, black) 100%);
+  --hero-text: #FFFFFF;
+  --hero-line: rgba(255, 255, 255, .14);
 
   /* Channels (fixed, not brand) */
   --color-whatsapp: #1FA855;
@@ -76,37 +102,39 @@
 
   /* Radius */
   --radius-xs: 6px;
-  --radius-sm: 8px;
+  --radius-sm: 9px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-xl: 22px;
   --radius-pill: 999px;
 
-  /* Typography (brand.json `font`, with an offline system fallback) */
+  /* Typography: Inter (loaded in index.html; the app self-hosts it) */
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  /* Body stays 16px for older eyes and bright workshops; calm comes from a
-   * short heading scale and few weights, not from small text. */
-  --text-xs: 12px;   --leading-xs: 16px;
-  --text-sm: 14px;   --leading-sm: 20px;
-  --text-md: 16px;   --leading-md: 24px;
-  --text-lg: 18px;   --leading-lg: 26px;
-  --text-xl: 20px;   --leading-xl: 26px;
-  --text-2xl: 24px;  --leading-2xl: 30px;
-  --text-3xl: 32px;  --leading-3xl: 38px;
+  --font-features: "cv02", "cv03", "cv04", "cv11";
+  /* Phone-first: crisp, not blunt. Amounts and titles get tight tracking. */
+  --text-xs: 11.5px;  --leading-xs: 16px;
+  --text-sm: 13px;    --leading-sm: 18px;
+  --text-md: 15px;    --leading-md: 22px;
+  --text-lg: 17px;    --leading-lg: 24px;
+  --text-xl: 19px;    --leading-xl: 26px;
+  --text-2xl: 23px;   --leading-2xl: 28px;
+  --text-3xl: 30px;   --leading-3xl: 36px;
+  --tracking-tight: -0.02em;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* Elevation */
-  --shadow-1: 0 1px 2px rgba(16, 24, 40, .04);
-  --shadow-2: 0 4px 12px rgba(16, 24, 40, .08), 0 1px 3px rgba(16, 24, 40, .06);
-  --shadow-sheet: 0 -8px 32px rgba(16, 24, 40, .18);
+  /* Elevation: soft and layered */
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, .04), 0 1px 1px rgba(15, 23, 42, .02);
+  --shadow-2: 0 12px 28px -14px rgba(15, 23, 42, .22), 0 2px 6px rgba(15, 23, 42, .05);
+  --shadow-hero: 0 18px 36px -18px color-mix(in srgb, var(--brand-primary) 70%, transparent);
+  --shadow-sheet: 0 -16px 40px rgba(15, 23, 42, .18);
 
   /* Touch targets (spec: at least 44px) */
   --touch-min: 44px;
-  --touch-lg: 56px;   /* field-team primary actions */
+  --touch-lg: 52px;
 
   /* Motion */
   --ease-out: cubic-bezier(.2, .8, .2, 1);
@@ -115,5 +143,61 @@
 
   /* Layout */
   --content-max: 1120px;
-  --rail-width: 232px;
+  --rail-width: 224px;
+
+  /* Prototype stage behind the device frame */
+  --stage-bg: #E6EAF0;
+
+  color-scheme: light;
+}
+
+/* 4. Night Mode: rich dark slate surfaces; brand shades derived in app.js */
+:root[data-theme="dark"] {
+  --color-primary: var(--brand-fill-dark);
+  --color-primary-contrast: var(--brand-fill-dark-contrast);
+  --color-primary-ink: var(--brand-ink-dark);
+  --color-primary-hover: color-mix(in srgb, var(--color-primary) 86%, white);
+  --color-primary-soft: color-mix(in srgb, var(--color-primary-ink) 11%, var(--color-surface));
+  --color-primary-soft-2: color-mix(in srgb, var(--color-primary-ink) 20%, var(--color-surface));
+  --color-accent-soft: color-mix(in srgb, var(--brand-accent) 18%, var(--color-surface));
+
+  --color-canvas: #0B0F17;
+  --color-surface: #131B26;
+  --color-surface-2: #1C2636;
+  --color-surface-glass: rgba(19, 27, 38, .84);
+  --color-border: #233044;
+  --color-border-strong: #31415A;
+  --color-text: #E8EDF4;
+  --color-text-muted: #A2AEC0;
+  --color-text-subtle: #6F7D92;
+  --color-focus: color-mix(in srgb, var(--color-primary-ink) 55%, transparent);
+
+  --color-danger: #F2837A;
+  --color-danger-soft: rgba(242, 131, 122, .13);
+  --color-warning: #F5B755;
+  --color-warning-soft: rgba(245, 183, 85, .13);
+  --color-warning-bar: #E8A23C;
+  --color-success: #4CD39A;
+  --color-success-soft: rgba(76, 211, 154, .12);
+  --color-success-bar: #2FB57E;
+  --color-info: #74ADF6;
+  --color-info-soft: rgba(116, 173, 246, .13);
+  --color-teal: #4FC9D2;
+  --color-teal-soft: rgba(79, 201, 210, .12);
+  --color-neutral-soft: #1C2636;
+  --color-track: #243146;
+
+  --hero-bg: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--brand-ink-dark) 22%, transparent) 0%, transparent 58%),
+             linear-gradient(160deg, #1B2636 0%, #121A25 100%);
+  --hero-text: #F2F5FA;
+  --hero-line: rgba(255, 255, 255, .09);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-2: 0 14px 30px -14px rgba(0, 0, 0, .6), 0 2px 6px rgba(0, 0, 0, .3);
+  --shadow-hero: 0 18px 40px -18px rgba(0, 0, 0, .7);
+  --shadow-sheet: 0 -16px 40px rgba(0, 0, 0, .55);
+
+  --stage-bg: #05080D;
+
+  color-scheme: dark;
 }

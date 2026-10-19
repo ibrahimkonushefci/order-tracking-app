@@ -6,12 +6,25 @@
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#1F3A5F">
   <title>Porositë · prototip</title>
-  <link rel="stylesheet" href="css/tokens.css?v=7">
-  <link rel="stylesheet" href="css/app.css?v=7">
+  <!-- Night Mode before first paint: saved choice, else the device setting (no white flash) -->
+  <script>
+    (function () {
+      var t = null;
+      try { t = (JSON.parse(localStorage.getItem('ot-proto-prefs')) || {}).theme; } catch (e) {}
+      if (t !== 'dark' && t !== 'light') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+  <!-- Inter from Google Fonts (prototype only; the app self-hosts it) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/tokens.css?v=9">
+  <link rel="stylesheet" href="css/app.css?v=9">
 </head>
 <body>
   <!-- Prototype chrome (laptop only; on a phone use the avatar button in the app header).
-       Filled by app.js: brand, "Shiko si", the demo moments, and a "Më shumë" panel. -->
+       Filled by app.js: brand, "Shiko si" (Pronari / Zyra / Klienti), the demo moments, and a "Më shumë" panel. -->
   <div class="proto-bar" id="proto-bar"></div>
 
   <div class="stage">
@@ -24,9 +37,10 @@
     </div>
   </div>
 
-  <script src="js/brands.js?v=7"></script>
-  <script src="js/logic.js?v=7"></script>
-  <script src="js/data.js?v=7"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/brands.js?v=9"></script>
+  <script src="js/logic.js?v=9"></script>
+  <script src="js/data.js?v=9"></script>
+  <script src="js/export.js?v=9"></script>
+  <script src="js/app.js?v=9"></script>
 </body>
 </html>

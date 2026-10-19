@@ -13,10 +13,11 @@
   OT.diffDays = (a, b) => Math.round((OT.parse(a) - OT.parse(b)) / 864e5);
   OT.fmtDate = iso => { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return `${d}.${m}.${y}`; };
   OT.WEEKDAYS = ['E diel', 'E hënë', 'E martë', 'E mërkurë', 'E enjte', 'E premte', 'E shtunë'];
+  OT.WEEKDAYS_ON = ['të dielën', 'të hënën', 'të martën', 'të mërkurën', 'të enjten', 'të premten', 'të shtunën'];
   OT.MONTHS = ['janar', 'shkurt', 'mars', 'prill', 'maj', 'qershor', 'korrik', 'gusht', 'shtator', 'tetor', 'nëntor', 'dhjetor'];
   OT.fmtDay = iso => {
     if (!iso) return '—';
-    const t = OT.today(), diff = OT.diffDays(iso, t);
+    const diff = OT.diffDays(iso, OT.today());
     if (diff === 0) return 'Sot';
     if (diff === 1) return 'Nesër';
     if (diff === -1) return 'Dje';
@@ -25,6 +26,13 @@
   OT.fmtLong = iso => `${OT.WEEKDAYS[OT.parse(iso).getDay()]}, ${OT.fmtDate(iso)}`;
   OT.fmtMonth = ym => { const [y, m] = ym.split('-').map(Number); return `${OT.MONTHS[m - 1]} ${y}`; };
   OT.nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  /** "sot", "dje", "12 ditë më parë", "3 muaj më parë" */
+  OT.ago = iso => {
+    const n = OT.diffDays(OT.today(), iso);
+    if (n <= 0) return 'sot';
+    if (n === 1) return 'dje';
+    return n > 60 ? `${Math.floor(n / 30)} muaj më parë` : `${n} ditë më parë`;
+  };
 
   /* ───────── Money ───────── */
   OT.eur = cents => {
@@ -43,319 +51,327 @@
     return Math.round(parseFloat(t) * 100);
   };
 
-  /* ───────── Stages: fixed keys, fixed order; labels may be renamed ───────── */
-  OT.STAGE_KEYS = ['new', 'measurement', 'production', 'ready', 'scheduled', 'fulfilled'];
-  OT.METHODS = { installation: 'Montim', delivery: 'Dërgesë', pickup: 'Tërheqje nga dyqani' };
-  OT.stageLabel = (key, method, brand) => {
-    const custom = brand && brand.stageLabels && brand.stageLabels[key];
-    if (custom) return custom;
-    if (key === 'scheduled') return method === 'delivery' ? 'Dërgesë e planifikuar' : 'Montim i planifikuar';
-    if (key === 'fulfilled') return { installation: 'Montuar', delivery: 'Dorëzuar', pickup: 'Tërhequr' }[method];
-    return { new: 'E re', measurement: 'Matje', production: 'Në prodhim', ready: 'Gati', cancelled: 'Anuluar' }[key];
-  };
-  /** Stages this order can pass through (pickup skips `scheduled`; hidden stages removed). */
-  OT.flow = (o, brand) => OT.STAGE_KEYS.filter(k =>
-    !(o.fulfilment === 'pickup' && k === 'scheduled') && !((brand.hiddenStages || []).includes(k)));
-  OT.stageIndex = k => OT.STAGE_KEYS.indexOf(k);
+  /* ───────── Stages: three fixed keys; labels may be renamed ───────── */
+  OT.STAGES = ['new', 'active', 'done'];
+  const STAGE_LABEL = { new: 'E re', active: 'Në punë', done: 'E kryer', cancelled: 'Anuluar' };
+  OT.TRACK_LABEL = { new: 'Porosia u pranua', active: 'Në punë', done: 'E kryer' };
+  OT.stageLabel = (key, brand) => (brand && brand.stageLabels && brand.stageLabels[key]) || STAGE_LABEL[key];
+
+  /* ───────── Visits: the only dates in the app ───────── */
+  OT.VISIT = { measure: 'Matje', install: 'Montim', delivery: 'Dërgesë', repair: 'Riparim' };
+  OT.VISIT_DONE = { measure: 'Matja u krye', install: 'Montimi u krye', delivery: 'Dërgesa u krye', repair: 'Riparimi u krye' };
+  OT.VISIT_ICON = { measure: 'ruler', install: 'tool', delivery: 'truck', repair: 'tool' };
+  OT.timeLabel = t => !t ? '' : t === 'morning' ? 'paradite' : t === 'afternoon' ? 'pasdite' : t;
+  const timeSort = t => !t ? '12:30' : t === 'morning' ? '08:00' : t === 'afternoon' ? '13:00' : t;
+  OT.visitSort = (a, b) => (a.date + timeSort(a.time)).localeCompare(b.date + timeSort(b.time));
+  /** Visit types where installers usually take the rest of the money. */
+  OT.collectsCash = v => v.type === 'install' || v.type === 'delivery';
+
+  /* ───────── Payment terms (when a done order / an installed part must be paid) ───────── */
+  OT.TERMS = { week: 'Brenda javës', month: 'Brenda muajit', date: 'Në një datë', unknown: 'Nuk e di' };
+  const TERM_DAYS = { week: 7, month: 30 };
+  const termDue = (from, term, date) => term === 'date' ? (date || null) : TERM_DAYS[term] ? OT.addDays(from, TERM_DAYS[term]) : null;
+
+  OT.UNITS = ['copë', 'm²', 'banesa'];
+  OT.METHODS = { cash: 'Kesh', bank: 'Bankë', card: 'Kartelë' };
+
+  /* ───────── Lookups ───────── */
+  OT.customer = id => OT.state.customers.find(c => c.id === id);
+  OT.order = id => OT.state.orders.find(o => o.id === id);
+  OT.opening = id => OT.state.openings.find(o => o.id === id);
+  OT.installer = id => OT.state.installers.find(i => i.id === id);
+  OT.user = id => OT.state.users.find(u => u.id === id);
+  OT.currentUser = () => OT.state.users.find(u => u.role === OT.state.role) || OT.state.users[0];
+  OT.isProject = o => !!o.qty;
+  OT.recOf = (kind, id) => kind === 'opening' ? OT.opening(id) : OT.order(id);
+  OT.nameOf = (kind, r) => kind === 'opening' ? r.name : OT.customer(r.customerId).name;
 
   /* ───────── Balances ───────── */
+  /** paid = everything the customer handed over; held = still with an installer. */
+  OT.paidOf = payments => {
+    let paid = 0, held = 0;
+    for (const p of payments) { paid += p.amount; if (p.heldBy && !p.handedAt) held += p.amount; }
+    return { paid, held, inOffice: paid - held };
+  };
+  OT.unitPrice = o => Math.round(o.price / o.qty);
+  /** Installed parts of a project: done visits with a quantity, oldest first. */
+  OT.batches = o => o.visits.filter(v => v.doneAt && v.qty > 0).sort((a, b) => a.doneAt.localeCompare(b.doneAt));
+  OT.batchValue = (o, v) => v.value != null ? v.value : v.qty * OT.unitPrice(o);
+  OT.installedQty = o => OT.batches(o).reduce((s, v) => s + v.qty, 0);
+
+  /**
+   * What the customer owes right now, and since when.
+   * - Normal order: nothing until it is done; then price − paid, due by the chosen term.
+   * - Project: value of installed parts − paid (the whole contract once done).
+   *   Payments cover the oldest parts first; the oldest part not yet paid sets the due date.
+   */
   OT.orderTotals = o => {
-    const adj = (o.adjustments || []).reduce((s, a) => s + a.amount, 0);
-    const total = o.price - (o.discount || 0) + adj;
-    return { adj, total, ...OT.paidOf(o.payments || [], total) };
-  };
-  OT.openingTotals = ob => ({ adj: 0, total: ob.amount, ...OT.paidOf(ob.payments || [], ob.amount) });
-  OT.paidOf = (payments, total) => {
-    let confirmed = 0, reported = 0;
-    for (const p of payments) {
-      if (p.status === 'confirmed' || p.status === 'reversal') confirmed += p.amount;
-      else if (p.status === 'reported') reported += p.amount;
-      // rejected → ignored
+    const { paid, held, inOffice } = OT.paidOf(o.payments);
+    const total = o.price, chunks = [];
+    if (o.stage !== 'cancelled') {
+      if (OT.isProject(o)) {
+        for (const b of OT.batches(o)) chunks.push({ value: OT.batchValue(o, b), due: termDue(b.doneAt, o.payTerm) });
+        const sum = chunks.reduce((s, c) => s + c.value, 0);
+        if (o.stage === 'done' && total > sum) chunks.push({ value: total - sum, due: termDue(o.doneAt, o.payTerm, o.dueDate) });
+      } else if (o.stage === 'done') chunks.push({ value: total, due: termDue(o.doneAt, o.payTerm, o.dueDate) });
     }
-    const paid = confirmed + reported;              // customer has paid
-    return { confirmed, reported, paid, remaining: total - paid, inOffice: confirmed };
+    // The contract is the ceiling until the owner edits it.
+    let earned = 0;
+    for (const c of chunks) { c.value = Math.min(c.value, total - earned); earned += c.value; }
+    let left = paid, dueDate, found = false;
+    for (const c of chunks) {
+      const covered = Math.min(c.value, Math.max(0, left)); left -= covered;
+      if (covered < c.value && !found) { dueDate = c.due; found = true; }
+    }
+    const owed = Math.max(0, earned - paid);
+    return {
+      total, paid, held, inOffice, remaining: total - paid, earned, owed,
+      paidAhead: OT.isProject(o) && o.stage !== 'done' ? Math.max(0, paid - earned) : 0,
+      dueDate: owed > 0 ? dueDate || null : null, dueUnknown: owed > 0 && !dueDate
+    };
   };
+  OT.openingTotals = ob => {
+    const { paid, held, inOffice } = OT.paidOf(ob.payments);
+    const owed = Math.max(0, ob.amount - paid);
+    return { total: ob.amount, paid, held, inOffice, remaining: ob.amount - paid, earned: ob.amount, owed, paidAhead: 0, dueDate: owed > 0 ? ob.dueDate : null, dueUnknown: owed > 0 && !ob.dueDate };
+  };
+  OT.totalsOf = (kind, r) => kind === 'opening' ? OT.openingTotals(r) : OT.orderTotals(r);
+
   OT.PAY_STATUS = { unpaid: 'Pa paguar', deposit: 'Avans', partial: 'Pjesërisht', paid: 'Paguar' };
   /** Company setting: some regions say "avans", others "kapar". */
   OT.depositWord = () => (OT.state && OT.state.settings.depositWord) || 'Avans';
   OT.payLabel = st => st === 'deposit' ? OT.depositWord() : OT.PAY_STATUS[st];
-  OT.payStatus = (o, t) => t.paid <= 0 ? 'unpaid' : t.remaining <= 0 ? 'paid' : (o.stage === 'fulfilled' ? 'partial' : 'deposit');
+  OT.payStatus = (o, t) => t.paid <= 0 ? 'unpaid' : t.remaining <= 0 ? 'paid' : (o.stage === 'done' ? 'partial' : 'deposit');
 
-  /* ───────── Reminder suggestion rules (spec §6) ───────── */
-  OT.reminderCheck = ({ remaining, dueDate, reported, pause, noReminders }) => {
-    const today = OT.today();
-    if (remaining <= 0) return { ok: false, reason: 'Nuk ka borxh' };
-    if (!dueDate) return { ok: false, reason: 'Afat i panjohur: nuk sugjerohen kujtesa' };
-    const late = OT.diffDays(today, dueDate);
-    if (late <= 0) return { ok: false, reason: `Afati i pagesës: ${OT.fmtDate(dueDate)}`, notDue: true };
-    if (reported > 0) return { ok: false, reason: `${OT.eur(reported)} raportuar nga montuesi, pa konfirmuar` };
-    if (pause && pause.until >= today) return { ok: false, reason: `Kujtesat në pauzë deri më ${OT.fmtDate(pause.until)}` };
-    if (noReminders) return { ok: false, reason: 'Klienti është shënuar “Mos sugjero kujtesa”' };
-    const days = OT.state.settings.reminderDays;
-    const step = days.filter(d => late >= d).length;
-    if (step === 0) return { ok: false, reason: `Kujtesa e parë sugjerohet ${days[0]} ditë pas afatit` };
-    return { ok: true, step, late };
+  /* ───────── Reminder rule (spec §7): no schedule, just "is it reasonable now?" ───────── */
+  OT.REMINDER_GAP = 7;
+  OT.lastReminder = r => (r.messages || []).filter(m => m.type === 'reminder').sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))[0] || null;
+  OT.noReminders = (kind, r) => kind === 'opening' ? !!r.noReminders : !!OT.customer(r.customerId).noReminders;
+  OT.reminderCheck = (kind, r) => {
+    const t = OT.totalsOf(kind, r), today = OT.today();
+    if (t.owed <= 0) return { ok: false, reason: 'Nuk ka borxh' };
+    if (!t.dueDate) return { ok: false, reason: 'Afat i panjohur' };
+    const late = OT.diffDays(today, t.dueDate);
+    if (late <= 0) return { ok: false, reason: `Afati i pagesës: ${OT.fmtDate(t.dueDate)}`, notDue: true };
+    if (r.pause && r.pause.until >= today) return { ok: false, reason: `Kujtesat në pauzë deri më ${OT.fmtDate(r.pause.until)}` };
+    if (OT.noReminders(kind, r)) return { ok: false, reason: 'Mos sugjero kujtesa' };
+    const last = OT.lastReminder(r);
+    if (last && OT.diffDays(today, last.date) < OT.REMINDER_GAP) return { ok: false, reason: `Kujtesa e fundit ${OT.ago(last.date)}` };
+    return { ok: true, late, sent: (r.messages || []).filter(m => m.type === 'reminder').length };
   };
 
-  OT.customer = id => OT.state.customers.find(c => c.id === id);
-  /** Where the job happens: the order's own location (e.g. parents' house) or the customer's. */
-  OT.locOf = o => o.location || OT.customer(o.customerId).loc;
-  OT.locLine = l => [l.street, l.village, l.city].filter(Boolean).join(', ');
-  OT.order = id => OT.state.orders.find(o => o.id === id);
-  OT.opening = id => OT.state.openings.find(o => o.id === id);
-  OT.team = id => OT.state.teams.find(t => t.id === id);
-  OT.user = id => OT.state.users.find(u => u.id === id);
-
-  /** Who the rest of the money is collected from / the person reminders go to. */
-  OT.payerOf = o => o.payer || OT.contactFromCustomer(OT.customer(o.customerId));
-  OT.contactFromCustomer = c => ({ name: c.name, phone: c.phone, channel: c.channel, country: c.country });
-
   /* ───────── Debts list ───────── */
+  OT.installerName = id => (OT.installer(id) || { name: '—' }).name;
+  const heldLine = payments => {
+    const by = {};
+    for (const p of payments) if (p.heldBy && !p.handedAt) by[p.heldBy] = (by[p.heldBy] || 0) + p.amount;
+    return Object.entries(by).map(([id, a]) => `${OT.eur(a)} te ${OT.installerName(id)}`).join(', ');
+  };
   OT.debts = () => {
     const S = OT.state, today = OT.today(), rows = [];
+    const row = (kind, r, t, base) => {
+      const late = t.dueDate ? OT.diffDays(today, t.dueDate) : null;
+      const rem = OT.reminderCheck(kind, r), last = OT.lastReminder(r);
+      // Every context is computed, most decisive first; a row shows only the first one.
+      const contexts = [];
+      if (t.held > 0) contexts.push(['warning', 'cash', `${heldLine(r.payments)}, pa dorëzuar`]);
+      if (OT.noReminders(kind, r)) contexts.push(['neutral', 'bellOff', 'Mos sugjero kujtesa']);
+      if (r.pause && r.pause.until >= today) contexts.push(['neutral', 'pause', `Kujtesat në pauzë deri më ${OT.fmtDate(r.pause.until)} · ${r.pause.reason}`]);
+      if (r.remainingWork) contexts.push(['neutral', 'tool', `Ka punë të mbetura: ${r.remainingWork.note}`]);
+      if (last) contexts.push(['neutral', 'message', `Kujtesa e fundit: ${OT.ago(last.date)}`]);
+      rows.push(Object.assign({
+        kind, id: r.id, amount: t.owed, dueDate: t.dueDate, late, overdue: late != null && late > 0,
+        unknownDue: t.dueUnknown, contexts, status: contexts[0] || null, rem, href: `#/${kind}/${r.id}`
+      }, base));
+    };
     for (const o of S.orders) {
       if (o.stage === 'cancelled') continue;
       const t = OT.orderTotals(o);
-      // Money is owed once the job is fulfilled or a payment due date is set; work in progress isn't debt yet.
-      if (t.remaining <= 0 || !(o.stage === 'fulfilled' || o.dueDate)) continue;
-      const c = OT.customer(o.customerId), payer = OT.payerOf(o);
-      const rem = OT.reminderCheck({ remaining: t.remaining, dueDate: o.dueDate, reported: t.reported, pause: o.pause, noReminders: c.noReminders });
-      const late = o.dueDate ? OT.diffDays(today, o.dueDate) : null;
-      // Every spec context is computed, most decisive first; a row shows only the first one.
-      const contexts = [];
-      if (t.reported > 0) contexts.push(['warning', 'cash', `${OT.eur(t.reported)} raportuar, pa konfirmuar`]);
-      if (c.noReminders) contexts.push(['neutral', 'bellOff', 'Mos sugjero kujtesa']);
-      if (o.pause && o.pause.until >= today) contexts.push(['neutral', 'pause', `Kujtesat në pauzë deri më ${OT.fmtDate(o.pause.until)} · ${o.pause.reason.toLowerCase()}`]);
-      if (o.remainingWork) contexts.push(['neutral', 'tool', `Ka punë të mbetura: ${o.remainingWork.note}`]);
-      if (o.collectAt === 'installers' && o.stage !== 'fulfilled') contexts.push(['neutral', 'truck', 'Mblidhet nga montuesit']);
-      const sinceFul = o.fulfilledAt ? OT.diffDays(today, o.fulfilledAt) : null;
-      const metaBits = [o.number, o.productType];
-      if (sinceFul > 0) metaBits.push(`${sinceFul} ditë nga ${o.fulfilment === 'installation' ? 'montimi' : 'dorëzimi'}`);
-      if (payer.country) metaBits.push(payer.name === c.name ? payer.country : `paguan ${payer.name.split(' ')[0]} (${payer.country})`);
-      rows.push({
-        kind: 'order', id: o.id, name: c.name, phone: payer.phone, channel: payer.channel,
-        meta: metaBits.join(' · '),
-        amount: t.remaining, dueDate: o.dueDate, late, overdue: late != null && late > 0,
-        unknownDue: !o.dueDate, contexts, status: contexts[0] || null, rem, fulfilledAt: o.fulfilledAt, href: `#/order/${o.id}`
-      });
+      if (t.owed <= 0) continue;
+      const c = OT.customer(o.customerId);
+      const meta = [o.number, OT.isProject(o) ? `${OT.installedQty(o)} / ${o.qty} ${o.unit}` : o.productType];
+      if (!OT.isProject(o) && o.doneAt) { const n = OT.diffDays(today, o.doneAt); if (n > 0) meta.push(`${n} ditë nga përfundimi`); }
+      if (c.country) meta.push(c.country);
+      row('order', o, t, { name: c.name, phone: c.phone, channel: c.channel, meta: meta.join(' · ') });
     }
     for (const ob of S.openings) {
       const t = OT.openingTotals(ob);
-      if (t.remaining <= 0) continue;
-      const late = ob.dueDate ? OT.diffDays(today, ob.dueDate) : null;
-      const rem = OT.reminderCheck({ remaining: t.remaining, dueDate: ob.dueDate, reported: t.reported, pause: ob.pause, noReminders: ob.noReminders });
-      // "Borxh i bartur" is in the meta line; "Afat i panjohur" is its own group.
-      const contexts = [];
-      if (t.reported > 0) contexts.push(['warning', 'cash', `${OT.eur(t.reported)} raportuar, pa konfirmuar`]);
-      if (ob.pause && ob.pause.until >= today) contexts.push(['neutral', 'pause', `Kujtesat në pauzë deri më ${OT.fmtDate(ob.pause.until)}`]);
-      rows.push({
-        kind: 'opening', id: ob.id, name: ob.name, phone: ob.phone, channel: ob.channel || 'whatsapp',
-        meta: ob.forWhat ? `Borxh i bartur · ${ob.forWhat}` : 'Borxh i bartur',
-        amount: t.remaining, dueDate: ob.dueDate, late, overdue: late != null && late > 0,
-        unknownDue: !ob.dueDate, contexts, status: contexts[0] || null, rem, href: `#/opening/${ob.id}`, approx: ob.dueApprox
-      });
+      if (t.owed <= 0) continue;
+      row('opening', ob, t, { name: ob.name, phone: ob.phone, channel: ob.channel || 'whatsapp', meta: ob.forWhat ? `Borxh i bartur · ${ob.forWhat}` : 'Borxh i bartur', approx: ob.dueApprox });
     }
     return rows;
   };
 
-  OT.dashboard = () => {
-    const S = OT.state, today = OT.today(), debts = OT.debts();
-    const total = debts.reduce((s, d) => s + d.amount, 0);
-    const overdue = debts.filter(d => d.overdue);
-    const unknown = debts.filter(d => d.unknownDue);
-    const jobs = OT.fieldJobs(null, today, 6);
-    const installs = jobs.filter(j => j.type === 'installation' || j.type === 'delivery' || j.type === 'visit');
-    const cash = OT.cashWithInstallers();
-    const atRisk = S.orders.filter(o => OT.atRisk(o));
-    return {
-      total, count: debts.length, overdue, overdueSum: overdue.reduce((s, d) => s + d.amount, 0),
-      unknownSum: unknown.reduce((s, d) => s + d.amount, 0),
-      installsToday: installs.filter(j => j.date === today), installsWeek: installs,
-      cash, cashSum: cash.reduce((s, g) => s + g.sum, 0),
-      msgCount: OT.suggestions().ready.length, atRisk
-    };
-  };
-
-  OT.atRisk = o => {
-    if (['fulfilled', 'cancelled'].includes(o.stage) || !o.promisedDate) return false;
-    const days = OT.diffDays(o.promisedDate, OT.today());
-    return !!o.delay || (days <= 3 && OT.stageIndex(o.stage) < OT.stageIndex('ready'));
-  };
-
-  /** Reported cash not handed over yet, grouped by installer. */
+  /** Cash an installer took from a customer and hasn't handed over yet, grouped by installer. */
   OT.cashWithInstallers = () => {
     const S = OT.state, groups = {};
-    const add = (p, rec) => {
-      const g = groups[p.receivedBy] || (groups[p.receivedBy] = { userId: p.receivedBy, name: OT.user(p.receivedBy).name, items: [], sum: 0 });
-      g.items.push({ p, rec, days: OT.diffDays(OT.today(), p.date) });
+    const add = (p, kind, r) => {
+      const g = groups[p.heldBy] || (groups[p.heldBy] = { installerId: p.heldBy, name: OT.installerName(p.heldBy), items: [], sum: 0 });
+      g.items.push({ p, kind, r, days: OT.diffDays(OT.today(), p.date) });
       g.sum += p.amount;
     };
-    for (const o of S.orders) for (const p of o.payments) if (p.status === 'reported') add(p, { kind: 'order', o });
-    for (const ob of S.openings) for (const p of ob.payments) if (p.status === 'reported') add(p, { kind: 'opening', o: ob });
+    for (const o of S.orders) for (const p of o.payments) if (p.heldBy && !p.handedAt) add(p, 'order', o);
+    for (const ob of S.openings) for (const p of ob.payments) if (p.heldBy && !p.handedAt) add(p, 'opening', ob);
     return Object.values(groups).sort((a, b) => b.sum - a.sum);
   };
 
-  /* ───────── Field jobs ───────── */
-  OT.fieldJobs = (teamId, from, spanDays) => {
-    const S = OT.state, to = OT.addDays(from, spanDays), jobs = [];
-    const inRange = d => d && d >= from && d <= to;
-    for (const o of S.orders) {
-      if (o.stage === 'cancelled') continue;
-      if (o.stage === 'measurement' && inRange(o.measurementDate))
-        jobs.push({ o, type: 'measurement', date: o.measurementDate, window: o.measurementWindow, teamId: o.teamId, done: !!o.measuredAt });
-      if (o.scheduledDate && inRange(o.scheduledDate) && (o.stage === 'scheduled' || (o.stage === 'fulfilled' && o.fulfilledAt === o.scheduledDate)))
-        jobs.push({ o, type: o.fulfilment === 'delivery' ? 'delivery' : 'installation', date: o.scheduledDate, window: o.arrivalWindow, teamId: o.teamId, done: o.stage === 'fulfilled' });
-      if (o.remainingWork && inRange(o.remainingWork.visitDate))
-        jobs.push({ o, type: 'visit', date: o.remainingWork.visitDate, window: o.remainingWork.window, teamId: o.remainingWork.teamId, done: false });
-    }
-    return jobs.filter(j => !teamId || j.teamId === teamId)
-      .sort((a, b) => (a.date + (a.window || '')).localeCompare(b.date + (b.window || '')));
+  /* ───────── Visits across orders (Orari) ───────── */
+  OT.allVisits = () => {
+    const out = [];
+    for (const o of OT.state.orders) if (o.stage !== 'cancelled') for (const v of o.visits) out.push({ o, v });
+    return out.sort((a, b) => OT.visitSort(a.v, b.v));
   };
-  OT.JOB_TYPES = { measurement: 'Matje', installation: 'Montim', delivery: 'Dërgesë', visit: 'Vizitë plotësuese' };
-  /** Field sees "Mblidh €X" only when installers are supposed to collect. */
-  OT.toCollect = o => {
-    if (o.collectAt !== 'installers') return 0;
-    return Math.max(0, OT.orderTotals(o).remaining);
+  OT.visitsOn = date => OT.allVisits().filter(x => x.v.date === date);
+  /** Planned visits from the last two weeks that nobody marked done. */
+  OT.pastUndone = () => { const t = OT.today(), from = OT.addDays(t, -14); return OT.allVisits().filter(x => !x.v.doneAt && x.v.date < t && x.v.date >= from); };
+  OT.nextVisit = o => o.visits.filter(v => !v.doneAt && v.date >= OT.today()).sort(OT.visitSort)[0] || null;
+  /** A visit that should have happened by now and isn't marked done. */
+  OT.dueVisit = o => o.visits.filter(v => !v.doneAt && v.date <= OT.today()).sort(OT.visitSort)[0] || null;
+  /* ───────── Punët e montuesve: who is free, who did what ───────── */
+  OT.WEEKDAYS_SHORT = ['Di', 'Hë', 'Ma', 'Më', 'En', 'Pr', 'Sh'];
+  /** Albanian definite form of a first name: "Dritoni", "Besniku", "Besa". */
+  OT.definite = n => /[kgh]$/.test(n) ? n + 'u' : /[aeë]$/.test(n) ? n : n + 'i';
+  /** Every visit an installer has on a date (planned or done), except the one being edited. */
+  OT.jobsOn = (installerId, date, exceptId) => OT.allVisits().filter(x => x.v.installerId === installerId && x.v.date === date && x.v.id !== exceptId);
+  OT.loadTone = n => n === 0 ? 'free' : n === 1 ? 'one' : 'busy';
+  /** The helper box under the installer chips in "Planifiko vizitë". */
+  OT.dayLine = (installer, date, exceptId) => {
+    const jobs = OT.jobsOn(installer.id, date, exceptId), d = OT.parse(date);
+    const cap = s => s[0].toUpperCase() + s.slice(1);
+    if (!jobs.length) return { free: true, head: `${installer.name} është i lirë në këtë datë.`, items: [] };
+    const when = `${cap(OT.WEEKDAYS_ON[d.getDay()])}, ${d.getDate()} ${OT.MONTHS[d.getMonth()]}`;
+    const at = v => { const l = OT.timeLabel(v.time); return l ? cap(l) : 'Pa orë'; };
+    return {
+      free: false, n: jobs.length, head: `${when}, ${OT.definite(installer.name)} ka ${jobs.length} punë:`,
+      items: jobs.map(({ o, v }) => `${at(v)} — ${OT.VISIT[v.type]} te ${OT.firstName(OT.customer(o.customerId).name)} (${o.city})`)
+    };
+  };
+  OT.installerSummary = id => {
+    const today = OT.today(), mine = OT.allVisits().filter(x => x.v.installerId === id);
+    const done = { install: 0, delivery: 0, measure: 0, repair: 0 }, units = {};
+    for (const { o, v } of mine) if (v.doneAt) { done[v.type]++; if (v.qty) units[o.unit] = (units[o.unit] || 0) + v.qty; }
+    const g = OT.cashWithInstallers().find(x => x.installerId === id);
+    return {
+      upcoming: mine.filter(x => !x.v.doneAt && x.v.date >= today), unmarked: mine.filter(x => !x.v.doneAt && x.v.date < today),
+      done, doneTotal: Object.values(done).reduce((a, b) => a + b, 0), units, held: g ? g.sum : 0, heldItems: g ? g.items.length : 0
+    };
   };
 
-  /* ───────── Customer tracking timeline (3–5 steps) ───────── */
-  OT.trackingSteps = (o, brand) => {
-    const flow = OT.flow(o, brand);
-    const keys = flow.filter(k => k !== 'new' && !(o.skipped || []).includes(k));
-    const cur = OT.stageIndex(o.stage);
-    const label = k => ({
-      measurement: 'Matja', production: 'Në prodhim', ready: 'Gati',
-      scheduled: o.fulfilment === 'delivery' ? 'Dërgesa' : 'Montimi',
-      fulfilled: o.fulfilment === 'pickup' ? 'Tërhequr' : 'Përfunduar'
-    }[k]);
-    return keys.map(k => {
-      const i = OT.stageIndex(k);
-      let state = i < cur ? 'done' : i === cur ? 'current' : 'future';
-      if (k === 'fulfilled' && o.stage === 'fulfilled') state = o.remainingWork ? 'current' : 'done';
-      if (k === 'measurement' && o.stage === 'measurement' && o.measuredAt) state = 'done';
-      return { key: k, label: label(k), state };
-    });
-  };
-  OT.trackingHeadline = o => {
-    const m = o.fulfilment;
-    if (o.stage === 'fulfilled' && o.remainingWork) return 'Po përfundojmë detajet e fundit';
+  /** "Mblidh €X" for an installer: only normal orders, only what remains. */
+  OT.toCollect = o => OT.isProject(o) ? 0 : Math.max(0, OT.orderTotals(o).remaining);
+
+  OT.dashboard = () => {
+    const debts = OT.debts(), overdue = debts.filter(d => d.overdue);
+    const cash = OT.cashWithInstallers(), sum = rows => rows.reduce((s, d) => s + d.amount, 0);
     return {
-      new: 'Porosia juaj u regjistrua',
-      measurement: o.measuredAt ? 'Matjet u kryen' : 'Matja është planifikuar',
-      production: 'Porosia juaj është në prodhim',
-      ready: m === 'pickup' ? 'Porosia juaj është gati për t’u tërhequr' : 'Porosia juaj është gati',
-      scheduled: m === 'delivery' ? 'Dërgesa është planifikuar' : 'Montimi është planifikuar',
-      fulfilled: m === 'pickup' ? 'Porosia u tërhoq. Faleminderit!' : m === 'delivery' ? 'Porosia u dorëzua. Faleminderit!' : 'Montimi përfundoi. Faleminderit!'
-    }[o.stage];
+      total: sum(debts), overdue, overdueSum: sum(overdue),
+      // Where the money not yet in the office is: the Sot headline's stacked bar
+      upcomingSum: sum(debts.filter(d => !d.overdue && !d.unknownDue)), unknownSum: sum(debts.filter(d => d.unknownDue)), cashSum: cash.reduce((s, g) => s + g.sum, 0),
+      cash, past: OT.pastUndone(), remindable: debts.filter(d => d.rem.ok), today: OT.visitsOn(OT.today())
+    };
+  };
+
+  /* ───────── Customer tracking page: three steps + the next visit ───────── */
+  OT.trackingSteps = o => OT.STAGES.map(k => {
+    const i = OT.STAGES.indexOf(k), cur = OT.STAGES.indexOf(o.stage);
+    let state = i < cur ? 'done' : i === cur ? 'current' : 'future';
+    if (k === 'done' && o.stage === 'done') state = o.remainingWork ? 'current' : 'done';
+    if (k === 'new' && o.stage === 'new') state = 'done'; // "Porosia u pranua" is a fact, not a step in progress
+    return { key: k, label: OT.TRACK_LABEL[k], state };
+  });
+  OT.trackingHeadline = o => {
+    if (o.stage === 'done') return o.remainingWork ? 'Po përfundojmë detajet e fundit' : 'Puna përfundoi. Faleminderit!';
+    if (o.stage === 'active') return OT.isProject(o) ? 'Montimi është në vazhdim' : 'Porosia juaj është në punë';
+    return 'Porosia juaj u pranua';
   };
 
   /* ───────── Prepared messages ───────── */
-  OT.MSG_TYPES = {
-    deposit: { label: 'Paradhënia u pranua', icon: 'check', tone: 'ok' },
-    production: { label: 'Në prodhim', icon: 'package', tone: '' },
-    scheduled: { label: 'Montimi u planifikua', icon: 'calendar', tone: '' },
-    dayBefore: { label: 'Kujtesë: nesër', icon: 'clock', tone: '' },
-    fulfilled: { label: 'Faleminderit + vlerësim', icon: 'star', tone: 'ok' },
-    delay: { label: 'Njoftim për vonesë', icon: 'alert', tone: 'late' },
-    reminder: { label: 'Kujtesë për pagesë', icon: 'wallet', tone: 'money' },
-    manual: { label: 'Mesazh i shkruar me dorë', icon: 'message', tone: '' }
-  };
-  /** Label for a message type; the deposit one follows the company's Avans/Kapar setting. */
-  OT.msgLabel = type => type === 'deposit' ? `${OT.depositWord()}i u pranua` : OT.MSG_TYPES[type].label;
-
   OT.trackingUrl = token => `https://${OT.brand.slug}.example/t/${token}`;
-
-  OT.messageText = (type, rec, extra = {}) => {
-    const S = OT.state, B = OT.brand, staff = OT.currentUser().name;
-    const sign = `\n\n${staff}, ${B.companyName}`;
-    if (rec.kind === 'opening') {
-      const ob = rec.o, t = OT.openingTotals(ob), first = ob.name.split(' ')[0];
-      return `Përshëndetje ${first}, shpresojmë që jeni mirë. Ju kujtojmë me mirësjellje për shumën e mbetur prej ${OT.eur(t.remaining)}${ob.forWhat ? ` (${ob.forWhat.toLowerCase()})` : ''}. Nëse ju përshtatet, na tregoni kur mund ta rregullojmë. Faleminderit!` + sign;
+  /** Greeting name: a person's first name, or a company's name without "sh.p.k.". */
+  const first = name => /sh\.?p\.?k|l\.?l\.?c/i.test(name) ? name.replace(/\s*(sh\.?p\.?k\.?|l\.?l\.?c\.?)\s*$/i, '') : name.split(' ')[0];
+  OT.firstName = first;
+  const sign = () => `\n\n${first(OT.currentUser().name)}, ${OT.brand.companyName}`;
+  /** "të enjten, 23.10" / "nesër (të enjten, 23.10)" */
+  OT.onDay = iso => {
+    const d = OT.parse(iso), base = `${OT.WEEKDAYS_ON[d.getDay()]}, ${OT.fmtDate(iso).slice(0, 5)}`;
+    const diff = OT.diffDays(iso, OT.today());
+    return diff === 0 ? `sot (${base})` : diff === 1 ? `nesër (${base})` : base;
+  };
+  OT.CUSTOMER_MSG = {
+    deposit: 'Avansi u pranua', visit: 'Vijmë për', link: 'Linku i porosisë', thanks: 'Faleminderit', reminder: 'Kujtesë për pagesë', free: 'Mesazh i lirë'
+  };
+  OT.msgLabel = type => type === 'deposit' ? `${OT.depositWord()}i u pranua` : type === 'job' || type === 'day' ? 'Detajet e punës' : OT.CUSTOMER_MSG[type];
+  /** Templates available on an order right now, most useful first. */
+  OT.templatesFor = (kind, r) => {
+    if (kind === 'opening') return ['reminder', 'free'];
+    const t = OT.orderTotals(r), list = [];
+    if (t.owed > 0) list.push('reminder');
+    if (OT.nextVisit(r)) list.push('visit');
+    if (r.stage !== 'done' && r.payments.length) list.push('deposit');
+    list.push('link');
+    if (r.stage === 'done') list.push('thanks');
+    list.push('free');
+    return list;
+  };
+  OT.customerText = (type, kind, r) => {
+    const B = OT.brand;
+    if (kind === 'opening') {
+      const t = OT.openingTotals(r), name = first(r.name);
+      if (type === 'free') return `Përshëndetje ${name},` + sign();
+      return (OT.lastReminder(r)
+        ? `Përshëndetje ${name}, vetëm një kujtesë e vogël për ${OT.eur(t.owed)} që ka mbetur${r.forWhat ? ` (${r.forWhat.toLowerCase()})` : ''}. Nëse ju përshtatet më mirë një datë tjetër, na tregoni dhe e rregullojmë bashkë. Faleminderit!`
+        : `Përshëndetje ${name}, shpresojmë që jeni mirë. Ju kujtojmë me mirësjellje për shumën e mbetur prej ${OT.eur(t.owed)}${r.forWhat ? ` (${r.forWhat.toLowerCase()})` : ''}. Nëse ju përshtatet, na tregoni kur mund ta rregullojmë. Faleminderit!`) + sign();
     }
-    const o = rec.o, c = OT.customer(o.customerId), t = OT.orderTotals(o);
-    const to = type === 'reminder' ? OT.payerOf(o) : (o.onSite || OT.contactFromCustomer(c));
-    const first = to.name.split(' ')[0];
-    const prod = o.productType.toLowerCase();
-    const link = OT.trackingUrl(o.token);
-    const isDel = o.fulfilment === 'delivery';
+    const o = r, c = OT.customer(o.customerId), t = OT.orderTotals(o), name = first(c.name);
+    const prod = o.productType.toLowerCase(), link = OT.trackingUrl(o.token);
+    const what = OT.isProject(o) ? `për ${OT.installedQty(o)} ${o.unit} të montuara deri tani` : `për porosinë ${o.number}`;
     switch (type) {
       case 'deposit': {
-        const dep = [...o.payments].reverse().find(p => p.status === 'confirmed' && p.amount > 0);
-        return `Përshëndetje ${first}, faleminderit për ${OT.depositWord().toLowerCase()}in prej ${OT.eur(dep ? dep.amount : 0)}. Porosia juaj ${o.number} (${prod}) u regjistrua. Gjendjen e porosisë mund ta ndiqni këtu:\n${link}` + sign;
+        const dep = o.payments[0];
+        return `Përshëndetje ${name}, faleminderit për ${OT.depositWord().toLowerCase()}in prej ${OT.eur(dep ? dep.amount : 0)}. Porosia juaj ${o.number} (${prod}) u regjistrua. Gjendjen e porosisë mund ta ndiqni këtu:\n${link}` + sign();
       }
-      case 'production':
-        return `Përshëndetje ${first}, porosia juaj ${o.number} (${prod}) ka hyrë në prodhim. Data e pritshme: ${OT.fmtDate(o.promisedDate)}. Ndiqeni këtu:\n${link}` + sign;
-      case 'scheduled':
-        return `Përshëndetje ${first}, ${isDel ? 'dërgesa' : 'montimi'} për ${prod} është planifikuar më ${OT.fmtLong(o.scheduledDate)}, ora ${o.arrivalWindow}. Nëse data nuk ju përshtatet, na shkruani.\n${link}` + sign;
-      case 'dayBefore':
-        return `Përshëndetje ${first}, ju kujtojmë që nesër (${OT.fmtDate(o.scheduledDate)}) ekipi ynë vjen për ${isDel ? 'dërgesë' : 'montim'}, ora ${o.arrivalWindow}. Për çdo gjë: ${B.contact.phone}.` + sign;
-      case 'fulfilled':
-        return `Faleminderit ${first}! Shpresojmë që t’ju pëlqejë ${prod} e re. Nëse jeni të kënaqur, një vlerësim i shkurtër na ndihmon shumë:\n${B.contact.googleReviewUrl}` + sign;
-      case 'delay':
-        return `Përshëndetje ${first}, ju njoftojmë me keqardhje që porosia ${o.number} do të vonohet pak (${o.delay.reason.toLowerCase()}). Data e re e pritshme: ${OT.fmtDate(o.delay.newDate)}. Ju kërkojmë ndjesë për pritjen dhe ju falënderojmë për durimin.\n${link}` + sign;
-      case 'reminder': {
-        const step = extra.step || 1;
-        if (step === 1)
-          return `Përshëndetje ${first}, shpresojmë që jeni mirë dhe që ${prod} po ju shërben mirë. Ju kujtojmë me mirësjellje që për porosinë ${o.number} ka mbetur për t’u paguar ${OT.eur(t.remaining)}. Nëse e keni paguar tashmë, ju lutem mos e merrni parasysh këtë mesazh. Faleminderit!` + sign;
-        return `Përshëndetje ${first}, vetëm një kujtesë e vogël për ${OT.eur(t.remaining)} që ka mbetur për porosinë ${o.number}. Nëse ju përshtatet më mirë një datë tjetër, na tregoni dhe e rregullojmë bashkë. Faleminderit për mirëkuptimin!` + sign;
+      case 'visit': {
+        const v = OT.nextVisit(o);
+        if (!v) return `Përshëndetje ${name},` + sign();
+        const kindTxt = { measure: 'matje', install: 'montim', delivery: 'dërgesë', repair: 'të përfunduar punën' }[v.type];
+        const tl = OT.timeLabel(v.time);
+        return `Përshëndetje ${name}, ekipi ynë vjen për ${kindTxt} ${OT.onDay(v.date)}${tl ? `, ${/^\d/.test(tl) ? 'ora ' + tl : tl}` : ''}. Nëse nuk ju përshtatet, na shkruani dhe e rregullojmë.\n${link}` + sign();
       }
+      case 'link':
+        return `Përshëndetje ${name}, këtu mund ta ndiqni gjendjen e porosisë suaj ${o.number}:\n${link}` + sign();
+      case 'thanks':
+        return `Faleminderit ${name}! Shpresojmë që t’ju pëlqejë ${prod}. Nëse jeni të kënaqur, një vlerësim i shkurtër na ndihmon shumë:\n${B.contact.googleReviewUrl}` + sign();
+      case 'reminder':
+        return (OT.lastReminder(o)
+          ? `Përshëndetje ${name}, vetëm një kujtesë e vogël për ${OT.eur(t.owed)} që ka mbetur ${what}. Nëse ju përshtatet më mirë një datë tjetër, na tregoni dhe e rregullojmë bashkë. Faleminderit për mirëkuptimin!`
+          : `Përshëndetje ${name}, shpresojmë që jeni mirë${OT.isProject(o) ? '' : ` dhe që ${prod} po ju shërben mirë`}. Ju kujtojmë me mirësjellje që ${what} ka mbetur për t’u paguar ${OT.eur(t.owed)}. Nëse e keni paguar tashmë, ju lutem mos e merrni parasysh këtë mesazh. Faleminderit!`) + sign();
       default:
-        return `Përshëndetje ${first},` + sign;
+        return `Përshëndetje ${name},` + sign();
     }
   };
 
-  /** Computed on page load: no scheduler. Returns ready + suppressed (with reasons). */
-  OT.suggestions = () => {
-    const S = OT.state, today = OT.today(), tomorrow = OT.addDays(today, 1), ready = [], suppressed = [];
-    const done = id => S.msgDone.includes(id);
-    const push = (id, type, rec, why, extra) => { if (!done(id)) ready.push({ id, type, rec, why, extra }); };
-    for (const o of S.orders) {
-      if (o.stage === 'cancelled') continue;
-      const rec = { kind: 'order', o }, c = OT.customer(o.customerId);
-      const skipped = o.skipped || [];
-      const since = k => o.stageDates && o.stageDates[k] ? OT.diffDays(today, o.stageDates[k]) : 99;
-      if (o.stage === 'new' && o.payments.some(p => p.status === 'confirmed' && OT.diffDays(today, p.date) <= 3))
-        push(`deposit:${o.id}`, 'deposit', rec, `${OT.depositWord()} i regjistruar së fundi`);
-      if (o.stage === 'production' && !skipped.includes('production') && since('production') <= 5)
-        push(`production:${o.id}`, 'production', rec, 'Porosia hyri në prodhim');
-      if (o.stage === 'scheduled' && o.scheduledDate > tomorrow)
-        push(`scheduled:${o.id}`, 'scheduled', rec, `${o.fulfilment === 'delivery' ? 'Dërgesë' : 'Montim'}: ${OT.fmtDay(o.scheduledDate)}`);
-      if (o.stage === 'scheduled' && o.scheduledDate === tomorrow)
-        push(`dayBefore:${o.id}`, 'dayBefore', rec, `${o.fulfilment === 'delivery' ? 'Dërgesa' : 'Montimi'} është nesër`);
-      if (o.stage === 'fulfilled' && since('fulfilled') <= 3 && !o.remainingWork)
-        push(`fulfilled:${o.id}`, 'fulfilled', rec, `${OT.stageLabel('fulfilled', o.fulfilment)} ${OT.fmtDay(o.fulfilledAt).toLowerCase()}`);
-      if (o.delay && !done(`delay:${o.id}:${o.delay.newDate}`))
-        push(`delay:${o.id}:${o.delay.newDate}`, 'delay', rec, `Vonesë: ${o.delay.reason}`);
-      const t = OT.orderTotals(o);
-      if (t.remaining > 0) {
-        const r = OT.reminderCheck({ remaining: t.remaining, dueDate: o.dueDate, reported: t.reported, pause: o.pause, noReminders: c.noReminders });
-        if (r.ok) push(`reminder:${o.id}:${r.step}`, 'reminder', rec, `${r.late} ditë pas afatit · ${OT.eur(t.remaining)}`, { step: r.step });
-        else if (!r.notDue) suppressed.push({ rec, name: c.name, label: `${o.number} · ${OT.eur(t.remaining)}`, reason: r.reason });
-      }
-    }
-    for (const ob of S.openings) {
-      const t = OT.openingTotals(ob);
-      if (t.remaining <= 0) continue;
-      const rec = { kind: 'opening', o: ob };
-      const r = OT.reminderCheck({ remaining: t.remaining, dueDate: ob.dueDate, reported: t.reported, pause: ob.pause, noReminders: ob.noReminders });
-      if (r.ok) push(`reminder:${ob.id}:${r.step}`, 'reminder', rec, `Borxh i bartur · ${r.late} ditë pas afatit`, { step: r.step });
-      else if (!r.notDue) suppressed.push({ rec, name: ob.name, label: `Borxh i bartur · ${OT.eur(t.remaining)}`, reason: r.reason });
-    }
-    const order = { dayBefore: 0, delay: 1, reminder: 2, scheduled: 3, deposit: 4, production: 5, fulfilled: 6 };
-    ready.sort((a, b) => order[a.type] - order[b.type]);
-    return { ready, suppressed };
+  /* Installer messages: plain, scannable, numbers tappable in WhatsApp. Never the internal note. */
+  const jobLines = (o, v, collect) => {
+    const c = OT.customer(o.customerId), tl = OT.timeLabel(v.time);
+    const lines = [`${OT.VISIT[v.type]}${tl ? ' · ' + tl : ''}`, `${c.name} · ${OT.fmtPhone(c.phone)}`, o.city];
+    if (o.directions) lines.push(o.directions);
+    lines.push(o.description || o.productType);
+    if (v.note) lines.push(`Shënim: ${v.note}`);
+    const amount = collect && OT.collectsCash(v) ? OT.toCollect(o) : 0;
+    if (amount > 0) lines.push(`Mblidh: ${OT.eur(amount)}`);
+    lines.push(`Porosia ${o.number}`);
+    return lines;
   };
-
-  OT.recipientOf = (type, rec) => {
-    if (rec.kind === 'opening') return { name: rec.o.name, phone: rec.o.phone, channel: rec.o.channel || 'whatsapp' };
-    const o = rec.o, c = OT.customer(o.customerId);
-    if (type === 'reminder') return OT.payerOf(o);
-    return o.onSite || OT.contactFromCustomer(c);
+  OT.installerJobText = (o, v, collect) => {
+    const lines = jobLines(o, v, collect);
+    lines[0] = `${lines[0].split(' · ')[0]} · ${OT.WEEKDAYS[OT.parse(v.date).getDay()]} ${OT.fmtDate(v.date).slice(0, 5)}${OT.timeLabel(v.time) ? ' · ' + OT.timeLabel(v.time) : ''}`;
+    return lines.join('\n');
   };
-
-  OT.currentUser = () => {
-    const S = OT.state;
-    return S.users.find(u => u.role === S.role && (S.role !== 'field' || u.id === S.fieldUserId)) || S.users[0];
+  OT.installerDayText = (installer, date, items, collect) => {
+    const diff = OT.diffDays(date, OT.today());
+    const when = diff === 1 ? 'nesër' : diff === 0 ? 'sot' : OT.WEEKDAYS_ON[OT.parse(date).getDay()];
+    const head = `Punët për ${when}, ${OT.WEEKDAYS[OT.parse(date).getDay()]} ${OT.fmtDate(date).slice(0, 5)} · ${items.length} punë`;
+    return [head, ...items.map(({ o, v }, i) => { const l = jobLines(o, v, collect); l[0] = `${i + 1}) ${l[0]}`; return l.join('\n'); })].join('\n\n');
   };
 
   OT.newToken = () => {
@@ -386,8 +402,6 @@
       s = `<rect width="320" height="320" fill="#5B4636"/><g transform="rotate(${seed % 2 ? -4 : 3} 160 160)"><rect x="22" y="24" width="276" height="276" rx="6" fill="#FBFAF4"/><line x1="56" x2="56" y1="24" y2="300" stroke="#E7A0A0" stroke-width="1.5"/>${lines}${scrib}<text x="70" y="128" font-family="Comic Sans MS, cursive" font-size="17" fill="#2B3F73">360 × 60</text><text x="190" y="104" font-family="Comic Sans MS, cursive" font-size="15" fill="#2B3F73">h 245</text><text x="80" y="250" font-family="Comic Sans MS, cursive" font-size="15" fill="#2B3F73">priza 2×, ujë majtas</text></g>`;
     } else if (kind === 'door') {
       s = `<rect width="320" height="320" fill="${wall}"/><rect x="0" y="262" width="320" height="58" fill="${wood}"/><g opacity=".25">${Array.from({ length: 6 }, (_, i) => `<line x1="${i * 60}" x2="${i * 60 + 40}" y1="262" y2="320" stroke="#5a3d22"/>`).join('')}</g><rect x="102" y="52" width="116" height="212" rx="3" fill="#FAFAF8" stroke="#C9CBCD" stroke-width="6"/><rect x="120" y="72" width="80" height="80" rx="2" fill="none" stroke="#E1E3E5" stroke-width="3"/><rect x="120" y="168" width="80" height="78" rx="2" fill="none" stroke="#E1E3E5" stroke-width="3"/><rect x="196" y="156" width="16" height="5" rx="2" fill="#8A8F94"/>`;
-    } else if (kind === 'site') {
-      s = `<rect width="320" height="320" fill="${wall}"/><rect x="0" y="250" width="320" height="70" fill="#C8C2B8"/><rect x="40" y="90" width="110" height="160" fill="#fff" stroke="#bbb" stroke-dasharray="6 6" stroke-width="3"/><rect x="180" y="120" width="70" height="130" fill="#D6D0C6"/><circle cx="250" cy="70" r="22" fill="#F2C14E" opacity=".6"/>`;
     } else { // kitchen / wardrobe
       const fr = ['#F4F4F2', '#2F3A44', '#E9DFD0'][seed % 3];
       const doors = (y, h, n, x0 = 30, w = 260) => Array.from({ length: n }, (_, i) => `<rect x="${x0 + i * (w / n) + 2}" y="${y}" width="${w / n - 4}" height="${h}" rx="3" fill="${fr}" stroke="rgba(0,0,0,.12)"/><rect x="${x0 + i * (w / n) + w / n / 2 - 10}" y="${y + 8}" width="20" height="3" rx="1.5" fill="#9AA0A6"/>`).join('');
