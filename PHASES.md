@@ -6,7 +6,7 @@ The app is built as a finished-looking demo that I show and sell to owners. It d
 
 | # | Phase | Result | Status |
 |---|---|---|---|
-| 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | v9 built (v8 workflow + installer workload, visual redesign, Night Mode), waiting for review on phone + approval |
+| 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | v10: approved redesign integrated on 19.10.2026 (v9 workflow and rules unchanged); waiting for the physical-phone check + Phase 1 sign-off |
 | 2 | Foundation | Running app shell: brand, auth (Pronari/Zyra), i18n, `/setup`, first fixtures | Not started |
 | 3 | Orders & money core | Orders, 3 stages, projects, payments, cash with installers, opening balances, debts list, Sot, export | Not started |
 | 4 | Orari, WhatsApp & tracking page | Visits, installers, job sharing, customer messages, tracking page, on a temporary HTTPS test deployment | Not started |

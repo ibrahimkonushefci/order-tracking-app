@@ -11,9 +11,9 @@ OT.brands = {
     tagline: { sq: 'Kuzhina me porosi që nga 2005' },
     logo: {
       alt: 'Druri Design',
-      svg: '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="16" fill="#1F3A5F"/><path d="M20 16h12c9.4 0 16 6.6 16 16s-6.6 16-16 16H20z" fill="none" stroke="#C8A165" stroke-width="5" stroke-linejoin="round"/><path d="M27 25c5 1 8 4 8 7s-3 6-8 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>'
+      svg: '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="16" fill="#365C50"/><path d="M20 16h12c9.4 0 16 6.6 16 16s-6.6 16-16 16H20z" fill="none" stroke="#B99A70" stroke-width="5" stroke-linejoin="round"/><path d="M27 25c5 1 8 4 8 7s-3 6-8 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>'
     },
-    colors: { primary: '#1F3A5F', accent: '#C8A165', background: '#FFFFFF', text: '#1A1A1A' },
+    colors: { primary: '#365C50', accent: '#B99A70', background: '#FFFFFF', text: '#1A1A1A' },
     font: 'Inter',
     contact: {
       phone: '+38344123456', whatsapp: '+38344123456', viber: '+38344123456',
@@ -47,9 +47,9 @@ OT.brands = {
     tagline: { sq: 'Dyer dhe dysheme që zgjasin' },
     logo: {
       alt: 'Lumi Dyer & Parket',
-      svg: '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="16" fill="#2F5D50"/><path d="M20 50V24a12 12 0 0 1 24 0v26" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="38" cy="37" r="2.6" fill="#E08A3C"/><path d="M12 50h40" stroke="#E08A3C" stroke-width="4.5" stroke-linecap="round"/></svg>'
+      svg: '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="16" fill="#45628F"/><path d="M20 50V24a12 12 0 0 1 24 0v26" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="38" cy="37" r="2.6" fill="#B58D5E"/><path d="M12 50h40" stroke="#B58D5E" stroke-width="4.5" stroke-linecap="round"/></svg>'
     },
-    colors: { primary: '#2F5D50', accent: '#E08A3C', background: '#FFFFFF', text: '#17201D' },
+    colors: { primary: '#45628F', accent: '#B58D5E', background: '#FFFFFF', text: '#17201D' },
     font: 'Inter',
     contact: {
       phone: '+38349555210', whatsapp: '+38349555210', viber: '+38349555210',

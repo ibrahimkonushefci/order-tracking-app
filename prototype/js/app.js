@@ -105,7 +105,7 @@
   };
   OT.darkShades = hex => {
     const [h, s, l] = hexToHsl(hex), sat = Math.min(.72, Math.max(s, .38));
-    return { ink: hslToHex(h, sat, Math.max(l, .74)), fill: hslToHex(h, sat, Math.min(.5, Math.max(l, .42))) };
+    return { ink: hslToHex(h, sat, Math.max(l, .74)), fill: hslToHex(h, sat, Math.min(.44, Math.max(l, .36))) };
   };
   const themeNow = () => document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
   function applyMode() {
@@ -168,10 +168,10 @@
   }
 
   function shell(out) {
-    const tabs = `<nav class="tabbar" aria-label="Navigimi">${[
-      ['dashboard', 'home', 'Sot'], ['debts', 'wallet', 'Borxhet'], ['orders', 'list', 'Porositë'], ['schedule', 'calendar', 'Orari']
-    ].map(([k, i, l]) => `<a class="tab" href="#/${k}" ${out.nav === k ? 'aria-current="page"' : ''}>${ic(i)}<span>${l}</span></a>`).join('')}</nav>`;
-    return `<div class="shell">
+    const tabs = `<nav class="tabbar" aria-label="Navigimi"><a class="rail-brand" href="#/dashboard"><span class="app-header__logo">${B.logo.svg}</span><span>${esc(B.companyName)}<small>Menaxhimi i porosive</small></span></a><span class="rail-label">PUNËTORIA</span>${[
+      ['dashboard', 'home', 'Sot'], ['orders', 'list', 'Porositë'], ['debts', 'wallet', 'Borxhet'], ['schedule', 'calendar', 'Orari']
+    ].map(([k, i, l]) => `<a class="tab" href="#/${k}" ${out.nav === k ? 'aria-current="page"' : ''}>${ic(i)}<span>${l}</span></a>`).join('')}<div class="rail-secondary"><a class="tab" href="#/cash" ${out.nav === 'cash' ? 'aria-current="page"' : ''}>${ic('cash')}<span>Para te montuesit</span>${OT.dashboard().cashSum ? '<span class="rail-dot"></span>' : ''}</a><a class="tab" href="#/settings" ${out.nav === 'settings' ? 'aria-current="page"' : ''}>${ic('settings')}<span>Cilësimet</span></a></div><div class="rail-user"><span class="avatar avatar--static">${esc(me().name[0])}</span><span>${esc(me().name)}<small>${ROLE[S.role]}</small></span></div></nav>`;
+    return `<div class="shell"><a class="skip-link" href="#main-content" data-act="focusMain">Kalo te përmbajtja</a>
       <header class="app-header">
         <a class="app-header__brand" href="#/dashboard">
           <span class="app-header__logo">${B.logo.svg}</span>
@@ -181,7 +181,7 @@
         <a class="icon-btn icon-btn--bare" href="#/settings" aria-label="Cilësimet" ${out.nav === 'settings' ? 'aria-current="page"' : ''}>${ic('settings')}</a>
         <button class="avatar" data-act="panel" aria-label="Paneli i prototipit">${esc(me().name[0])}</button>
       </header>
-      <main class="main"><div class="content">${out.html}</div></main>
+      <main class="main" id="main-content" tabindex="-1"><div class="content content--${esc(out.nav)}">${out.html}</div></main>
       ${tabs}
     </div>`;
   }
@@ -262,7 +262,7 @@
     const parts = [['overdue', 'Jashtë afatit', D.overdueSum], ['term', 'Në afat', D.upcomingSum], ['unknown', 'Pa afat', D.unknownSum], ['held', 'Te montuesit', D.cashSum]].filter(x => x[2] > 0);
     const whole = parts.reduce((s, x) => s + x[2], 0) || 1;
     const hero = `<a class="hero" href="#/debts">
-      <span class="hero__top"><span>Kush më ka borxh</span>${ic('right', 'chev')}</span>
+      <span class="hero__top"><span>Borxhet</span>${ic('right', 'chev')}</span>
       ${overdue.length
         ? `<span class="hero__value">${eur(D.overdueSum)}</span><span class="hero__sub">jashtë afatit · ${overdue.length} klientë · gjithsej ${eur(D.total)} për t’u mbledhur</span>`
         : `<span class="hero__value">${eur(D.total)}</span><span class="hero__sub">për t’u mbledhur · asnjë jashtë afatit</span>`}
@@ -272,7 +272,7 @@
     </a>`;
 
     const tiles = `<div class="tiles">
-      <a class="tile" href="#/order/new"><span class="tile__icon tone--brand">${ic('plus')}</span><span class="tile__label">Porosi e re<small>Klient i ri</small></span></a>
+      <a class="tile" href="#/order/new"><span class="tile__icon tone--brand">${ic('plus')}</span><span class="tile__label">Porosi e re<small>Shto porosi</small></span></a>
       <button class="tile" data-act="sheet" data-sheet="payPick"><span class="tile__icon tone--success">${ic('cash')}</span><span class="tile__label">Pagesë<small>Regjistro</small></span></button>
       <a class="tile" href="#/opening/new"><span class="tile__icon tone--info">${ic('book')}</span><span class="tile__label">Borxh i bartur<small>Nga fletorja</small></span></a>
     </div>`;
@@ -287,11 +287,10 @@
     if (D.remindable.length) attention.push(['success', 'message', '#/debts', `${D.remindable.length} ${D.remindable.length === 1 ? 'klient pret' : 'klientë presin'} një kujtesë`, 'Jashtë afatit dhe pa kujtesë në 7 ditët e fundit']);
 
     const html = `
-      <div class="today-line">${hello}, ${esc(me().name)} · ${OT.fmtLong(today)}</div>
-      ${hero}
-      ${tiles}
-      ${attention.length ? `<section class="card"><div class="card__head"><h2 class="card__title">Kërkon vëmendje</h2></div><div class="list">${attention.slice(0, 4).map(([tone, icon, href, title, sub]) => `<a class="list-row" href="${href}"><span class="list-row__icon tone--${tone}">${ic(icon)}</span><span class="grow"><b>${esc(title)}</b><br><span class="small muted clamp2">${esc(sub)}</span></span>${ic('right', 'chev')}</a>`).join('')}</div></section>` : ''}
-      <section class="card"><div class="card__head"><h2 class="card__title">Punët e sotme <span class="subtle small">· ${D.today.length}</span></h2><a class="card__link" href="#/schedule">Orari ${ic('right', 'chev')}</a></div>
+      ${pageHead(`${hello}, ${esc(me().name)}`, '', OT.fmtLong(today))}
+      <div class="dashboard-grid"><div class="dashboard-primary">${hero}</div><div class="dashboard-secondary"><div class="eyebrow">Veprime të shpejta</div>${tiles}
+      ${attention.length ? `<section class="card attention-card"><div class="card__head"><h2 class="card__title">Kërkon vëmendje</h2></div><div class="list">${attention.slice(0, 4).map(([tone, icon, href, title, sub]) => `<a class="list-row" href="${href}"><span class="list-row__icon tone--${tone}">${ic(icon)}</span><span class="grow"><b>${esc(title)}</b><br><span class="small muted clamp2">${esc(sub)}</span></span>${ic('right', 'chev')}</a>`).join('')}</div></section>` : ''}
+      </div></div><section class="card today-agenda"><div class="card__head"><h2 class="card__title">Punët e sotme <span class="subtle small">· ${D.today.length}</span></h2><a class="card__link" href="#/schedule">Orari ${ic('right', 'chev')}</a></div>
         ${D.today.length ? `<div class="agenda">${D.today.map(({ o, v }) => agendaItem(o, v, { showInstaller: true })).join('')}</div>` : '<div class="empty small">Sot nuk ka punë në terren.</div>'}</section>
     `;
     return { html, nav: 'dashboard' };
@@ -330,16 +329,16 @@
     const rows = list => `<div class="card list">${[...list].sort(cmp).map(debtRow).join('')}</div>`;
     const title = (t, list) => `${t} <span class="count">${list.length} · ${eur(sum(list))}</span>`;
     const html = `
-      ${pageHead('Kush më ka borxh', '', '', `<a class="btn btn--soft btn--sm" href="#/opening/new">${ic('plus')} Borxh i bartur</a>`)}
-      <div class="summary card">
+      ${pageHead('Borxhet', '', 'Pagesat që presin të mblidhen', `<a class="btn btn--soft btn--sm" href="#/opening/new">${ic('plus')} Borxh i bartur</a>`)}
+      <div class="debt-overview"><div class="summary card">
         <div class="summary__row"><span>Me vonesë</span><b class="num${overdue.length ? ' danger' : ''}">${eur(sum(overdue))}</b></div>
-        <div class="summary__row"><span>Gjithsej për t’u mbledhur</span><b class="num">${eur(sum(all))}</b></div>
+        <div class="summary__row"><span>Gjithsej</span><b class="num">${eur(sum(all))}</b></div>
       </div>
-      <div class="seg" role="group" aria-label="Rendit">
+      <a class="cash-summary card" href="#/cash"><span class="list-row__icon tone--warning">${ic('cash')}</span><span class="grow"><span class="small muted">Para te montuesit</span><b class="num">${eur(OT.dashboard().cashSum)}</b><span class="xs muted">Në pritje të dorëzimit</span></span>${ic('right', 'chev')}</a></div><div class="debt-toolbar"><span class="small muted">Rendit borxhet</span><div class="seg seg--inline" role="group" aria-label="Rendit">
         <a href="#/debts?sort=amount" ${sort === 'amount' ? 'aria-current="page"' : ''}>Sipas shumës</a>
         <a href="#/debts?sort=late" ${sort === 'late' ? 'aria-current="page"' : ''}>Sipas vonesës</a>
       </div>
-      ${overdue.length ? `<h2 class="section-title">${title('Me vonesë', overdue)}</h2>${rows(overdue)}` : ''}
+      </div>${overdue.length ? `<h2 class="section-title">${title('Me vonesë', overdue)}</h2>${rows(overdue)}` : ''}
       ${unknown.length ? `<h2 class="section-title">${title('Afat i panjohur', unknown)}</h2>
         <p class="group-help">Pa afat pagese. Llogariten në total, jo te vonesat, dhe nuk sugjerohen kujtesa.</p>${rows(unknown)}` : ''}
       ${upcoming.length ? `<details class="group" data-fold="debts-upcoming"><summary class="section-title">${ic('right', 'chev')}${title('Ende në afat', upcoming)}</summary>${rows(upcoming)}</details>` : ''}
@@ -368,7 +367,7 @@
         }).join('')}
         ${g.items.length > 1 ? `<button class="btn btn--success" data-act="sheet" data-sheet="confirmAll" data-inst="${g.installerId}">${ic('check')} Konfirmo të gjitha (${eur(g.sum)}) nga ${esc(g.name)}</button>` : ''}</div></div>`).join('') || `<div class="card"><div class="empty">${ic('check')}<b>Të gjitha paratë janë dorëzuar.</b></div></div>`}
     `;
-    return { html, nav: 'dashboard' };
+    return { html, nav: 'cash' };
   };
 
   /* 3. Order detail. Always visible: one alert, the stage, the money, the visits.
@@ -503,7 +502,7 @@
       <label class="photo photo--add">${ic('camera')}<span>Shto foto</span><input type="file" accept="image/*" data-photo="order" data-id="${o.id}" data-kind="other"></label>
     </div><div class="xs subtle">Vetëm për ju (p.sh. fleta e matjeve që ju dërgoi montuesi). Klienti nuk i sheh.</div>`;
     const rows = `<section class="card folds">
-      ${fold('loc', 'map', 'Ku & si të shkoni', esc([o.city, o.directions].filter(Boolean).join(' · ')), locBody)}
+      ${fold('loc', 'map', 'Adresa dhe udhëzimet', esc([o.city, o.directions].filter(Boolean).join(' · ')), locBody)}
       ${fold('client', 'user', 'Klienti', esc(`${c.name} · ${OT.fmtPhone(c.phone)}`), clientBody)}
       ${o.stage !== 'cancelled' ? fold('link', 'link', 'Faqja e klientit', 'Hapat dhe vizita e radhës, pa çmime', linkBody) : ''}
       ${fold('photos', 'camera', 'Fotot', o.photos.length ? `${o.photos.length} foto` : 'Asnjë foto ende', photoBody)}
@@ -524,7 +523,7 @@
     </section>`;
 
     const html = `${pageHead(esc(c.name), 'back:#/orders', `${o.number} · ${esc(proj ? o.description.split(' · ')[0] : o.productType)} · ${esc(o.city)}`)}
-      <div class="narrow">${alert}${strip}${status}${money}${visits}${rows}${more}</div>`;
+      <div class="detail-layout">${alert}${strip}<div class="detail-primary">${status}${visits}${rows}</div><aside class="detail-secondary">${money}${more}</aside></div>`;
     return {
       html, nav: 'orders', frame: 'phone', after: () => {
         // Demo moment 4 opens straight into the "Montimi u krye" sheet.
@@ -615,7 +614,7 @@
   const PHONE_CODES = ['+383', '+49', '+41', '+43', '+33', '+46', '+1'];
   function openingForm() {
     const html = `${pageHead('Borxh i bartur', 'back:#/debts', 'Nga fletorja · shkruani vetëm atë që dini')}
-      <form class="card narrow" data-form="opening" novalidate><div class="card__body form">
+      <form class="card narrow form-page form-page--opening" data-form="opening" novalidate><div class="card__body form">
         <div class="field" data-f="name"><label class="label" for="ob-name">Emri i klientit <span class="req">*</span></label><input class="input" id="ob-name" name="name" autocomplete="off" placeholder="p.sh. Blerim Hasani"></div>
         <div class="field" data-f="phone"><label class="label" for="ob-phone">Telefoni <span class="opt">(opsional)</span></label>
           <div class="input-group"><select class="select" name="cc" aria-label="Prefiksi">${PHONE_CODES.map(c => `<option>${c}</option>`).join('')}</select><input class="input" id="ob-phone" name="phone" inputmode="tel" placeholder="44 123 456"></div></div>
@@ -654,7 +653,7 @@
     const cat = B.catalog, types = [cat.main.type, cat.second.type, cat.small.type];
     const dw = OT.depositWord();
     const html = `${pageHead('Porosi e re', 'back:#/orders', 'Vetëm bazat. Datat i shtoni kur t’i dini.')}
-      <form class="card narrow" data-form="order" novalidate><div class="card__body form">
+      <form class="card narrow form-page form-page--order" data-form="order" novalidate><div class="card__body form">
         <div class="field" data-f="name"><label class="label" for="no-name">Klienti / Kompania <span class="req">*</span></label><input class="input" id="no-name" name="name" autocomplete="off" placeholder="p.sh. Arta Krasniqi" list="no-clients"><datalist id="no-clients">${S.customers.map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>
           <div class="help">Ai që paguan dhe merr kujtesat.</div></div>
         ${phoneField('phone', 'Telefoni', true)}
@@ -719,7 +718,7 @@
     const html = `${pageHead('Porositë', '', `${S.orders.length} porosi`, `<a class="btn btn--primary btn--sm" href="#/order/new">${ic('plus')} Porosi e re</a>`)}
       <div class="search">${ic('search')}<input class="input" type="search" data-search placeholder="Kërko emër, telefon ose numër porosie" value="${esc(F.s)}" aria-label="Kërko"></div>
       <div class="filters">
-        <div class="seg seg--inline"><a href="#/orders?view=list" ${view === 'list' ? 'aria-current="page"' : ''}>Lista</a><a href="#/orders?view=kanban" ${view === 'kanban' ? 'aria-current="page"' : ''}>Tabela</a></div>
+        <div class="seg seg--inline"><a href="#/orders?view=list" ${view === 'list' ? 'aria-current="page"' : ''}>Lista</a><a href="#/orders?view=kanban" ${view === 'kanban' ? 'aria-current="page"' : ''}>Bordi</a></div>
         ${chips.map(([k, l]) => `<button class="chip" data-act="stageFilter" data-k="${k}" aria-pressed="${F.stage === k}">${esc(l)} <b class="chip__count">${counts[k]}</b></button>`).join('')}
       </div>
       <div id="order-results" data-view="${view}">${orderResults(view)}</div>`;
@@ -754,7 +753,7 @@
     const owedCell = (o, t) => t.owed > 0 ? eur(t.owed) : o.stage !== 'done' && t.remaining > 0 ? `<span class="subtle">${eur(t.remaining)}</span>` : '—';
     const barOf = (o, t) => OT.isProject(o) ? `<div class="mini">${projBar(o)}<span class="mini__pct">${OT.installedQty(o)}/${o.qty}</span></div>` : miniBar(t);
     return `<div class="card only-wide table-wrap"><table class="orders-table"><thead><tr><th>Nr.</th><th>Klienti</th><th>Faza</th><th>Pagesa</th><th>E radhës</th><th class="right">Mbetur</th></tr></thead><tbody>
-      ${rows.map(({ o, c, t }) => `<tr data-act="open" data-href="#/order/${o.id}"><td class="num strong">${o.number}</td><td><div class="cell-client">${prodAnchor(o)}<div><b>${esc(c.name)}</b><div class="xs subtle">${esc(OT.isProject(o) ? `projekt · ${o.qty} ${o.unit}` : o.productType)} · ${esc(o.city)}</div></div></div></td><td>${badge({ new: 'info', active: 'brand', done: 'success', cancelled: 'neutral' }[o.stage], '', stageLabel(o.stage))}</td><td style="min-width:130px">${barOf(o, t)}</td><td class="small">${esc(listNote(o)) || '—'}</td><td class="right num strong">${owedCell(o, t)}</td></tr>`).join('')}
+      ${rows.map(({ o, c, t }) => `<tr data-act="open" data-href="#/order/${o.id}"><td class="num strong"><a class="order-number" href="#/order/${o.id}">${o.number}</a></td><td><div class="cell-client">${prodAnchor(o)}<div><b>${esc(c.name)}</b><div class="xs subtle">${esc(OT.isProject(o) ? `projekt · ${o.qty} ${o.unit}` : o.productType)} · ${esc(o.city)}</div></div></div></td><td>${badge({ new: 'info', active: 'brand', done: 'success', cancelled: 'neutral' }[o.stage], '', stageLabel(o.stage))}</td><td style="min-width:130px">${barOf(o, t)}</td><td class="small">${esc(listNote(o)) || '—'}</td><td class="right num strong">${owedCell(o, t)}</td></tr>`).join('')}
     </tbody></table></div>
     <div class="card list only-narrow">${rows.map(({ o, c, t }) => `<a class="order-row" href="#/order/${o.id}">${prodAnchor(o)}<div class="order-row__main">
       <div class="order-row__top"><span class="order-row__name">${esc(c.name)}</span>${t.owed > 0 ? `<span class="order-row__amount">${eur(t.owed)}</span>` : badge({ new: 'info', active: 'brand', done: 'success', cancelled: 'neutral' }[o.stage], '', stageLabel(o.stage))}</div>
@@ -788,7 +787,7 @@
     const isDate = /^\d{4}-\d{2}-\d{2}$/.test(d);
     const tab = isDate ? 'team' : d; // a single day opened from the grid belongs to "Montuesit"
     const seg = `<div class="seg">${[['today', 'Sot'], ['tomorrow', 'Nesër'], ['week', '7 ditë'], ['team', 'Montuesit']].map(([k, l]) => `<a href="#/schedule${k === 'today' ? '' : '?d=' + k}" ${tab === k ? 'aria-current="page"' : ''}>${l}</a>`).join('')}</div>`;
-    if (tab === 'team' && !isDate) return { html: `${pageHead('Orari', '', 'Kush është i lirë dhe kush sa punë ka kryer')}${seg}${teamView()}`, nav: 'schedule' };
+    if (tab === 'team' && !isDate) return { html: `${pageHead('Orari', '', 'Disponueshmëria dhe punët e montuesve')}${seg}${teamView()}`, nav: 'schedule' };
     const days = isDate ? [d] : d === 'today' ? [today] : d === 'tomorrow' ? [tomorrow] : Array.from({ length: 7 }, (_, i) => OT.addDays(today, i));
     const past = isDate ? [] : OT.pastUndone();
     const dayBlock = day => {
@@ -815,7 +814,7 @@
     return { html, nav: 'schedule' };
   };
 
-  /* Orari → Montuesit: "Kush është i lirë?" (7-day grid) and "Kush sa punë ka kryer" */
+  /* Orari → Montuesit: "Disponueshmëria" (7-day grid) and "Përmbledhja e montuesve" */
   function teamView() {
     const today = OT.today(), tomorrow = OT.addDays(today, 1), days = Array.from({ length: 7 }, (_, i) => OT.addDays(today, i));
     const headRow = `<div class="avail__row"><span></span>${days.map(day => `<span class="avail__day${day === today ? ' avail__day--today' : ''}">${OT.WEEKDAYS_SHORT[OT.parse(day).getDay()]}<small>${OT.parse(day).getDate()}</small></span>`).join('')}</div>`;
@@ -823,9 +822,9 @@
       const n = OT.jobsOn(i.id, day).length;
       return `<a class="avail__cell avail__cell--${Math.min(n, 2)}" href="#/schedule?d=${day}&i=${i.id}" aria-label="${esc(i.name)}, ${OT.fmtLong(day)}: ${n ? n + ' punë' : 'i lirë'}">${n || '—'}</a>`;
     }).join('')}</div>`).join('');
-    const grid = `<section class="card"><div class="card__head"><h2 class="card__title">Kush është i lirë?</h2><span class="xs subtle">sot + 6 ditë</span></div>
+    const grid = `<section class="card"><div class="card__head"><h2 class="card__title">Disponueshmëria</h2><span class="xs subtle">sot + 6 ditë</span></div>
       <div class="avail">${headRow}${rows}</div>
-      <div class="legend avail-legend"><span class="legend__item"><span class="legend__dot ld--free"></span>I lirë</span><span class="legend__item"><span class="legend__dot ld--one"></span>1 punë</span><span class="legend__item"><span class="legend__dot ld--busy"></span>2+ punë</span><span class="legend__item subtle">Prekni një ditë</span></div></section>`;
+      <div class="legend avail-legend"><span class="legend__item"><span class="legend__dot ld--free"></span>I lirë</span><span class="legend__item"><span class="legend__dot ld--one"></span>1 punë</span><span class="legend__item"><span class="legend__dot ld--busy"></span>2+ punë</span><span class="legend__item subtle">Prekni një ditë</span><span class="legend__item subtle only-narrow">Rrëshqitni për 7 ditë →</span></div></section>`;
     const cards = S.installers.map(i => {
       const s = OT.installerSummary(i.id), next = s.upcoming[0], tom = OT.jobsOn(i.id, tomorrow).filter(x => !x.v.doneAt).length;
       const parts = [['install', 'Montime'], ['delivery', 'Dërgesa'], ['measure', 'Matje'], ['repair', 'Riparime']].filter(([k]) => s.done[k])
@@ -844,7 +843,7 @@
         ${s.unmarked.length ? `<div class="small" style="color:var(--color-warning)">${s.unmarked.length} punë nga ditët e kaluara pa u shënuar</div>` : ''}
       </section>`;
     }).join('');
-    return `${grid}<h2 class="section-title">Kush sa punë ka kryer</h2><div class="inst-grid">${cards}</div>`;
+    return `${grid}<h2 class="section-title">Përmbledhja e montuesve</h2><div class="inst-grid">${cards}</div>`;
   }
 
   /* Sending to an installer (one visit, or one installer's whole day) */
@@ -892,8 +891,8 @@
   function composeScreen(m) {
     const ch = ui.channel || chOf(m.to.channel) || 'whatsapp';
     ui.compose = { ...m, ch };
-    const tpl = m.templates ? `<div class="chips chips--scroll">${m.templates.list.map(t => `<a class="chip" href="${m.templates.href(t)}"><span style="${t === m.templates.current ? 'background:var(--color-primary);color:var(--color-primary-contrast);border-color:var(--color-primary)' : ''}">${esc(OT.msgLabel(t))}</span></a>`).join('')}</div>` : '';
-    const pick = m.pickInstaller ? `<div class="field"><span class="label">Kujt t’ia dërgoj?</span><div class="chips">${S.installers.map(i => `<a class="chip" href="${m.pickInstaller.href(i.id)}"><span style="${i.id === m.pickInstaller.current ? 'background:var(--color-primary);color:var(--color-primary-contrast);border-color:var(--color-primary)' : ''}">${esc(i.name)}</span></a>`).join('')}</div>${m.assign ? `<div class="help">Vizita do t’i caktohet ${esc(dative(m.to.name))}.</div>` : ''}</div>` : '';
+    const tpl = m.templates ? `<div class="chips chips--scroll">${m.templates.list.map(t => `<a class="chip${t === m.templates.current ? ' is-on' : ''}" href="${m.templates.href(t)}" ${t === m.templates.current ? 'aria-current="true"' : ''}><span>${esc(OT.msgLabel(t))}</span></a>`).join('')}</div>` : '';
+    const pick = m.pickInstaller ? `<div class="field"><span class="label">Kujt t’ia dërgoj?</span><div class="chips">${S.installers.map(i => `<a class="chip${i.id === m.pickInstaller.current ? ' is-on' : ''}" href="${m.pickInstaller.href(i.id)}" ${i.id === m.pickInstaller.current ? 'aria-current="true"' : ''}><span>${esc(i.name)}</span></a>`).join('')}</div>${m.assign ? `<div class="help">Vizita do t’i caktohet ${esc(dative(m.to.name))}.</div>` : ''}</div>` : '';
     const html = `${pageHead(esc(m.title), m.back, esc(m.sub))}
       <div class="card narrow"><div class="card__body">
         <div class="contact"><div class="grow"><div class="xs subtle">${m.kind === 'installer' ? 'Montuesi' : 'Për'}</div><b>${esc(m.to.name)}</b><div class="small muted">${OT.fmtPhone(m.to.phone)}${m.to.country ? ' · ' + esc(m.to.country) : ''}</div></div><a class="icon-btn icon-btn--call" href="tel:${esc(m.to.phone)}" aria-label="Thirr">${ic('phone')}</a></div>
@@ -1006,7 +1005,7 @@
   };
 
   /* ═══════════════════════ SHEETS ═══════════════════════ */
-  const head = (title, sub) => `<h2 class="sheet__title">${title}</h2>${sub ? `<p class="sheet__sub">${sub}</p>` : '<div style="height:12px"></div>'}`;
+  const head = (title, sub) => `<h2 class="sheet__title" id="sheet-title">${title}</h2>${sub ? `<p class="sheet__sub">${sub}</p>` : '<div style="height:12px"></div>'}`;
   const actions = (label, cls = 'primary', extra = '') => `<div class="btn-row" style="margin-top:4px"><button class="btn btn--${cls} btn--lg" type="submit">${label}</button><button class="btn btn--secondary btn--lg" type="button" data-act="closeSheet">Anulo</button>${extra}</div>`;
   const money = (name, label, value) => `<div class="field" data-f="${name}"><label class="label" for="m-${name}">${label}</label><div class="money-wrap"><input class="input input--money" id="m-${name}" name="${name}" inputmode="decimal" value="${value != null && value > 0 ? (value / 100).toFixed(value % 100 ? 2 : 0).replace('.', ',') : ''}" autocomplete="off"></div></div>`;
   const reasonField = (name, label, chips = [], ph = '', req = true) => `<div class="field" data-f="${name}"><label class="label">${label} ${req ? '<span class="req">*</span>' : '<span class="opt">(opsionale)</span>'}</label>${chips.length ? `<div class="chips">${chips.map(c => `<button type="button" class="chip" data-act="fillReason" data-target="${name}" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}<input class="input" name="${name}" placeholder="${esc(ph)}" autocomplete="off"></div>`;
@@ -1288,7 +1287,7 @@
       render(ctx) {
         const o = OT.order(ctx.id);
         return head(`Kthe te “${esc(stageLabel(ctx.k))}”?`, `${o.number} · ${esc(OT.customer(o.customerId).name)}`) +
-          `<div class="callout callout--warning">${ic('alert')}<span>Porosia del nga “Kush më ka borxh” derisa të shënohet përsëri e kryer.</span></div>` + actions('Po, kthe');
+          `<div class="callout callout--warning">${ic('alert')}<span>Porosia del nga “Borxhet” derisa të shënohet përsëri e kryer.</span></div>` + actions('Po, kthe');
       },
       submit(fd, ctx) {
         const o = OT.order(ctx.id);
@@ -1477,15 +1476,17 @@
   function openSheet(name, ctx = {}) {
     const root = document.getElementById('sheet-root');
     ui.sheet = { name, ctx };
-    root.innerHTML = `<div class="sheet-backdrop" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true"><form class="form" data-sheet="${name}" novalidate>${SHEETS[name].render(ctx)}</form></div>`;
+    root.innerHTML = `<div class="sheet-backdrop" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><button class="sheet-close icon-btn icon-btn--bare" type="button" data-act="closeSheet" aria-label="Mbyll">${ic('x')}</button><form class="form" data-sheet="${name}" novalidate>${SHEETS[name].render(ctx)}</form></div>`;
     root.classList.add('open');
+    $view().inert = true;
     const f = root.querySelector('form'); updateConditionals(f);
     const first = f.querySelector('.input--money, textarea, input:not([type=radio]):not([type=checkbox]):not([type=file]):not([type=date]):not([type=time])');
     if (first && window.matchMedia('(hover: hover)').matches) first.focus();
+    else root.querySelector('.sheet-close').focus({ preventScroll: true });
   }
   function closeSheet() {
     const root = document.getElementById('sheet-root');
-    root.innerHTML = ''; root.classList.remove('open'); ui.sheet = null;
+    root.innerHTML = ''; root.classList.remove('open'); $view().inert = false; ui.sheet = null;
   }
   function showErrors(form, errs) {
     form.querySelectorAll('.error').forEach(e => e.remove());
@@ -1581,7 +1582,7 @@
     const track = OT.order(K.track) || k800, proj = OT.order(K.project);
     const k800Open = k800 && k800.visits.some(v => v.id === K.k800Visit && !v.doneAt);
     return [
-      ['1', 'Kush më ka borxh', '#/debts', 'owner'],
+      ['1', 'Borxhet', '#/debts', 'owner'],
       ['2', 'Faqja e klientit', `#/t/${track.token}`, 'client'],
       ['3', `Dërgoja ${dative(lead.name)} në WhatsApp`, `#/send/day/${lead.id}/${OT.addDays(OT.today(), 1)}`, 'owner'],
       ['4', `${lead.name} telefonon: “Mora €800”`, k800Open ? `#/order/${k800.id}?sheet=done&v=${K.k800Visit}` : `#/order/${k800.id}`, 'owner'],
@@ -1593,18 +1594,18 @@
     const K = S.keyIds, track = (OT.order(K.track) || {}).token;
     return [
       ['1', 'Sot', '#/dashboard', ''],
-      ['2', 'Kush më ka borxh', '#/debts', ''],
+      ['2', 'Borxhet', '#/debts', ''],
       ['3', 'Porosia me €800 (pa sheet)', `#/order/${K.k800}`, ''],
       ['4', 'Para te montuesit', '#/cash', ''],
       ['5', 'Projekti me disa montime', `#/order/${K.project}`, ''],
       ['6', 'Orari · nesër', '#/schedule?d=tomorrow', ''],
       ['7', 'Porosi e re', '#/order/new', ''],
       ['7', 'Borxh i bartur: formulari', '#/opening/new', ''],
-      ['8', 'Porositë + tabela (tablet)', '#/orders?view=kanban', ''],
+      ['8', 'Porositë · bordi', '#/orders?view=kanban', ''],
       ['9', 'Faqja e klientit', `#/t/${track}`, 'client'],
       ['9', 'Link jo më aktiv', `#/t/${ui.lastRevoked || K.revoked}`, 'client'],
       ['10', 'Cilësimet & eksporti', '#/settings', ''],
-      ['11', 'Montuesit: kush është i lirë', '#/schedule?d=team', ''],
+      ['11', 'Montuesit: disponueshmëria', '#/schedule?d=team', ''],
       ['11', 'Planifiko për të premten (disponueshmëria)', `#/order/${K.plan}?sheet=visit&date=${K.busyDay}`, ''],
       ['+', 'Punë të mbetura + pauzë', `#/order/${K.remaining}`, ''],
       ['+', 'Mos sugjero kujtesa (kushëri)', `#/order/${K.cousin}`, ''],
@@ -1636,15 +1637,15 @@
       <select data-pb="brand" aria-label="Marka">${Object.values(OT.brands).map(b => `<option value="${b.slug}" ${b.slug === B.slug ? 'selected' : ''}>${esc(b.shortName)}</option>`).join('')}</select>
       <span class="proto-bar__label">Shiko si</span>
       <span class="proto-seg" role="group" aria-label="Shiko si">${[...S.users.map(u => [u.role, u.name]), ['client', 'Klienti']].map(([p, l]) => `<button data-pb-persona="${p}" aria-pressed="${persona === p}">${esc(l)}</button>`).join('')}</span>
-      <span class="proto-bar__moments">${moments().map(([n, l, h, r]) => `<button data-pb-jump="${esc(h)}|${r}"><b>${n}</b>${esc(l)}</button>`).join('')}</span>
+      <span class="proto-bar__moments">${moments().map(([n, l, h, r], i) => `<button data-pb-jump="${esc(h)}|${r}" title="${esc(l)}"><b>${n}</b>${esc(['Borxhet', 'Klienti', 'WhatsApp', 'Pagesa €800', 'Projekti'][i])}</button>`).join('')}</span>
       <span class="proto-bar__spacer"></span>
-      <button data-pb="theme" aria-label="Dritë / Errët">${ic(themeNow() === 'dark' ? 'sun' : 'moon')} ${themeNow() === 'dark' ? 'Dritë' : 'Errët'}</button>
+      <select data-pb="frame" aria-label="Madhësia e pamjes">${[['auto', 'Ekrani'], ['phone', 'Telefon'], ['tablet', 'Tablet']].map(([v,l]) => `<option value="${v}" ${(prefs.frame || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select><button data-pb="theme" aria-label="Dritë / Errët">${ic(themeNow() === 'dark' ? 'sun' : 'moon')} ${themeNow() === 'dark' ? 'Dritë' : 'Errët'}</button>
       ${S.dayOffset ? `<span class="proto-bar__note">Data e demos +${S.dayOffset} ditë</span>` : ''}
       <button data-pb="more">Më shumë…</button>`;
   }
   function setFrame(screenFrame) {
     const dev = document.getElementById('device');
-    const f = (prefs.frame && prefs.frame !== 'auto') ? prefs.frame : screenFrame;
+    const f = (prefs.frame && prefs.frame !== 'auto') ? prefs.frame : 'none';
     dev.className = `device device--${f}`;
   }
   function setRole(role) {
@@ -1664,6 +1665,7 @@
 
   /* ═══════════════════════ EVENTS ═══════════════════════ */
   const ACT = {
+    focusMain: (el, e) => { e.preventDefault(); document.getElementById('main-content').focus(); },
     sheet: el => openSheet(el.dataset.sheet, { ...el.dataset }),
     closeSheet: () => closeSheet(),
     panel: () => openSheet('panel'),
@@ -1721,6 +1723,7 @@
 
   function bind() {
     const app = document.getElementById('app');
+    app.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.sheet) { closeSheet(); } });
     app.addEventListener('click', e => {
       const el = e.target.closest('[data-act]');
       if (!el || !app.contains(el)) return;
@@ -1781,7 +1784,7 @@
 
     // Laptop prototype bar (re-rendered by updateProtoBar, so events are delegated)
     const bar = document.getElementById('proto-bar');
-    bar.addEventListener('change', e => { if (e.target.dataset.pb === 'brand') ACT.brand({ dataset: { slug: e.target.value } }); });
+    bar.addEventListener('change', e => { if (e.target.dataset.pb === 'brand') ACT.brand({ dataset: { slug: e.target.value } }); if (e.target.dataset.pb === 'frame') ACT.frame({ dataset: { f: e.target.value } }); });
     bar.addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.pbPersona) persona(b.dataset.pbPersona);
