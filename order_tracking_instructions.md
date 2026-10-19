@@ -16,7 +16,7 @@ This is a **sales demo I'll show owners on a tablet/laptop, rebranded with their
 ### The four demo moments
 
 Everything else supports these. Build them first and make them perfect.
-1. **"Kush më ka borxh"** (who owes me money): the total outstanding, sorted by amount and days overdue, with a WhatsApp/Viber/call button next to each name, and a prepared reminder one tap away.
+1. **"Borxhet"** (the owner's question "Kush më ka borxh?", who owes me money): the total outstanding, sorted by amount and days overdue, with a WhatsApp/Viber/call button next to each name, and a prepared reminder one tap away.
 2. **"Faqja e klientit"**: the tracking link opens on the owner's own phone (they scan a QR code on my laptop), showing their logo, in Albanian: the three steps and the next visit.
 3. **"Dërgoja Dritonit"**: tomorrow's jobs for one installer, formatted as one WhatsApp message (client, phone, place, directions, product, "Mblidh €800"), landing on the owner's own phone as if they were the installer.
 4. **"Driton telefonon: Mora €800"**: the installer calls, the owner records it in three taps, the customer's debt drops to €0, and the €800 waits under "Para te montuesit" until the owner confirms the handover.
@@ -89,7 +89,8 @@ My three products currently use three different `brand.json` shapes. This projec
   "shortName": "Druri",
   "tagline": { "sq": "Kuzhina me porosi që nga 2005", "en": "Custom kitchens since 2005", "de": "Küchen nach Maß seit 2005" },
   "logo": { "src": "logo.svg", "alt": "Druri Design" },
-  "colors": { "primary": "#1F3A5F", "accent": "#C8A165", "background": "#FFFFFF", "text": "#1A1A1A" },
+  "colors": { "primary": "#365C50", "accent": "#B99A70", "background": "#FFFFFF", "text": "#1A1A1A" },
+  "depositWord": "Avans",
   "font": "Inter",
   "contact": {
     "phone": "+38344123456",
@@ -110,17 +111,24 @@ My three products currently use three different `brand.json` shapes. This projec
 }
 ```
 
+- `depositWord`: `Avans` | `Kapar`, the default for the company's deposit-term setting (see Language & locale).
 - `businessType`: `kitchens` | `furniture` | `doors_floors` | `doors_windows`. It sets the default product types, project units and seed data wording.
 - Active brand: `?brand=<slug>` in demo mode, otherwise the `BRAND` env var. Theme applied through CSS variables. Missing or invalid brand files fall back to a neutral brand.
 - **Brand Setup page** (`/setup`, PIN-protected, demo convenience, not real auth): upload a logo → suggested colors (reuse the color extraction I already built in 3d_designer), set name/phone/city, live preview, then **"Apply & reseed demo"**, which regenerates demo data with the brand's name and city.
 
 ## Visual design & Night Mode
 
+**Design baseline: the approved v10 prototype** (`prototype/`, approved 19.10.2026, commit `b861ff6`). The finished app must match its appearance, layouts, navigation, wording and interactions. Where this section and the prototype differ in look or wording, the prototype wins; the business rules in this spec stay as written. Physical-phone validation of the prototype is still pending.
+
 The app must look like modern software on a mid-range phone, and be **scannable in a second**: icons, colors, bars and timelines carry meaning before any text is read. The prototype's `tokens.css` is the source; the app maps it to Tailwind/shadcn variables.
 
+- **Shell and navigation**: on laptop/tablet a full-width layout with a sidebar: brand, "PUNËTORIA" with **Sot · Porositë · Borxhet · Orari**, then **Para te montuesit** (with a dot when cash is waiting), **Cilësimet** and the signed-in user (name, Pronari/Zyra). On phones (narrower than 700px): a header with the logo, company name, "Pronari · Arben", the moon/sun and the gear (Cilësimet), and a compact bottom tab bar with Sot · Porositë · Borxhet · Orari.
+- **Selection** is always a solid brand fill with a crisp border (tabs, filters, sorting, form choices, template and installer chips); in Night Mode it uses the bright brand ink with dark text.
+- **Sheets** have a close button, close with Escape, and keep the page behind them inert.
+
 - **Font: Inter** (400, 500, 600, 700) from Google Fonts, with OpenType features `cv02`, `cv03`, `cv04`, `cv11`, and tabular numbers for every amount and date. Self-host the font files in the app (no runtime dependency on Google), falling back to the system UI font.
-- **Type scale** (phone-first, crisp): body 15px, secondary 13px, captions and badges 11.5px; headings 17–30px. Euro figures and page titles use tight letter-spacing (−0.02em).
-- **Palette (light)**: cool alabaster canvas `#F6F8FA`, white cards, soft borders `#EAEEF4`, subtle layered shadows. Status colors have one meaning each: red = past due, amber = waiting (cash with an installer, pauses, a busy installer), green = paid/done/free, blue = information (measurements, opening balances).
+- **Type scale** (quiet, crisp): body 14px (16px in form inputs on phones, so iOS doesn't zoom), secondary 12px, captions and badges 11px; headings 16–28px. Euro figures and page titles use tight letter-spacing (−0.025em). Small radii (4–16px), 44px touch targets.
+- **Palette (light)**: quiet canvas `#F7F8F7`, white cards, crisp borders `#E5E9E6`, very soft shadows. Sample brands: Druri Design sage/forest `#365C50` with accent `#B99A70`, Lumi Dyer & Parket slate blue `#45628F` with accent `#B58D5E`. Status colors have one meaning each: red = past due, amber = waiting (cash with an installer, pauses, a busy installer), green = paid/done/free, blue = information (measurements, opening balances).
 - **Not everything is a white box**:
   - The Sot headline is a layered dark brand card with the stacked "where is the money" bar.
   - Quick actions are tactile tiles with a tinted icon badge.
@@ -132,14 +140,14 @@ The app must look like modern software on a mid-range phone, and be **scannable 
   - The three stages are a **connected stepper** with an icon per step and a distinct active color (E re blue, Në punë brand, E kryer green).
   - A project shows a **progress ring** (installed %) and a **dual bar** comparing "Montuar" with "Paguar", so the gap (what is owed now) is visible.
 - **Night Mode** (`Dritë / Errët`):
-  - A complete dark token set under `[data-theme="dark"]`: canvas `#0B0F17`, cards `#131B26`, inset surfaces `#1C2636`, borders `#233044`, and soft translucent status tints.
+  - A complete dark token set under `[data-theme="dark"]`: canvas `#121816`, cards `#1A221E`, inset surfaces `#222C26`, borders `#2C3830`, and soft status tints.
   - Brand colors adapt automatically: the app derives a lighter "ink" shade of the brand primary for links, active tabs and chips, and a mid-tone "fill" shade for buttons, so any client's brand stays bright and readable on dark cards (tested with dark navy, green and brown brands).
   - Toggled with one tap (moon/sun) in the header and in Cilësimet ("Pamja: Dritë / Errët"), saved per device. With no saved choice, the device setting decides. Set the theme before first paint so there is no white flash. The customer tracking page follows the visitor's device setting.
 
 ## Core features (v1)
 
 ### 1. Sot (the owner's start screen)
-- **Headline: "Kush më ka borxh"**: the overdue total (or the total outstanding when nothing is overdue), a **stacked bar** splitting the money not yet in the office into "Jashtë afatit", "Në afat", "Pa afat" and "Te montuesit", and the top three names, linking to the debts list.
+- **Headline: "Borxhet"** (it answers "Kush më ka borxh?"): the overdue total (or the total outstanding when nothing is overdue), a **stacked bar** splitting the money not yet in the office into "Jashtë afatit", "Në afat", "Pa afat" and "Te montuesit", and the top three names, linking to the debts list.
 - **"Kërkon vëmendje"**, at most four quiet rows, each linking to where the thing is handled:
   - cash with an installer, not handed over: "Driton: €800 për t'u dorëzuar"
   - visits from past days not marked done: "1 punë nga dje: a u krye?" (because the debts list depends on work being marked done)
@@ -148,7 +156,7 @@ The app must look like modern software on a mid-range phone, and be **scannable 
 - Quick action tiles: **+ Porosi e re**, **+ Pagesë** (search the client, then the payment sheet), **+ Borxh i bartur**.
 - No charts, no "orders at risk", no message queue.
 
-### 2. Kush më ka borxh
+### 2. Borxhet ("Kush më ka borxh")
 - Three groups: **"Me vonesë"** (past the due date), **"Afat i panjohur"** (no due date known: counted in the total, not in overdue, no reminder suggested), **"Ende në afat"** (folded by default). Sort by amount or by days overdue.
 - One row = name, what it's for (order number · product, "40 / 100 copë" for a project, or "Borxh i bartur"), amount owed now, how late, **one status line** (the most decisive of: "€X te Driton, pa dorëzuar", "Mos sugjero kujtesa", "Kujtesat në pauzë deri më …", "Ka punë të mbetura: …", "Kujtesa e fundit: 12 ditë më parë"), the message button and the call button.
 - **The message button is a green labelled "Kujtesë" only when a reminder is reasonable now** (see §7). Otherwise it is a quiet icon that still lets the owner write by hand.
@@ -245,8 +253,8 @@ For debts that existed before the app. The owner often knows only "Blerimi më k
 So the owner can answer "A mund të vini të premten?" without remembering every installer's day:
 - **Live availability in "Planifiko vizitë"**: when the date is picked or changed, each installer chip shows that day's load: **"Faton · i lirë"** (green dot), **"Besnik · 1 punë"**, **"Driton · 2 punë"** (amber from 2 jobs). The visit being edited is not counted. Under the chips, a helper box describes the selected installer's day: "Të premten, 23 tetor, Dritoni ka 2 punë: Paradite — Montim te Besa (Prishtinë) · Pasdite — Matje te Rinor (Prishtinë)", or "Faton është i lirë në këtë datë."
 - **Orari → "Montuesit"** (a fourth tab next to Sot · Nesër · 7 ditë):
-  1. **"Kush është i lirë?"**: a 7-day strip (today + 6 days) per installer. Each cell shows that day's load: empty/"—" for free, a soft brand badge for 1 job, an amber badge for 2 or more. Tapping a cell opens that installer's jobs for that day.
-  2. **"Kush sa punë ka kryer"**: one card per installer with **Në pritje** (planned visits not done), **Të kryera** (installations, deliveries, measurements, repairs, and project units installed, e.g. "18 banesa", "40 copë"), and **Para në dorë** (cash taken from customers and not handed over, linking to "Para te montuesit"; otherwise "€0 në dorë").
+  1. **"Disponueshmëria"** (who is free?): a 7-day strip (today + 6 days) per installer. Each cell shows that day's load: empty/"—" for free, a soft brand badge for 1 job, an amber badge for 2 or more. Tapping a cell opens that installer's jobs for that day.
+  2. **"Përmbledhja e montuesve"** (who did what): one card per installer with **Në pritje** (planned visits not done), **Të kryera** (installations, deliveries, measurements, repairs, and project units installed, e.g. "18 banesa", "40 copë"), and **Para në dorë** (cash taken from customers and not handed over, linking to "Para te montuesit"; otherwise "€0 në dorë").
 - Load counts every visit (measurement, installation, delivery, repair) assigned to that installer on that date, done or not. No capacity limits or warnings that block saving: the owner decides.
 
 ### 6. Customer tracking page `/t/<random-token>`
@@ -358,7 +366,7 @@ Barely visible in a sales demo, but required before real money and real customer
 
 ## Work plan
 
-The project is built in phases; see [PHASES.md](PHASES.md). The first phase is an interactive HTML prototype in `prototype/`; once I approve it, the app's design follows it. In the app build phases, keep the app running after each phase, and end every phase with the report described in PHASES.md (what was built, how to run it, what to test manually, what's next).
+The project is built in phases; see [PHASES.md](PHASES.md). The first phase is an interactive HTML prototype in `prototype/`. It was approved on 19.10.2026 (v10), and the app's design follows it: appearance, layouts, navigation, wording and interactions. In the app build phases, keep the app running after each phase, and end every phase with the report described in PHASES.md (what was built, how to run it, what to test manually, what's next).
 
 Before you start coding the app, give me the plan, the data model (Drizzle schema) and the folder structure. At the end, write a `README.md` covering:
 - how to run it locally (offline, PGlite)

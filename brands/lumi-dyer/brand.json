@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 2,
+  "slug": "lumi-dyer",
+  "companyName": "Lumi Dyer & Parket",
+  "shortName": "Lumi",
+  "tagline": { "sq": "Dyer dhe dysheme që zgjasin", "en": "Doors and floors that last", "de": "Türen und Böden, die halten" },
+  "logo": { "src": "logo.svg", "alt": "Lumi Dyer & Parket" },
+  "colors": { "primary": "#45628F", "accent": "#B58D5E", "background": "#FFFFFF", "text": "#17201D" },
+  "font": "Inter",
+  "contact": {
+    "phone": "+38349555210",
+    "whatsapp": "+38349555210",
+    "viber": "+38349555210",
+    "email": "info@lumidyer.example",
+    "address": "Rr. Remzi Ademaj 8, Prizren",
+    "city": "Prizren",
+    "mapsUrl": "https://maps.google.com/?q=Prizren",
+    "googleReviewUrl": "https://g.page/r/lumi-dyer/review"
+  },
+  "legal": { "businessNumber": "", "fiscalNumber": "", "vatNumber": "", "bankName": "", "iban": "", "website": "" },
+  "languages": ["sq", "en", "de"],
+  "defaultLanguage": "sq",
+  "businessType": "doors_floors",
+  "depositWord": "Kapar",
+  "modules": { "orderTracking": true },
+  "demo": true
+}

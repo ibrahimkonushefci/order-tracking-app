@@ -1,0 +1,45 @@
+/* Tailwind theme + utilities only (no preflight), so the v10 prototype components render exactly. */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import '../styles/tokens.css';
+@import '../styles/app.css';
+@import '../styles/app-extra.css';
+@import '../styles/brand-scope.css';
+
+/* Inter, self-hosted (variable 400–700). No runtime dependency on Google. */
+@font-face {
+  font-family: 'InterVariable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'InterVariable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Tokens → Tailwind/shadcn names, for any utility used in the app. */
+@theme inline {
+  --font-sans: var(--font-sans);
+  --color-background: var(--color-canvas);
+  --color-foreground: var(--color-text);
+  --color-card: var(--color-surface);
+  --color-muted: var(--color-surface-2);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-contrast);
+  --color-accent: var(--color-accent);
+  --color-accent-foreground: var(--color-accent-contrast);
+  --color-destructive: var(--color-danger);
+  --color-border: var(--color-border);
+  --color-ring: var(--color-focus);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}

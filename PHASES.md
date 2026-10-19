@@ -6,9 +6,9 @@ The app is built as a finished-looking demo that I show and sell to owners. It d
 
 | # | Phase | Result | Status |
 |---|---|---|---|
-| 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | v10: approved redesign integrated on 19.10.2026 (v9 workflow and rules unchanged); waiting for the physical-phone check + Phase 1 sign-off |
-| 2 | Foundation | Running app shell: brand, auth (Pronari/Zyra), i18n, `/setup`, first fixtures | Not started |
-| 3 | Orders & money core | Orders, 3 stages, projects, payments, cash with installers, opening balances, debts list, Sot, export | Not started |
+| 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | **Approved 19.10.2026**: v10 (commit `b861ff6`) is the design baseline for all phases. Physical-phone check still pending |
+| 2 | Foundation | Running app shell: brand, auth (Pronari/Zyra), i18n, `/setup`, first fixtures | Built 19.10.2026 (app on port 3100). Independent review: two P2 findings (phone logout, brand text contrast) and the setup i18n tidy-up fixed and verified 19.10.2026 |
+| 3 | Orders & money core | Orders, 3 stages, projects, payments, cash with installers, opening balances, debts list, Sot, export | In progress (started 19.10.2026) |
 | 4 | Orari, WhatsApp & tracking page | Visits, installers, job sharing, customer messages, tracking page, on a temporary HTTPS test deployment | Not started |
 | 5 | Demo-ready | Full seed data, demo mode, polished sales environment, QR flow, PWA, pitch kit | Not started |
 | 6 | Production readiness & first client | Backups, tested restore, real auth, pilot checkpoint passed | Not started |
@@ -17,8 +17,9 @@ The app is built as a finished-looking demo that I show and sell to owners. It d
 
 ### How we work
 1. When I give new feedback, discuss and confirm the plan before coding (unless I say "go ahead").
-2. End every turn with a plain-text report and plain-text questions at the bottom. Never use the interactive multiple-choice widget (AskUserQuestion).
+2. End every turn with a plain-text report and any remaining questions in plain text at the bottom (no answer buttons at the end of a turn). **During a task**, questions may use the selectable prompt (AskUserQuestion), with the recommended option first and marked "(Recommended)".
 3. Always work directly on `main`. Never create branches. Commit only when I ask.
+4. Ask all foreseeable clarification, permission, and folder-access questions at the start of the task, before implementation. Once resolved, proceed independently within the agreed scope. Ask again only if a genuinely new blocker or consequential decision appears.
 
 ### Report at the end of each phase
 When a phase is finished, tell me:
@@ -35,11 +36,22 @@ Then update the status column in the table above.
   order_tracking_instructions.md   spec
   PHASES.md                        this file
   prototype/                       Phase 1, static HTML; design reference
+  docs/                            phase plans (e.g. phase-2-plan.md)
   (Next.js app at the root)        Phases 2–6
 ```
 - `prototype/` is **standalone**: plain HTML/CSS/JS, no `package.json`, no shared code with the app, opened directly in the browser.
 - The app must not import anything from `prototype/`. Exclude it from the app's TypeScript, ESLint, tests and build so the two never interfere.
 - Keep `prototype/` in the repo after Phase 1 as the visual reference. It is not updated as the app evolves unless I ask.
+
+### Design baseline (approved 19.10.2026)
+The integrated **v10 prototype** in `prototype/` (commit `b861ff6`) is the approved design baseline for every phase. The finished app must match its **appearance, layouts, navigation, wording and interactions**:
+- Shell: on laptop/tablet a sidebar with Sot · Porositë · Borxhet · Orari, then Para te montuesit, Cilësimet and the signed-in user; on phones (narrower than 700px) a header (logo, company, role · name, moon/sun, gear) and a bottom tab bar with Sot · Porositë · Borxhet · Orari.
+- Tokens: `prototype/css/tokens.css` (v10 palette, 14px body / 16px form inputs on phones, small radii, 44px touch targets, the dark set under `[data-theme="dark"]`, derived brand ink/fill shades).
+- Wording: the v10 labels (see the table in `prototype/README.md`, e.g. "Borxhet", "Bordi", "Disponueshmëria", "Adresa dhe udhëzimet"). The spec's business rules, stage keys and customer-facing texts are unchanged.
+- Interactions: bottom sheets with a close button, Escape to close, the page behind them inert; solid brand fill for every selected state.
+- Prototype-only chrome (the laptop demo bar, "Shiko si", the device frame, the avatar panel) is not part of the app; its demo functions arrive in Phase 5 as demo mode.
+
+Where the app has to differ (a real form needs more fields, a technical limit), keep the prototype's look and say what changed in the phase report.
 
 ### Test fixtures (from Phase 2 on)
 The full realistic seed dataset comes in Phase 5. Before that, keep a **small, repeatable fixture set** loaded by one command (e.g. `pnpm fixtures`), so every phase review starts from the same known records instead of recreating them by hand. All data is fictional.
@@ -62,8 +74,8 @@ The full realistic seed dataset comes in Phase 5. Before that, keep a **small, r
 - Build it with the design tokens (colors as CSS variables, spacing, type scale, light and dark sets) the app will use, so the design can be carried over directly. Inter is loaded from Google Fonts in the prototype only; the app self-hosts it.
 
 **Screens and flows:**
-1. **Sot**: the "Kush më ka borxh" headline, "Kërkon vëmendje" (cash with installers, past visits not marked done, reminders possible now), today's visits.
-2. **"Kush më ka borxh"** with the three groups, one status line per row, the green "Kujtesë" only where a reminder is reasonable, and "Kujtesa e fundit".
+1. **Sot**: the "Kush më ka borxh" headline ("Borxhet" since v10), "Kërkon vëmendje" (cash with installers, past visits not marked done, reminders possible now), today's visits.
+2. **"Kush më ka borxh"** ("Borxhet" since v10) with the three groups, one status line per row, the green "Kujtesë" only where a reminder is reasonable, and "Kujtesa e fundit".
 3. **Order detail**: the three-stage control, money, visits, quiet rows (place & directions, client, tracking link, photos, internal note, history), Ndrysho, payments with edit/delete.
 4. **The €800 call**: "Montimi u krye" → "Po, të gjitha €800" · "Te Driton" → the order is done, owed €0, the €800 under "Para te montuesit" → "Konfirmo: i mora paratë nga Driton".
 5. **A multi-unit project**: progress "40 / 100 copë", "Shëno montim", owed now = installed value − paid, "Paguar përpara".
@@ -72,7 +84,7 @@ The full realistic seed dataset comes in Phase 5. Before that, keep a **small, r
 8. Order list with search and stage chips + three-column board (tablet).
 9. **Customer tracking page** (responsive), branded, three steps, next visit, project progress, plus the "link no longer active" page.
 10. **Cilësimet**: installers, Avans/Kapar, "Pamja: Dritë / Errët", "Eksporto të dhënat" (a real .xlsx and a .json), and what Zyra can't do.
-11. **Punët e montuesve**: live availability on the installer chips in "Planifiko vizitë" (with the helper box for the selected installer), and Orari → "Montuesit": the 7-day "Kush është i lirë?" grid and the per-installer summary (Në pritje, Të kryera, Para në dorë).
+11. **Punët e montuesve**: live availability on the installer chips in "Planifiko vizitë" (with the helper box for the selected installer), and Orari → "Montuesit": the 7-day "Kush është i lirë?" grid ("Disponueshmëria" since v10) and the per-installer summary ("Përmbledhja e montuesve") (Në pritje, Të kryera, Para në dorë).
 12. **Visual design and Night Mode**: every screen above in light and dark, switched with the moon/sun button in the header.
 
 **Done when:**
@@ -80,14 +92,14 @@ The full realistic seed dataset comes in Phase 5. Before that, keep a **small, r
 - The tracking page and the simulated message previews look right at phone width.
 - Every screen is readable in both light and dark mode, for both brands.
 - The exported .xlsx opens in Excel/Numbers with readable sheets.
-- I've opened the prototype on **my own physical phone** (served from the laptop over local Wi-Fi, e.g. `python3 -m http.server` in `prototype/`) and the phone screens are comfortable to use with a thumb. The laptop device frame only reviews layout; it doesn't prove usability on a phone.
+- I've opened the prototype on **my own physical phone** (served from the laptop over local Wi-Fi, e.g. `python3 -m http.server` in `prototype/`) and the phone screens are comfortable to use with a thumb. The laptop device frame only reviews layout; it doesn't prove usability on a phone. **Still pending** (not yet done as of 19.10.2026); approval was given without it, so findings from it are fed into the app phases.
 - I've said the workflow is right.
 
 Real delivery (a tracking link opened on another phone, a message that actually arrives) is **not** part of Phase 1; that is checked in Phase 4.
 
 **After approval:** I'll mark the prototype as approved here. From then on, **the app's design follows the prototype**: layout, navigation, components, colors and wording are adopted from `prototype/`. Where the app has to differ (a real form needs more fields, a technical limit), keep the prototype's look and say what changed in the phase report.
 
-> Prototype approved: _not yet_
+> Prototype approved: **19.10.2026, v10** (commit `b861ff6`, "Prototype v10: integrate the approved redesign"), as the design baseline for all future phases; see "Design baseline" above. Physical-phone validation: **still pending**.
 
 ---
 
@@ -96,15 +108,15 @@ Real delivery (a tracking link opened on another phone, a message that actually 
 Spec sections: Tech stack, White-label brand system, Users, Language & locale, Permissions.
 - Next.js + TypeScript + Tailwind/shadcn, Drizzle + PGlite locally, Better Auth with the Pronari and Zyra roles, next-intl (Albanian), Serwist PWA shell.
 - **brand.json v2** schema (zod), theming with CSS variables taken from the prototype's tokens (light and dark sets, brand ink/fill shades for dark mode), Inter self-hosted, the theme toggle with no flash on load, neutral fallback brand, `/setup` with logo color extraction.
-- Layout shell and navigation matching the prototype (Sot, Borxhet, Porositë, Orari; Cilësimet from the header).
+- Layout shell and navigation matching the v10 prototype: sidebar on laptop/tablet (Sot · Porositë · Borxhet · Orari, Para te montuesit, Cilësimet, signed-in user), header + bottom tab bar on phones (Cilësimet and the moon/sun in the header).
 - First fixtures: the two accounts, one brand, three installers.
 - Data model (Drizzle schema) and folder structure shown to me **before** coding.
 
-**Done when:** I can log in as Pronari and as Zyra (from the fixtures) on a rebranded shell that looks like the prototype in light and dark mode, offline, on my laptop.
+**Done when:** I can log in as Pronari and as Zyra (from the fixtures) on a rebranded shell that looks like the v10 prototype in light and dark mode, offline, on my laptop.
 
 ## Phase 3: Orders & money core
 
-Spec sections: 1 Sot, 2 Kush më ka borxh, 3 Orders, 4 Payments & debts, 9 Export, Permissions. This is the heart of the product, so most of the tests live here.
+Spec sections: 1 Sot, 2 Borxhet, 3 Orders, 4 Payments & debts, 9 Export, Permissions. This is the heart of the product, so most of the tests live here.
 - Clients, orders (five-field form), three stages by key, the "E kryer" sheet with the payment term, multi-unit projects with installed parts, remaining work, reminder pause, order edits, history.
 - Payments with "Në zyrë" / "Te montuesi", Konfirmo (one / all), edit and delete with history, balances, owed now for orders and projects, due dates, overdue logic.
 - **Opening balances (borxh i bartur)** with known or unknown due dates.

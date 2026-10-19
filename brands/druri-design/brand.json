@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 2,
+  "slug": "druri-design",
+  "companyName": "Druri Design",
+  "shortName": "Druri",
+  "tagline": {
+    "sq": "Kuzhina me porosi që nga 2005",
+    "en": "Custom kitchens since 2005",
+    "de": "Küchen nach Maß seit 2005"
+  },
+  "logo": {
+    "src": "logo.svg",
+    "alt": "Druri Design"
+  },
+  "colors": {
+    "primary": "#365C50",
+    "accent": "#B99A70",
+    "background": "#FFFFFF",
+    "text": "#1A1A1A"
+  },
+  "font": "Inter",
+  "contact": {
+    "phone": "+38344123456",
+    "whatsapp": "+38344123456",
+    "viber": "+38344123456",
+    "email": "info@druridesign.example",
+    "address": "Rr. Agim Ramadani 24, Prishtinë",
+    "city": "Prishtinë",
+    "mapsUrl": "https://maps.google.com/?q=Prishtin%C3%AB",
+    "googleReviewUrl": "https://g.page/r/druri-design/review"
+  },
+  "legal": {
+    "businessNumber": "",
+    "fiscalNumber": "",
+    "vatNumber": "",
+    "bankName": "",
+    "iban": "",
+    "website": ""
+  },
+  "languages": [
+    "sq",
+    "en",
+    "de"
+  ],
+  "defaultLanguage": "sq",
+  "businessType": "doors_floors",
+  "depositWord": "Avans",
+  "modules": {
+    "orderTracking": true
+  },
+  "demo": true
+}

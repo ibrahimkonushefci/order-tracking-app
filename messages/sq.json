@@ -1,0 +1,177 @@
+{
+  "app": {
+    "title": "Porositë",
+    "tagline": "Menaxhimi i porosive",
+    "skip": "Kalo te përmbajtja",
+    "nav": "Navigimi",
+    "workshop": "PUNËTORIA"
+  },
+  "nav": {
+    "dashboard": "Sot",
+    "orders": "Porositë",
+    "debts": "Borxhet",
+    "schedule": "Orari",
+    "cash": "Para te montuesit",
+    "settings": "Cilësimet"
+  },
+  "role": {
+    "owner": "Pronari",
+    "office": "Zyra"
+  },
+  "theme": {
+    "toggle": "Dritë / Errët",
+    "toLight": "Pamja e ndritshme",
+    "toDark": "Pamja e errët",
+    "light": "Dritë",
+    "dark": "Errët"
+  },
+  "login": {
+    "title": "Hyr",
+    "sub": "Për pronarin dhe zyrën",
+    "email": "Email",
+    "password": "Fjalëkalimi",
+    "submit": "Hyr",
+    "submitting": "Duke hyrë…",
+    "invalid": "Email ose fjalëkalim i gabuar.",
+    "required": "Shkruani email-in dhe fjalëkalimin.",
+    "note": "Montuesit dhe klientët nuk hyjnë: montuesit i marrin punët në WhatsApp, klientët kanë linkun e porosisë."
+  },
+  "user": {
+    "logout": "Dil",
+    "you": "(ju)",
+    "logoutAs": "Dil ({name})"
+  },
+  "phase": {
+    "later3": "Vjen në fazën 3 (porositë dhe pagesat).",
+    "later4": "Vjen në fazën 4 (orari dhe WhatsApp)."
+  },
+  "dashboard": {
+    "morning": "Mirëmëngjes",
+    "day": "Mirëdita",
+    "evening": "Mirëmbrëma",
+    "hero": "Borxhet",
+    "nothingDue": "për t’u mbledhur · asnjë jashtë afatit",
+    "quick": "Veprime të shpejta",
+    "newOrder": "Porosi e re",
+    "newOrderSub": "Shto porosi",
+    "payment": "Pagesë",
+    "paymentSub": "Regjistro",
+    "opening": "Borxh i bartur",
+    "openingSub": "Nga fletorja",
+    "today": "Punët e sotme",
+    "noVisits": "Sot nuk ka punë në terren.",
+    "toSchedule": "Orari"
+  },
+  "orders": {
+    "title": "Porositë",
+    "count": "{count} porosi",
+    "new": "Porosi e re",
+    "search": "Kërko emër, telefon ose numër porosie",
+    "empty": "Ende nuk ka porosi."
+  },
+  "debts": {
+    "title": "Borxhet",
+    "sub": "Pagesat që presin të mblidhen",
+    "opening": "Borxh i bartur",
+    "empty": "Askush nuk ju ka borxh."
+  },
+  "schedule": {
+    "title": "Orari",
+    "sub": "Matje, montime, dërgesa dhe riparime",
+    "today": "Sot",
+    "tomorrow": "Nesër",
+    "week": "7 ditë",
+    "installers": "Montuesit",
+    "empty": "Asnjë punë në 7 ditët e ardhshme."
+  },
+  "cash": {
+    "title": "Para te montuesit",
+    "sub": "Pa dorëzuar në zyrë",
+    "empty": "Të gjitha paratë janë dorëzuar."
+  },
+  "settings": {
+    "title": "Cilësimet",
+    "users": "Përdoruesit",
+    "usersHelp": "Të dy përdorin të njëjtat ekrane. Vetëm pronari mund të fshijë pagesa, porosi e borxhe, të eksportojë të dhënat dhe të shtojë përdorues.",
+    "installers": "Montuesit",
+    "installersHelp": "Montuesit nuk hyjnë në aplikacion: ua dërgoni punët në WhatsApp, ata ju telefonojnë kur mbarojnë.",
+    "call": "Thirr {name}",
+    "appearance": "Pamja",
+    "appearanceHelp": "Ruhet në këtë pajisje. Pa zgjedhje, ndjek cilësimin e telefonit.",
+    "deposit": "Fjala për paradhënien",
+    "depositHelp": "Përdoret në etiketa dhe mesazhe. Kërkimi pranon të dyja.",
+    "depositOwnerOnly": "Vetëm pronari mund ta ndryshojë.",
+    "depositSaved": "U ruajt: {word}",
+    "export": "Eksporto të dhënat",
+    "exportHelp": "Një skedar Excel me porositë, pagesat, vizitat, borxhet e bartura dhe klientët. Ruajeni ku të doni: është kopja juaj, edhe pa aplikacionin.",
+    "exportOwnerOnly": "Vetëm pronari mund t’i eksportojë të gjitha të dhënat.",
+    "brand": "Marka",
+    "brandHelp": "Logoja, ngjyrat dhe emri i kompanisë.",
+    "brandSetup": "Hap konfigurimin e markës"
+  },
+  "channel": {
+    "whatsapp": "WhatsApp",
+    "viber": "Viber",
+    "sms": "SMS"
+  },
+  "setup": {
+    "title": "Konfigurimi i markës",
+    "sub": "Vetëm për demo: logoja, ngjyrat dhe emri para takimit",
+    "pin": "PIN-i",
+    "pinSubmit": "Vazhdo",
+    "pinWrong": "PIN i gabuar.",
+    "disabled": "Konfigurimi i markës është i fikur (vetëm në modalitetin demo).",
+    "ownerOnly": "Vetëm pronari mund ta ndryshojë markën.",
+    "logo": "Logoja",
+    "chooseLogo": "Zgjidh logon",
+    "logoHelp": "SVG ose PNG, deri në 2 MB. Ngjyrat sugjerohen nga logoja.",
+    "suggested": "Ngjyra të sugjeruara",
+    "primary": "Ngjyra kryesore",
+    "accent": "Ngjyra theksuese",
+    "companyName": "Emri i kompanisë",
+    "shortName": "Emri i shkurtër",
+    "phone": "Telefoni",
+    "city": "Qyteti",
+    "businessType": "Lloji i biznesit",
+    "deposit": "Avans apo kapar?",
+    "preview": "Parapamja",
+    "apply": "Apliko",
+    "applying": "Duke ruajtur…",
+    "applied": "Marka u ruajt dhe u aplikua në këtë shfletues.",
+    "invalid": "Kontrolloni fushat e shënuara.",
+    "logoInvalid": "Logoja duhet të jetë SVG ose PNG deri në 2 MB.",
+    "types": {
+      "kitchens": "Kuzhina",
+      "furniture": "Mobilje",
+      "doors_floors": "Dyer dhe dysheme",
+      "doors_windows": "Dyer dhe dritare"
+    },
+    "previewRole": "Pronari · {name}",
+    "previewHero": "Borxhet",
+    "previewHeroSub": "jashtë afatit · 3 klientë",
+    "previewToday": "Sot",
+    "previewTomorrow": "Nesër",
+    "previewWeek": "7 ditë",
+    "previewNewOrder": "Porosi e re",
+    "previewReminder": "Kujtesë",
+    "pinExpired": "PIN-i ka skaduar. Hapni faqen përsëri.",
+    "errors": {
+      "companyName": "Shkruani emrin e kompanisë (2–60 shkronja).",
+      "shortName": "Shkruani emrin e shkurtër (deri në 24 shkronja).",
+      "phone": "Telefoni në formatin +38344123456.",
+      "city": "Shkruani qytetin (2–40 shkronja).",
+      "businessType": "Zgjidhni llojin e biznesit.",
+      "depositWord": "Zgjidhni Avans ose Kapar.",
+      "primary": "Ngjyra në formatin #365C50.",
+      "accent": "Ngjyra në formatin #B99A70."
+    }
+  },
+  "tracking": {
+    "inactive": "Ky link nuk është më aktiv. Na kontaktoni.",
+    "call": "Thirr"
+  },
+  "errors": {
+    "forbidden": "Nuk keni leje për këtë veprim.",
+    "generic": "Diçka shkoi keq. Provoni përsëri."
+  }
+}

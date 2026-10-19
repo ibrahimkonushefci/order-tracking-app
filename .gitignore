@@ -24,3 +24,11 @@ next-env.d.ts
 # Local secrets and environment
 .env
 .env*.local
+
+# Local PGlite database, PWA build output, test output
+data/
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+playwright-report/
+test-results/

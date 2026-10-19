@@ -1,0 +1,8 @@
+node_modules
+.next
+out
+prototype
+data
+drizzle
+pnpm-lock.yaml
+public/sw.js
