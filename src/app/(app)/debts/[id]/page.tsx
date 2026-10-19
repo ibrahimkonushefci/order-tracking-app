@@ -2,9 +2,10 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
 import { lateDays, openingTotals } from '@/domain/balances';
-import { lastReminder } from '@/domain/debts';
+import { lastReminder, reminderCheck } from '@/domain/debts';
+import Link from 'next/link';
+import { ContactPrefs } from '@/components/sheets/link';
 import { Badge } from '@/components/cues';
-import { chatHref } from '@/components/debt-row';
 import { Icon } from '@/components/icons';
 import { Page, PageHead } from '@/components/shell/shell';
 import { EditOpeningButton, OpeningMoreActions, SetDueButton } from '@/components/sheets/opening';
@@ -40,6 +41,7 @@ export default async function OpeningPage({ params }: { params: Promise<{ id: st
   const workDone = /^\d{4}-\d{2}-\d{2}$/.test(ob.workDone) ? fmtDate(ob.workDone) : /^\d{4}-\d{2}$/.test(ob.workDone) ? fmtMonth(ob.workDone) : t('dontKnow');
   const reminders = tot.owed <= 0 ? t('remNoDebt') : !ob.dueDate ? w('dueUnknown') : pauseOn ? tm('paused', { date: fmtDate(ob.pausedUntil), reason: ob.pauseReason ?? '' }) : ob.noReminders ? t('remOff') : (late ?? 0) <= 0 ? t('remNotDue', { date: fmtDate(ob.dueDate) }) : t('remPhase4');
   const ch = ob.channel === 'viber' ? 'viber' : 'whatsapp';
+  const rem = reminderCheck(tot, ob, ob.noReminders, today);
   return (
     <Page nav="debts">
       <PageHead back="/debts" backLabel={t('back')} title={ob.name} sub={ob.forWhat ? t('subFor', { what: ob.forWhat }) : t('sub')} />
@@ -96,9 +98,15 @@ export default async function OpeningPage({ params }: { params: Promise<{ id: st
             {ob.phone ? (
               <div className="row">
                 <span className="grow small muted">{t('contact', { name: firstName(ob.name) })}</span>
-                <a className="icon-btn icon-btn--quiet" href={chatHref(ch, ob.phone)} target="_blank" rel="noopener" aria-label={t('write')}>
-                  <Icon name={ch} />
-                </a>
+                {rem.ok ? (
+                  <Link className={`btn btn--${ch} btn--sm`} href={`/compose/opening/${ob.id}?t=reminder`}>
+                    <Icon name={ch} /> {t('remind')}
+                  </Link>
+                ) : (
+                  <Link className="icon-btn icon-btn--quiet" href={`/compose/opening/${ob.id}?t=reminder`} aria-label={t('write')}>
+                    <Icon name={ch} />
+                  </Link>
+                )}
                 <a className="icon-btn icon-btn--call" href={`tel:${ob.phone}`} aria-label={t('call')}>
                   <Icon name="phone" />
                 </a>
@@ -171,6 +179,7 @@ export default async function OpeningPage({ params }: { params: Promise<{ id: st
               <Icon name="right" className="chev" />
             </summary>
             <div className="fold__body">
+              {ob.phone ? <ContactPrefs kind="opening" id={ob.id} language={ob.language} channel={ob.channel} /> : null}
               <OpeningMoreActions
                 id={ob.id}
                 name={ob.name}

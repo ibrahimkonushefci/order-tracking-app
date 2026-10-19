@@ -2,6 +2,9 @@
 export const TIME_ZONE = 'Europe/Belgrade';
 
 export const WEEKDAYS = ['E diel', 'E hënë', 'E martë', 'E mërkurë', 'E enjte', 'E premte', 'E shtunë'];
+/** "të enjten": the weekday after a preposition. */
+export const WEEKDAYS_ON = ['të dielën', 'të hënën', 'të martën', 'të mërkurën', 'të enjten', 'të premten', 'të shtunën'];
+export const WEEKDAYS_SHORT = ['Di', 'Hë', 'Ma', 'Më', 'En', 'Pr', 'Sh'];
 export const MONTHS = ['janar', 'shkurt', 'mars', 'prill', 'maj', 'qershor', 'korrik', 'gusht', 'shtator', 'tetor', 'nëntor', 'dhjetor'];
 
 /** Today in Kosovo as yyyy-MM-dd, whatever the server's timezone. */

@@ -1,0 +1,161 @@
+/**
+ * Visits (spec §5): Matje, Montim, Dërgesë, Riparim with an optional time and installer.
+ * Planning, editing and removing a planned visit, and "U krye" in its four forms:
+ * a measurement, a repair, a project part ("Sa u montuan?") and the €800 phone call
+ * ("Montimi u krye": the payment, where the money is, and "Porosia është e kryer").
+ */
+import { eq } from 'drizzle-orm';
+import { isProject } from '@/domain/balances';
+import { VISIT_TYPES, type VisitType } from '@/domain/visits';
+import { installer, orders, visit } from '@/db/schema';
+import type { Db } from '@/db/connect';
+import { fmtDate } from '@/lib/dates';
+import { allow, FieldError, log, NotFoundError, th, throwIf, tw, type Actor, type DbOrTx, type Tx } from './common';
+import { checkInstaller, markDoneIn, mustLoad, recordPartIn, type DoneInput, type PartInput } from './orders';
+
+export interface VisitInput {
+  type: string;
+  date: string;
+  /** 'morning' | 'afternoon' | 'exact' | 'none' */
+  time: string;
+  exact?: string;
+  /** An installer id, or '' / 'none'. */
+  installerId?: string;
+  note?: string;
+}
+
+const text = (v: unknown, max = 300) => String(v ?? '').trim().slice(0, max);
+const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+async function nameOf(tx: DbOrTx, id: string | null) {
+  if (!id) return tw('noInstaller');
+  return (await tx.select({ n: installer.name }).from(installer).where(eq(installer.id, id)))[0]?.n ?? '—';
+}
+
+const timeText = (t: string | null) => (!t ? '' : t === 'morning' ? tw('time.morning') : t === 'afternoon' ? tw('time.afternoon') : t);
+
+async function describe(tx: DbOrTx, v: { type: VisitType; date: string; time: string | null; installerId: string | null }) {
+  const time = timeText(v.time);
+  return `${tw(`visit.${v.type}`)} · ${fmtDate(v.date)}${time ? ` · ${time}` : ''} · ${await nameOf(tx, v.installerId)}`;
+}
+
+function parseVisit(input: VisitInput) {
+  const errors: FieldError[] = [];
+  const type = VISIT_TYPES.find(t => t === input.type);
+  if (!type) errors.push(new FieldError('type', 'visitTypeRequired'));
+  const date = text(input.date, 10);
+  if (!isDate(date)) errors.push(new FieldError('date', 'dateRequired'));
+  let time: string | null = null;
+  if (input.time === 'morning' || input.time === 'afternoon') time = input.time;
+  else if (input.time === 'exact') {
+    const e = text(input.exact, 5);
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(e)) errors.push(new FieldError('exact', 'timeInvalid'));
+    else time = e;
+  }
+  throwIf(errors);
+  const inst = input.installerId && input.installerId !== 'none' ? input.installerId : null;
+  return { type: type!, date, time, installerId: inst, note: text(input.note) };
+}
+
+/** "Planifiko vizitë" / "Ndrysho vizitën" (both roles). Changing a sent visit clears "dërguar". */
+export async function saveVisit(db: Db, actor: Actor, orderId: string, visitId: string | null, input: VisitInput) {
+  allow(actor, 'daily');
+  const v = parseVisit(input);
+  return db.transaction(async tx => {
+    const o = await mustLoad(tx, actor, orderId);
+    if (o.stage === 'cancelled') throw new FieldError('date', 'cancelled');
+    if (v.installerId) await checkInstaller(tx, actor, v.installerId);
+    if (!visitId) {
+      const [row] = await tx.insert(visit).values({ companyId: actor.companyId, orderId, ...v }).returning();
+      await log(tx, actor, 'order', orderId, th('visitPlanned', { visit: await describe(tx, row) }));
+      return row;
+    }
+    const old = o.visits.find(x => x.id === visitId);
+    if (!old) throw new NotFoundError('visit');
+    if (old.doneAt) throw new FieldError('date', 'visitDone');
+    const before = await describe(tx, old);
+    const after = await describe(tx, v);
+    const changed = before !== after || old.note !== v.note;
+    const [row] = await tx
+      .update(visit)
+      .set({ ...v, lastSentAt: changed ? null : old.lastSentAt })
+      .where(eq(visit.id, visitId))
+      .returning();
+    if (before !== after) await log(tx, actor, 'order', orderId, th('visitChanged', { from: before, to: after }));
+    else if (old.note !== v.note) await log(tx, actor, 'order', orderId, th('visitNote', { visit: after }));
+    return row;
+  });
+}
+
+/** "Hiq vizitën": a planned visit that won't happen (both roles). Done visits are corrected, not removed here. */
+export async function removeVisit(db: Db, actor: Actor, orderId: string, visitId: string) {
+  allow(actor, 'daily');
+  await db.transaction(async tx => {
+    const o = await mustLoad(tx, actor, orderId);
+    const v = o.visits.find(x => x.id === visitId);
+    if (!v) throw new NotFoundError('visit');
+    if (v.doneAt) throw new FieldError('date', 'visitDone');
+    await tx.delete(visit).where(eq(visit.id, visitId));
+    await log(tx, actor, 'order', orderId, th('visitRemoved', { visit: await describe(tx, v) }));
+  });
+}
+
+export interface VisitDoneInput extends Omit<DoneInput, 'pay'> {
+  pay: 'no' | 'all' | 'part';
+  /** Project visit: "Sa u montuan?", an optional value, "Projekti përfundoi". */
+  quantity?: string;
+  value?: string;
+  finish?: boolean;
+  /** Normal job: "Porosia është e kryer" (pre-checked). */
+  close?: boolean;
+  /** Repair: "Puna u përfundua" clears "Ka punë të mbetura". */
+  finishRemaining?: boolean;
+  note?: string;
+}
+
+/**
+ * "U krye" on a visit. The visit is marked done today; for a normal installation or
+ * delivery the €800 sheet runs in the same transaction, so the customer's payment, the
+ * cash with the installer and the stage change are one step.
+ */
+export async function completeVisit(db: Db, actor: Actor, orderId: string, visitId: string, input: VisitDoneInput, today: string) {
+  allow(actor, 'daily');
+  return db.transaction(async tx => {
+    const o = await mustLoad(tx, actor, orderId);
+    const v = o.visits.find(x => x.id === visitId);
+    if (!v) throw new NotFoundError('visit');
+    if (v.doneAt) throw new FieldError('pay', 'visitDone');
+    if (o.stage === 'cancelled') throw new FieldError('pay', 'cancelled');
+    const who = v.installerId ? ` · ${await nameOf(tx, v.installerId)}` : '';
+
+    if (isProject(o) && (v.type === 'install' || v.type === 'delivery')) {
+      const part: PartInput = { quantity: input.quantity ?? '', value: input.value, pay: input.pay === 'no' ? 'no' : 'part', amount: input.amount, method: input.method, holder: input.holder, finish: input.finish, date: today };
+      const r = await recordPartIn(tx, actor, orderId, part, today, visitId);
+      return { kind: 'part' as const, ...r };
+    }
+    if (v.type === 'measure' || v.type === 'repair' || isProject(o)) {
+      const note = text(input.note);
+      await tx
+        .update(visit)
+        .set({ doneAt: today, note: note ? (v.note ? `${v.note} · ${note}` : note) : v.note })
+        .where(eq(visit.id, visitId));
+      await log(tx, actor, 'order', orderId, th('visitDone', { what: tw(`visitDone.${v.type}`), who, note: note ? ` · ${note}` : '' }));
+      if (v.type === 'repair' && input.finishRemaining && o.remainingWork) await clearRemaining(tx, actor, o);
+      if (v.type === 'repair') return { kind: 'repair' as const };
+      return { kind: 'measure' as const };
+    }
+    await tx.update(visit).set({ doneAt: today }).where(eq(visit.id, visitId));
+    await log(tx, actor, 'order', orderId, th('visitDone', { what: tw(`visitDone.${v.type}`), who, note: '' }));
+    const r = await markDoneIn(tx, actor, orderId, { ...input, close: input.close ?? true }, today);
+    return { kind: 'job' as const, ...r };
+  });
+}
+
+async function clearRemaining(tx: Tx, actor: Actor, o: { id: string; remainingWork: string | null; pausedUntil: string | null; pauseReason: string | null }) {
+  await tx.update(orders).set({ remainingWork: null }).where(eq(orders.id, o.id));
+  await log(tx, actor, 'order', o.id, th('remainingDone', { note: o.remainingWork ?? '' }));
+  if (o.pausedUntil && o.pauseReason === tw('remainingReason')) {
+    await tx.update(orders).set({ pausedUntil: null, pauseReason: null }).where(eq(orders.id, o.id));
+    await log(tx, actor, 'order', o.id, th('unpaused'));
+  }
+}

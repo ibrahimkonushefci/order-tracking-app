@@ -23,7 +23,7 @@ export async function stageLabels(db: DbOrTx, companyId: string) {
   return (k: Stage) => (k !== 'cancelled' && o[k]) || tw(`stage.${k}`);
 }
 
-async function mustLoad(db: DbOrTx, actor: Actor, id: string) {
+export async function mustLoad(db: DbOrTx, actor: Actor, id: string) {
   const o = await loadOrder(db, actor.companyId, id);
   if (!o) throw new NotFoundError('order');
   return o;
@@ -161,35 +161,42 @@ export interface DoneInput {
 /** "E kryer" for a normal order: the payment (in the office or with an installer) and the term in one sheet. */
 export async function markDone(db: Db, actor: Actor, id: string, input: DoneInput, today: string) {
   allow(actor, 'daily');
-  return db.transaction(async tx => {
-    const o = await mustLoad(tx, actor, id);
-    if (isProject(o)) throw new FieldError('pay', 'projectUsesFinish');
-    if (o.stage === 'cancelled') throw new FieldError('pay', 'cancelled');
-    const rem = Math.max(0, orderTotals(o).remaining);
-    const pay = rem > 0 ? input.pay : 'no';
-    let amount = pay === 'all' ? rem : 0;
-    if (pay === 'part') {
-      amount = money('amount', input.amount, true);
-      if (amount > rem) throw new FieldError('amount', 'moreThanLeft', { left: eur(rem) });
-    }
-    const left = rem - amount;
-    const term = (['week', 'month', 'date', 'unknown'] as const).find(t => t === input.term) ?? 'week';
-    const termDate = text(input.termDate, 10);
-    if (left > 0 && term === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(termDate)) throw new FieldError('term', 'dateRequired');
-    if (amount > 0) {
-      const holder = await checkHolder(tx, actor, input.holder);
-      await insertPayment(tx, actor, { orderId: id }, { amount, method: holder === 'office' ? methodOf(input.method) : 'cash', holder, date: today, note: '' });
-    }
-    if (o.stage !== 'done') {
-      const label = await stageLabels(tx, actor.companyId);
-      const t = left > 0 ? term : 'week';
-      const dueDate = termDue(today, t, termDate);
-      await tx.update(orders).set({ stage: 'done', doneAt: today, payTerm: t, dueDate }).where(eq(orders.id, id));
-      const termText = left > 0 ? th('termSuffix', { term: tw(`term.${t}`).toLowerCase(), date: t === 'date' ? ` ${fmtDate(dueDate)}` : '' }) : '';
-      await log(tx, actor, 'order', id, th('stage', { from: label(o.stage), to: label('done') }) + termText, { field: 'stage', old: o.stage, new: 'done' });
-    }
-    return { left, held: amount > 0 && input.holder !== 'office' && !!input.holder };
-  });
+  return db.transaction(tx => markDoneIn(tx, actor, id, input, today));
+}
+
+/**
+ * The body of "E kryer", shared with "Montimi u krye" on a visit. `close: false` records only
+ * the payment (the visit was done, the order isn't finished yet).
+ */
+export async function markDoneIn(tx: Tx, actor: Actor, id: string, input: DoneInput & { close?: boolean }, today: string) {
+  const o = await mustLoad(tx, actor, id);
+  if (isProject(o)) throw new FieldError('pay', 'projectUsesFinish');
+  if (o.stage === 'cancelled') throw new FieldError('pay', 'cancelled');
+  const close = input.close ?? true;
+  const rem = Math.max(0, orderTotals(o).remaining);
+  const pay = rem > 0 ? input.pay : 'no';
+  let amount = pay === 'all' ? rem : 0;
+  if (pay === 'part') {
+    amount = money('amount', input.amount, true);
+    if (amount > rem) throw new FieldError('amount', 'moreThanLeft', { left: eur(rem) });
+  }
+  const left = rem - amount;
+  const term = (['week', 'month', 'date', 'unknown'] as const).find(t => t === input.term) ?? 'week';
+  const termDate = text(input.termDate, 10);
+  if (close && left > 0 && term === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(termDate)) throw new FieldError('term', 'dateRequired');
+  if (amount > 0) {
+    const holder = await checkHolder(tx, actor, input.holder);
+    await insertPayment(tx, actor, { orderId: id }, { amount, method: holder === 'office' ? methodOf(input.method) : 'cash', holder, date: today, note: '' });
+  }
+  if (close && o.stage !== 'done') {
+    const label = await stageLabels(tx, actor.companyId);
+    const t = left > 0 ? term : 'week';
+    const dueDate = termDue(today, t, termDate);
+    await tx.update(orders).set({ stage: 'done', doneAt: today, payTerm: t, dueDate }).where(eq(orders.id, id));
+    const termText = left > 0 ? th('termSuffix', { term: tw(`term.${t}`).toLowerCase(), date: t === 'date' ? ` ${fmtDate(dueDate)}` : '' }) : '';
+    await log(tx, actor, 'order', id, th('stage', { from: label(o.stage), to: label('done') }) + termText, { field: 'stage', old: o.stage, new: 'done' });
+  }
+  return { left, held: amount > 0 && input.holder !== 'office' && !!input.holder, closed: close };
 }
 
 /* ───────── Projects ───────── */
@@ -209,43 +216,56 @@ export interface PartInput {
 /** "Shëno montim": one installed part (date, installer, quantity); its value is quantity × unit price unless overridden. */
 export async function recordPart(db: Db, actor: Actor, id: string, input: PartInput, today: string) {
   allow(actor, 'daily');
-  return db.transaction(async tx => {
-    const o = await mustLoad(tx, actor, id);
-    if (!isProject(o) || o.stage === 'done' || o.stage === 'cancelled') throw new FieldError('quantity', 'notOpenProject');
-    const left = o.quantity! - installedQty(o);
-    const q = quantity(input.quantity, 1);
-    if (q > left) throw new FieldError('quantity', 'qtyTooMany', { left });
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(input.date ?? '') ? input.date! : today;
-    if (date > today) throw new FieldError('date', 'dateFuture');
-    const value = text(input.value) ? money('value', input.value, true) : null;
-    const inst = input.installerId ? await checkInstaller(tx, actor, input.installerId) : null;
+  return db.transaction(tx => recordPartIn(tx, actor, id, input, today));
+}
+
+/**
+ * The body of "Shëno montim", shared with a planned project visit marked done ("Sa u montuan?"):
+ * with `visitId` that visit becomes the part instead of a new one.
+ */
+export async function recordPartIn(tx: Tx, actor: Actor, id: string, input: PartInput, today: string, visitId?: string) {
+  const o = await mustLoad(tx, actor, id);
+  if (!isProject(o) || o.stage === 'done' || o.stage === 'cancelled') throw new FieldError('quantity', 'notOpenProject');
+  const errors: FieldError[] = [];
+  const left = o.quantity! - installedQty(o);
+  const q = check(errors, () => quantity(input.quantity, 1));
+  if (q != null && q > left) errors.push(new FieldError('quantity', 'qtyTooMany', { left }));
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(input.date ?? '') ? input.date! : today;
+  if (date > today) errors.push(new FieldError('date', 'dateFuture'));
+  const value = text(input.value) ? (check(errors, () => money('value', input.value, true)) ?? null) : null;
+  const amount = input.pay === 'part' ? check(errors, () => money('amount', input.amount, true)) : undefined;
+  const room = Math.max(0, orderTotals(o).remaining);
+  if (amount != null && amount > room) errors.push(new FieldError('amount', 'moreThanLeft', { left: eur(room) }));
+  throwIf(errors);
+  const planned = visitId ? o.visits.find(v => v.id === visitId && !v.doneAt) : undefined;
+  if (visitId && !planned) throw new NotFoundError('visit');
+  const instId = planned ? planned.installerId : input.installerId ? (await checkInstaller(tx, actor, input.installerId)).id : null;
+  const instName = instId ? ((await tx.select({ n: installer.name }).from(installer).where(eq(installer.id, instId)))[0]?.n ?? '') : '';
+  if (planned) await tx.update(visit).set({ doneAt: date, quantity: q!, value }).where(eq(visit.id, planned.id));
+  else
     await tx.insert(visit).values({
       companyId: actor.companyId,
       orderId: id,
       type: 'install',
       date,
-      installerId: inst?.id ?? null,
+      installerId: instId,
       doneAt: date,
-      quantity: q,
+      quantity: q!,
       value,
     });
-    const label = await stageLabels(tx, actor.companyId);
-    if (o.stage === 'new') {
-      await tx.update(orders).set({ stage: 'active' }).where(eq(orders.id, id));
-      await log(tx, actor, 'order', id, th('stage', { from: label('new'), to: label('active') }), { field: 'stage', old: 'new', new: 'active' });
-    }
-    await log(tx, actor, 'order', id, th('part', { qty: q, unit: o.unit ?? '', who: inst ? ` · ${inst.name}` : '', value: value != null ? th('valueSuffix', { value: eur(value) }) : '', date: fmtDate(date) }));
-    if (input.pay === 'part') {
-      const amount = money('amount', input.amount, true);
-      const room = Math.max(0, orderTotals(o).remaining);
-      if (amount > room) throw new FieldError('amount', 'moreThanLeft', { left: eur(room) });
-      const holder = await checkHolder(tx, actor, input.holder);
-      await insertPayment(tx, actor, { orderId: id }, { amount, method: holder === 'office' ? methodOf(input.method) : 'cash', holder, date: today, note: '' });
-    }
-    if (input.finish) await finish(tx, actor, o, today);
-    const after = await mustLoad(tx, actor, id);
-    return { installed: installedQty(after), owed: orderTotals(after).owed };
-  });
+  const label = await stageLabels(tx, actor.companyId);
+  if (o.stage === 'new') {
+    await tx.update(orders).set({ stage: 'active' }).where(eq(orders.id, id));
+    await log(tx, actor, 'order', id, th('stage', { from: label('new'), to: label('active') }), { field: 'stage', old: 'new', new: 'active' });
+  }
+  await log(tx, actor, 'order', id, th('part', { qty: q!, unit: o.unit ?? '', who: instName ? ` · ${instName}` : '', value: value != null ? th('valueSuffix', { value: eur(value) }) : '', date: fmtDate(date) }));
+  if (amount != null) {
+    const holder = await checkHolder(tx, actor, input.holder);
+    await insertPayment(tx, actor, { orderId: id }, { amount, method: holder === 'office' ? methodOf(input.method) : 'cash', holder, date: today, note: '' });
+  }
+  if (input.finish) await finish(tx, actor, o, today);
+  const after = await mustLoad(tx, actor, id);
+  return { installed: installedQty(after), owed: orderTotals(after).owed };
 }
 
 export interface PartEditInput {
@@ -580,7 +600,7 @@ export async function setClientNoReminders(db: Db, actor: Actor, clientId: strin
 
 export const methodOf = (m: unknown): Method => (METHODS.includes(m as Method) ? (m as Method) : 'cash');
 
-async function checkInstaller(tx: DbOrTx, actor: Actor, id: string) {
+export async function checkInstaller(tx: DbOrTx, actor: Actor, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new FieldError('installerId', 'installerUnknown');
   const [i] = await tx.select().from(installer).where(and(eq(installer.id, id), eq(installer.companyId, actor.companyId))).limit(1);
   if (!i) throw new FieldError('installerId', 'installerUnknown');

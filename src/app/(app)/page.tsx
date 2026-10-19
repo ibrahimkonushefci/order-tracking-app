@@ -4,6 +4,8 @@ import { can } from '@/auth/permissions';
 import { isProject, openingTotals, orderTotals } from '@/domain/balances';
 import { cashWithInstallers, debts, headline } from '@/domain/debts';
 import { Icon, type IconName } from '@/components/icons';
+import { AgendaItem } from '@/components/agenda';
+import { allJobs, jobsOnDay, pastUndone } from '@/domain/visits';
 import { Page, PageHead } from '@/components/shell/shell';
 import { PayPickTile, type PickRow } from '@/components/sheets/pay-pick';
 import { addDays, fmtLong, hourInKosovo } from '@/lib/dates';
@@ -13,7 +15,7 @@ import { pageBook, pageContext } from '@/server/context';
 
 /** Sot: the "Borxhet" headline, "Kërkon vëmendje", today's visits and the quick actions. */
 export default async function DashboardPage() {
-  const { user, today } = await pageContext();
+  const { user, today, offset } = await pageContext();
   const b = await pageBook();
   const t = await getTranslations('dashboard');
   const tt = await getTranslations('time');
@@ -38,9 +40,9 @@ export default async function DashboardPage() {
   const whole = parts.reduce((s, x) => s + x[2], 0) || 1;
 
   // Visits from the last two weeks that nobody marked done (the debts list depends on it).
-  const visits = b.orders.filter(o => o.stage !== 'cancelled').flatMap(o => o.visits.map(v => ({ o, v })));
-  const past = visits.filter(x => !x.v.doneAt && x.v.date < today && x.v.date >= addDays(today, -14));
-  const todays = visits.filter(x => x.v.date === today).sort((a, z) => (a.v.time ?? '12:30').localeCompare(z.v.time ?? '12:30'));
+  const jobs = allJobs(b.orders);
+  const past = pastUndone(jobs, today);
+  const todays = jobsOnDay(jobs, today);
   const attention: [string, IconName, string, string, string][] = [];
   for (const g of cash) attention.push(['warning', 'cash', '/cash', t('cashRow', { name: g.name, amount: eur(g.sum) }), t('cashRowSub')]);
   if (past.length) {
@@ -53,6 +55,9 @@ export default async function DashboardPage() {
       past.map(x => `${w(`visit.${x.v.type}`)} · ${x.o.client.name}`).join(', '),
     ]);
   }
+
+  const remindable = rows.filter(r => r.rem.ok);
+  if (remindable.length) attention.push(['success', 'message', '/debts', t('remindable', { n: remindable.length }), t('remindableSub')]);
 
   const pick: PickRow[] = [
     ...b.orders
@@ -68,12 +73,10 @@ export default async function DashboardPage() {
   ]
     .filter(r => r.remaining > 0)
     .sort((a, z) => z.owed - a.owed || z.remaining - a.remaining);
-  const instName = (id: string | null) => (id ? (b.installers.find(i => i.id === id)?.name ?? '—') : t('noInstaller'));
-  const time = (v: string | null) => (!v ? '—' : v === 'morning' ? t('morningShort') : v === 'afternoon' ? t('afternoonShort') : v);
 
   return (
     <Page nav="dashboard">
-      <PageHead title={`${hello}, ${user.firstName}`} sub={fmtLong(today)} />
+      <PageHead title={`${hello}, ${user.firstName}`} sub={offset ? t('demoSub', { date: fmtLong(today), n: offset }) : fmtLong(today)} />
       <div className="dashboard-grid">
         <div className="dashboard-primary">
           <Link className="hero" href="/debts">
@@ -181,31 +184,7 @@ export default async function DashboardPage() {
         {todays.length ? (
           <div className="agenda">
             {todays.map(({ o, v }) => (
-              <div className={`agenda__item vt--${v.type}${v.doneAt ? ' agenda__item--done' : ''}`} key={v.id}>
-                <span className="agenda__time">{time(v.time)}</span>
-                <span className="agenda__rail">
-                  <span className="agenda__dot" />
-                </span>
-                <span className="agenda__card">
-                  <Link className="agenda__body" href={`/orders/${o.id}`}>
-                    <span className="agenda__name">{o.client.name}</span>
-                    <span className="agenda__meta">
-                      <span className="type-tag">{w(`visit.${v.type}`)}</span>
-                      <span className="pill">
-                        <Icon name="map" />
-                        {o.city}
-                      </span>
-                      <span>{instName(v.installerId)}</span>
-                    </span>
-                  </Link>
-                  {v.doneAt ? (
-                    <span className="badge badge--success">
-                      <Icon name="check" />
-                      <span className="ellipsis">{t('visitDone')}</span>
-                    </span>
-                  ) : null}
-                </span>
-              </div>
+              <AgendaItem key={v.id} o={o} v={v} today={today} installers={b.installers.map(i => ({ id: i.id, name: i.name }))} showInstaller />
             ))}
           </div>
         ) : (

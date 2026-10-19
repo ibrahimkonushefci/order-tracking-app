@@ -3,12 +3,14 @@
  * from an empty database, so every review and test begins from the same known records.
  * - Phase 2: one brand, Pronari + Zyra, three installers.
  * - Phase 3: the order and money cases (fixtures-phase3.ts), dated relative to today.
+ * - Phase 4: visits for the week, tracking links, reminder history (fixtures-phase4.ts).
  */
 import { sql } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
 import type { Db } from './connect';
 import { account, company, installer, user } from './schema';
 import { loadPhase3 } from './fixtures-phase3';
+import { loadPhase4 } from './fixtures-phase4';
 import { todayIso } from '../lib/dates';
 
 export const FIXTURE_USERS = [
@@ -51,7 +53,9 @@ export async function loadFixtures(
       .returning();
     if (!opts.phase2Only) {
       const byName = Object.fromEntries(inst.map(i => [i.name, i.id])) as Record<'Driton' | 'Faton' | 'Besnik', string>;
-      await loadPhase3(tx, { companyId: c.id, users, installers: byName, today: opts.today ?? todayIso() });
+      const ctx = { companyId: c.id, users, installers: byName, today: opts.today ?? todayIso() };
+      await loadPhase3(tx, ctx);
+      await loadPhase4(tx, ctx);
     }
   });
 }

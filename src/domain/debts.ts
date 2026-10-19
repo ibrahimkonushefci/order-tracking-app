@@ -85,12 +85,15 @@ export interface DebtRow {
   unknownDue: boolean;
   dueApprox: boolean;
   contexts: DebtContext[];
+  /** Whether the green "Kujtesë" shows. */
+  rem: ReminderCheck;
   /** Normal order: number + product; project: number + "40 / 100 copë"; opening: what it was for. */
   order?: { number: string; productType: string; project: { installed: number; quantity: number; unit: string } | null; doneDays: number | null };
   opening?: { forWhat: string };
 }
 
 const tsIso = (t: Date | string) => (typeof t === 'string' ? t : t.toISOString()).slice(0, 10);
+const isoOf = tsIso;
 
 export function lastReminder(messages: MessageLite[]): MessageLite | null {
   return (
@@ -98,6 +101,36 @@ export function lastReminder(messages: MessageLite[]): MessageLite | null {
       .filter(m => m.type === 'reminder')
       .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0] ?? null
   );
+}
+
+/* ───────── The green "Kujtesë" (spec §7) ───────── */
+
+export const REMINDER_GAP_DAYS = 7;
+
+export type ReminderCheck =
+  | { ok: true; late: number; sent: number }
+  | { ok: false; reason: 'noDebt' | 'unknownDue' | 'notDue' | 'paused' | 'noReminders' | 'recent'; dueDate?: string; until?: string; lastAt?: string };
+
+/**
+ * Spec §7: owed now > €0, a known due date has passed, reminders not paused, the client
+ * isn't "Mos sugjero kujtesa", and no reminder in the last 7 days. `today` carries the
+ * demo date offset, so the buttons change live when the demo jumps forward.
+ */
+export function reminderCheck(
+  t: Pick<Totals, 'owed' | 'dueDate'>,
+  r: { pausedUntil: string | null; messages: MessageLite[] },
+  noReminders: boolean,
+  today: string,
+): ReminderCheck {
+  if (t.owed <= 0) return { ok: false, reason: 'noDebt' };
+  if (!t.dueDate) return { ok: false, reason: 'unknownDue' };
+  const late = lateDays(t, today) ?? 0;
+  if (late <= 0) return { ok: false, reason: 'notDue', dueDate: t.dueDate };
+  if (r.pausedUntil && r.pausedUntil >= today) return { ok: false, reason: 'paused', until: r.pausedUntil };
+  if (noReminders) return { ok: false, reason: 'noReminders' };
+  const last = lastReminder(r.messages);
+  if (last && diffDays(today, isoOf(last.sentAt)) < REMINDER_GAP_DAYS) return { ok: false, reason: 'recent', lastAt: isoOf(last.sentAt) };
+  return { ok: true, late, sent: r.messages.filter(m => m.type === 'reminder').length };
 }
 
 function heldBy(payments: PaymentRec[]) {
@@ -145,6 +178,7 @@ export function debts(orders: BookOrder[], openings: BookOpening[], today: strin
       unknownDue: t.dueUnknown,
       dueApprox: false,
       contexts: contextsOf(o, o.client.noReminders, o.remainingWork, today),
+      rem: reminderCheck(t, o, o.client.noReminders, today),
       order: {
         number: o.number,
         productType: o.productType,
@@ -171,6 +205,7 @@ export function debts(orders: BookOrder[], openings: BookOpening[], today: strin
       unknownDue: t.dueUnknown,
       dueApprox: ob.dueApprox,
       contexts: contextsOf(ob, ob.noReminders, null, today),
+      rem: reminderCheck(t, ob, ob.noReminders, today),
       opening: { forWhat: ob.forWhat },
     });
   }

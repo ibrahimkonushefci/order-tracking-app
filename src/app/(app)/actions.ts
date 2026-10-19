@@ -10,12 +10,14 @@ import { getCurrentUser } from '@/auth/session';
 import { ForbiddenError } from '@/auth/permissions';
 import { getDb } from '@/db/client';
 import type { Db } from '@/db/connect';
-import { todayIso } from '@/lib/dates';
+import { appToday } from '@/server/today';
 import { eur } from '@/lib/money';
 import { FieldError, FieldErrors, NotFoundError, type Actor } from '@/services/common';
 import * as O from '@/services/orders';
 import * as P from '@/services/payments';
 import * as B from '@/services/openings';
+import * as V from '@/services/visits';
+import * as M from '@/services/messages';
 import type { ActionResult } from './action-result';
 
 const s = (f: FormData, k: string) => String(f.get(k) ?? '');
@@ -26,7 +28,7 @@ async function run(fn: (db: Db, actor: Actor, today: string) => Promise<Omit<Act
   const u = await getCurrentUser();
   if (!u?.companyId) return { errors: { _: te('forbidden') } };
   try {
-    const r = await fn(await getDb(), { id: u.id, role: u.role, companyId: u.companyId, firstName: u.firstName }, todayIso());
+    const r = await fn(await getDb(), { id: u.id, role: u.role, companyId: u.companyId, firstName: u.firstName }, await appToday());
     revalidatePath('/', 'layout');
     return { ok: true, ...(r ?? {}) };
   } catch (e) {
@@ -317,5 +319,113 @@ export async function deletePartAction(orderId: string, visitId: string) {
   return run(async (db, a) => {
     await O.deletePart(db, a, orderId, visitId);
     return { toast: tt('partDeleted') };
+  });
+}
+
+/* ───────── Phase 4: visits ───────── */
+
+const visitInput = (f: FormData): V.VisitInput => ({ type: s(f, 'type'), date: s(f, 'date'), time: s(f, 'time'), exact: s(f, 'exact'), installerId: s(f, 'installerId'), note: s(f, 'note') });
+
+export async function saveVisitAction(orderId: string, visitId: string | null, f: FormData) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    const v = await V.saveVisit(db, a, orderId, visitId, visitInput(f));
+    const send = f.get('then') === 'send';
+    return { toast: visitId ? tt('visitSaved') : tt('visitPlanned'), go: send ? `/send/visit/${orderId}/${v.id}` : undefined };
+  });
+}
+
+export async function removeVisitAction(orderId: string, visitId: string) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    await V.removeVisit(db, a, orderId, visitId);
+    return { toast: tt('visitRemoved') };
+  });
+}
+
+export async function completeVisitAction(orderId: string, visitId: string, f: FormData) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a, today) => {
+    const r = await V.completeVisit(
+      db,
+      a,
+      orderId,
+      visitId,
+      {
+        pay: (s(f, 'pay') || 'no') as 'no',
+        amount: s(f, 'amount'),
+        holder: s(f, 'holder'),
+        method: s(f, 'method'),
+        term: s(f, 'term'),
+        termDate: s(f, 'termDate'),
+        close: on(f, 'close'),
+        quantity: s(f, 'quantity'),
+        value: s(f, 'value'),
+        finish: on(f, 'finish'),
+        finishRemaining: on(f, 'finishRemaining'),
+        note: s(f, 'note'),
+      },
+      today,
+    );
+    if (r.kind === 'part') return { toast: tt('part', { installed: r.installed, owed: eur(r.owed) }) };
+    if (r.kind === 'measure') return { toast: tt('measureDone') };
+    if (r.kind === 'repair') return { toast: tt('repairDone') };
+    return { toast: r.held && r.left <= 0 ? tt('doneHeld') : !r.closed ? tt('visitDone') : r.left > 0 ? tt('doneLeft', { left: eur(r.left) }) : tt('done') };
+  });
+}
+
+/* ───────── Phase 4: messages ("U dërgua?" → Po) ───────── */
+
+export async function logCustomerMessageAction(kind: 'order' | 'opening', id: string, input: M.SentInput) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    await M.logCustomerMessage(db, a, kind === 'order' ? { orderId: id } : { openingId: id }, input);
+    return { toast: tt('messageLogged'), go: kind === 'order' ? `/orders/${id}` : `/debts/${id}` };
+  });
+}
+
+export async function logInstallerMessageAction(input: M.InstallerSentInput, back: string) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    await M.logInstallerMessage(db, a, input);
+    return { toast: tt('installerLogged'), go: back.startsWith('/') ? back : '/schedule' };
+  });
+}
+
+export async function newLinkAction(orderId: string) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    await M.newTrackingLink(db, a, orderId);
+    return { toast: tt('newLink') };
+  });
+}
+
+export async function clientContactAction(clientId: string, input: { language?: string; channel?: string }) {
+  return run(async (db, a) => {
+    await M.setClientContact(db, a, clientId, input);
+  });
+}
+
+export async function openingContactAction(id: string, input: { language?: string; channel?: string }) {
+  return run(async (db, a) => {
+    await M.setOpeningContact(db, a, id, input);
+  });
+}
+
+export async function saveInstallerAction(id: string | null, f: FormData) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    await M.saveInstaller(db, a, id, { name: s(f, 'name'), phoneCc: s(f, 'phoneCc'), phone: s(f, 'phone'), channel: s(f, 'channel'), active: id ? f.get('active') !== '0' : true });
+    return { toast: id ? tt('installerSaved') : tt('installerAdded') };
+  });
+}
+
+export async function saveTemplatesAction(lang: string, f: FormData) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    const input: Record<string, string> = {};
+    for (const [k, v] of f.entries()) if (typeof v === 'string' && k.startsWith('t_')) input[k.slice(2)] = v;
+    await M.saveTemplates(db, a, lang, input);
+    return { toast: tt('templatesSaved') };
   });
 }

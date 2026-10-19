@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "fixtures": "tsx scripts/fixtures.ts"
+    "fixtures": "tsx scripts/fixtures.ts",
+    "vercel-build": "tsx scripts/migrate.ts && next build --webpack"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.10",

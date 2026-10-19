@@ -9,7 +9,10 @@ import { Page, PageHead } from '@/components/shell/shell';
 import { ThemeSeg } from '@/components/theme';
 import { fmtPhone } from '@/lib/phone';
 import { logout } from '@/auth/actions';
-import { setDepositWord } from './actions';
+import { setDemoDays, setDepositWord } from './actions';
+import { InstallerButton, TemplatesEditor } from '@/components/settings';
+import { pageContext } from '@/server/context';
+import { fmtLong } from '@/lib/dates';
 
 export default async function SettingsPage() {
   const me = await requireUser();
@@ -19,6 +22,7 @@ export default async function SettingsPage() {
   const [users, installers] = c ? await Promise.all([listUsers(c.id), listInstallers(c.id)]) : [[], []];
   const owner = can(me.role, 'settings');
   const word = c?.depositWord ?? brand.depositWord;
+  const { today, offset } = await pageContext();
   return (
     <Page nav="settings">
       <PageHead title={t('settings.title')} sub={brand.companyName} />
@@ -57,6 +61,9 @@ export default async function SettingsPage() {
       <section className="card">
         <div className="card__head">
           <h2 className="card__title">{t('settings.installers')}</h2>
+          <InstallerButton className="card__link">
+            <Icon name="plus" /> {t('installers.add')}
+          </InstallerButton>
         </div>
         <div className="card__body">
           <div className="list list--flush">
@@ -67,11 +74,15 @@ export default async function SettingsPage() {
                 </span>
                 <span className="grow">
                   <b>{i.name}</b>
+                  {i.active ? null : <span className="muted small"> · {t('installers.inactive')}</span>}
                   <br />
                   <span className="small muted">
                     {fmtPhone(i.phone)} · {t(`channel.${i.channel}`)}
                   </span>
                 </span>
+                <InstallerButton installer={{ id: i.id, name: i.name, phone: i.phone, channel: i.channel, active: i.active }} className="icon-btn" ariaLabel={t('installers.editLabel', { name: i.name })}>
+                  <Icon name="edit" />
+                </InstallerButton>
                 <a className="icon-btn icon-btn--call" href={`tel:${i.phone}`} aria-label={t('settings.call', { name: i.name })}>
                   <Icon name="phone" />
                 </a>
@@ -123,6 +134,46 @@ export default async function SettingsPage() {
                 <Icon name="edit" /> {t('settings.brandSetup')}
               </Link>
             </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="card">
+        <div className="card__head">
+          <h2 className="card__title">{t('templates.title')}</h2>
+        </div>
+        <div className="card__body">
+          <div className="help">{t('templates.help')}</div>
+          {owner ? (
+            <TemplatesEditor saved={c?.templates ?? {}} />
+          ) : (
+            <div className="callout callout--neutral">
+              <Icon name="help" />
+              <span>{t('templates.ownerOnly')}</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {isDemoMode() ? (
+        <section className="card">
+          <div className="card__head">
+            <h2 className="card__title">{t('demoDate.title')}</h2>
+          </div>
+          <div className="card__body">
+            <div className="small">{t('demoDate.now', { date: fmtLong(today), n: offset })}</div>
+            <form action={setDemoDays} className="btn-row">
+              <button className="btn btn--secondary" type="submit" name="step" value="1">
+                {t('demoDate.plus1')}
+              </button>
+              <button className="btn btn--secondary" type="submit" name="step" value="7">
+                {t('demoDate.plus7')}
+              </button>
+              <button className="btn btn--ghost" type="submit" name="step" value="reset" disabled={!offset}>
+                {t('demoDate.reset')}
+              </button>
+            </form>
+            <div className="help">{t('demoDate.help')}</div>
           </div>
         </section>
       ) : null}

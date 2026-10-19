@@ -118,7 +118,7 @@ test('Pronari exports the Excel file and the JSON copy', async ({ page }) => {
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: /Excel/ }).click()]);
   expect(download.suggestedFilename()).toMatch(/^druri-design-te-dhenat-\d{4}-\d{2}-\d{2}\.xlsx$/);
   const json = await (await page.request.get('/api/export?format=json')).json();
-  expect(json.orders).toHaveLength(11);
+  expect(json.orders).toHaveLength(15);
 });
 
 test('Borxh i bartur with "Nuk e di" lands under "Afat i panjohur"', async ({ page }) => {

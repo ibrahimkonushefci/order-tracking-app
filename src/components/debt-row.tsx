@@ -1,8 +1,8 @@
 /**
  * One debt row (spec §2): name, what it's for, amount owed now, how late, ONE status
  * line (the most decisive context), the message button and the call button.
- * The green "Kujtesë" (only where a reminder is reasonable) arrives with Phase 4's
- * prepared messages; until then the quiet icon lets the owner write by hand.
+ * The green "Kujtesë" shows only where a reminder is reasonable now; otherwise a quiet
+ * icon still opens the prepared message so the owner can decide by hand.
  */
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -36,7 +36,10 @@ export async function DebtRow({ d, today, installers, flash }: { d: Row; today: 
         return ['neutral', 'message', t('ctxLast', { ago: ago(c.at, today, tt) })];
     }
   };
-  const st = d.contexts[0] ? status(d.contexts[0]) : null;
+  // Next to the green button the last-reminder line gets its short form, so it isn't cut off.
+  const top = d.contexts[0];
+  const st = top ? status(top) : null;
+  if (st && top?.kind === 'lastReminder' && d.rem.ok) st[2] = t('ctxLastShort', { ago: ago(top.at, today, tt) });
   const dot = d.overdue ? 'danger' : d.totals.held > 0 ? 'warning' : d.unknownDue ? 'neutral' : 'info';
   const meta = d.order
     ? [d.order.number, d.order.project ? `${d.order.project.installed} / ${d.order.project.quantity} ${d.order.project.unit}` : d.order.productType, d.order.doneDays ? t('sinceDone', { n: d.order.doneDays }) : null]
@@ -79,9 +82,15 @@ export async function DebtRow({ d, today, installers, flash }: { d: Row; today: 
         )}
         {d.phone ? (
           <>
-            <a className={`icon-btn icon-btn--quiet`} href={chatHref(ch, d.phone)} target="_blank" rel="noopener" aria-label={t('writeByHand', { name: d.name })}>
-              <Icon name={ch} />
-            </a>
+            {d.rem.ok ? (
+              <Link className={`btn btn--${ch} btn--sm`} href={`/compose/${d.kind}/${d.id}?t=reminder`} aria-label={t('remindLabel', { name: d.name })}>
+                <Icon name={ch} /> {t('remind')}
+              </Link>
+            ) : (
+              <Link className="icon-btn icon-btn--quiet" href={`/compose/${d.kind}/${d.id}?t=reminder`} aria-label={t('writeByHand', { name: d.name })}>
+                <Icon name={ch} />
+              </Link>
+            )}
             <a className="icon-btn icon-btn--call" href={`tel:${d.phone}`} aria-label={t('call', { name: d.name })}>
               <Icon name="phone" />
             </a>

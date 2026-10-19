@@ -75,7 +75,10 @@
     "morningShort": "paradite",
     "afternoonShort": "pasdite",
     "attention": "Kërkon vëmendje",
-    "visitDone": "Kryer"
+    "visitDone": "Kryer",
+    "remindable": "{n, plural, one {# klient pret} other {# klientë presin}} një kujtesë",
+    "remindableSub": "Jashtë afatit dhe pa kujtesë në 7 ditët e fundit",
+    "demoSub": "{date} · demo +{n} ditë"
   },
   "orders": {
     "title": "Porositë",
@@ -126,7 +129,10 @@
     "dueToday": "Afati sot",
     "dueOn": "Afati {day}",
     "writeByHand": "Shkruaji {name} me dorë",
-    "call": "Thirr {name}"
+    "call": "Thirr {name}",
+    "remind": "Kujtesë",
+    "remindLabel": "Kujtesë për {name}",
+    "ctxLastShort": "E fundit: {ago}"
   },
   "schedule": {
     "title": "Orari",
@@ -135,7 +141,48 @@
     "tomorrow": "Nesër",
     "week": "7 ditë",
     "installers": "Montuesit",
-    "empty": "Asnjë punë në 7 ditët e ardhshme."
+    "empty": "Asnjë punë në 7 ditët e ardhshme.",
+    "teamSub": "Disponueshmëria dhe punët e montuesve",
+    "availability": "Disponueshmëria",
+    "availabilitySub": "sot + 6 ditë",
+    "cellLabel": "{name}, {day}: {n, plural, =0 {i lirë} other {# punë}}",
+    "free": "I lirë",
+    "one": "1 punë",
+    "busy": "2+ punë",
+    "tapDay": "Prekni një ditë",
+    "swipe": "Rrëshqitni për 7 ditë →",
+    "summary": "Përmbledhja e montuesve",
+    "sendTomorrow": "Dërgo {name} punët e nesërme",
+    "call": "Thirr {name}",
+    "pending": "Në pritje",
+    "doneJobs": "Të kryera",
+    "cashInHand": "Para në dorë",
+    "doneKind": {
+      "install": "Montime",
+      "delivery": "Dërgesa",
+      "measure": "Matje",
+      "repair": "Riparime"
+    },
+    "unitsInstalled": "{unit} të montuara",
+    "next": "Puna e radhës:",
+    "noneNext": "Asnjë punë e planifikuar.",
+    "unmarked": "{n} punë nga ditët e kaluara pa u shënuar",
+    "freeDay": "{name} është i lirë këtë ditë.",
+    "nothingDay": "Asnjë punë këtë ditë.",
+    "nothingToday": "Sot nuk ka punë të planifikuara.",
+    "nothingTomorrow": "Nesër nuk ka punë të planifikuara.",
+    "planHint": "Planifikoni një vizitë nga faqja e porosisë.",
+    "whenTomorrow": "punët e nesërme",
+    "whenToday": "punët e sotme",
+    "whenDay": "listën",
+    "jobs": "{n} punë",
+    "busyDay": "ditë e ngarkuar",
+    "sendDay": "Dërgo {name} {when}",
+    "back": "Kthehu",
+    "dayJobs": "Punët e ditës",
+    "clearFilter": "Hiq filtrin",
+    "past": "Nga ditët e kaluara",
+    "pastHelp": "Vizita të planifikuara që askush nuk i shënoi. Borxhi llogaritet vetëm kur puna shënohet e kryer."
   },
   "cash": {
     "title": "Para te montuesit",
@@ -270,7 +317,12 @@
     "installerUnknown": "Zgjidhni montuesin.",
     "notFound": "Nuk u gjet. Rifreskoni faqen.",
     "invalid": "Kontrolloni fushat e shënuara.",
-    "openingBelowPaid": "Klienti ka paguar tashmë {paid}. Shuma nuk mund të jetë më e vogël."
+    "openingBelowPaid": "Klienti ka paguar tashmë {paid}. Shuma nuk mund të jetë më e vogël.",
+    "visitTypeRequired": "Zgjidhni llojin e vizitës.",
+    "timeInvalid": "Shkruani orën, p.sh. 08:30.",
+    "visitDone": "Kjo vizitë është shënuar e kryer.",
+    "messageEmpty": "Mesazhi është bosh.",
+    "installerNameRequired": "Shkruani emrin e montuesit."
   },
   "words": {
     "stage": {
@@ -313,8 +365,42 @@
       "installer": "Montuesi",
       "value": "Vlera",
       "forWhat": "Për çfarë",
-      "workDone": "Kur u bë puna"
-    }
+      "workDone": "Kur u bë puna",
+      "language": "Gjuha",
+      "channel": "Kanali"
+    },
+    "noInstaller": "Pa montues",
+    "time": {
+      "morning": "paradite",
+      "afternoon": "pasdite"
+    },
+    "visitDone": {
+      "measure": "Matja u krye",
+      "install": "Montimi u krye",
+      "delivery": "Dërgesa u krye",
+      "repair": "Riparimi u krye"
+    },
+    "channelName": {
+      "whatsapp": "WhatsApp",
+      "viber": "Viber",
+      "sms": "SMS"
+    },
+    "msgType": {
+      "deposit": "{word}i u pranua",
+      "visit": "Vijmë për …",
+      "link": "Linku i porosisë",
+      "thanks": "Faleminderit",
+      "reminder": "Kujtesë për pagesë",
+      "free": "Mesazh i lirë",
+      "job": "Detajet e punës",
+      "day": "Detajet e punës"
+    },
+    "lang": {
+      "sq": "Shqip",
+      "en": "Anglisht",
+      "de": "Gjermanisht"
+    },
+    "opening": "Borxh i bartur"
   },
   "history": {
     "created": "Porosia u krijua · {price}",
@@ -354,7 +440,20 @@
     "partDeleted": "Montimi u fshi: {qty} {unit}{who} · {value} · {date}",
     "openingAmount": "Shuma e borxhit: {from} → {to}",
     "openingDueChanged": "Kur duhej paguar: {from} → {to}",
-    "noteEditedLine": "Shënimi u ndryshua"
+    "noteEditedLine": "Shënimi u ndryshua",
+    "visitPlanned": "Vizitë e planifikuar: {visit}",
+    "visitChanged": "Vizita u ndryshua: {from} → {to}",
+    "visitNote": "Shënimi i vizitës u ndryshua: {visit}",
+    "visitRemoved": "Vizita u hoq: {visit}",
+    "visitDone": "{what}{who}{note}",
+    "visitAssigned": "{visit} iu caktua {name}",
+    "messageSent": "Mesazh {channel}: {label} → {name}",
+    "daySent": "Lista e {date} u dërgua te {name} ({channel})",
+    "jobSent": "Detajet: {visit} u dërguan te {name} ({channel})",
+    "linkReplaced": "U krijua link i ri për klientin; linku i vjetër nuk hapet më",
+    "installerAdded": "Montuesi u shtua: {name}",
+    "installerEdited": "Montuesi u ndryshua: {name}",
+    "templatesSaved": "Mesazhet ({lang}) u ndryshuan"
   },
   "export": {
     "orders": "Porositë",
@@ -550,7 +649,21 @@
     "termSub": "Llogaritet nga data e përfundimit ({date}).",
     "termSubProject": "Afati llogaritet nga data e çdo montimi.",
     "eachPart": "Çdo montim paguhet",
-    "save": "Ruaj"
+    "save": "Ruaj",
+    "sentAgo": "dërguar {ago}",
+    "editVisit": "Ndrysho vizitën",
+    "markDone": "U krye",
+    "sendToInstaller": "Dërgo te montuesi",
+    "plan": "Planifiko",
+    "noVisitsPlan": "Asnjë vizitë ende. Planifikoni kur ta dini datën.",
+    "trackingPage": "Faqja e klientit",
+    "trackingSum": "Hapat dhe vizita e radhës, pa çmime · {lang}",
+    "sendLink": "Dërgo linkun",
+    "previewLink": "Parapamje",
+    "reminder": "Kujtesë",
+    "thankDeposit": "Falënderoni për {word}in",
+    "thankDepositSub": "dhe dërgoni linkun e porosisë",
+    "write": "Shkruaj"
   },
   "done": {
     "title": "{done}?",
@@ -715,7 +828,7 @@
     "remNoDebt": "nuk ka borxh",
     "remOff": "Mos sugjero kujtesa",
     "remNotDue": "Afati i pagesës: {date}",
-    "remPhase4": "mund të dërgoni një tani (kujtesat e përgatitura vijnë në fazën 4)",
+    "remPhase4": "mund të dërgoni një tani",
     "contact": "Kontakto {name}",
     "write": "Shkruaj me dorë",
     "call": "Thirr",
@@ -740,7 +853,8 @@
     "editPaid": "Klienti ka paguar {paid}. Shuma nuk mund të jetë më e vogël.",
     "deleteHasPayments": "Ky borxh ka pagesa aktive, ndaj nuk fshihet. Për një gabim, përdorni “Ndrysho”.",
     "saveEdit": "Ruaj ndryshimet",
-    "close": "Mbyll"
+    "close": "Mbyll",
+    "remind": "Kujtesë"
   },
   "payPick": {
     "title": "Regjistro pagesë",
@@ -770,6 +884,160 @@
     "openingDeleted": "Borxhi u fshi.",
     "partEdited": "Montimi u ndryshua.",
     "partDeleted": "Montimi u fshi. Ruhet në historik.",
-    "openingEdited": "Borxhi u ndryshua."
+    "openingEdited": "Borxhi u ndryshua.",
+    "visitPlanned": "Vizita u planifikua.",
+    "visitSaved": "Vizita u ruajt.",
+    "visitRemoved": "Vizita u hoq.",
+    "visitDone": "U shënua e kryer.",
+    "measureDone": "Matja u shënua e kryer.",
+    "repairDone": "Riparimi u shënua i kryer.",
+    "messageLogged": "U regjistrua në historikun e klientit.",
+    "installerLogged": "U regjistrua: dërguar te montuesi.",
+    "newLink": "Linku i ri u krijua. I vjetri nuk hapet më.",
+    "installerSaved": "Montuesi u ruajt.",
+    "installerAdded": "Montuesi u shtua.",
+    "templatesSaved": "Mesazhet u ruajtën.",
+    "demoDate": "Data e demos: {date}"
+  },
+  "visit": {
+    "planTitle": "Planifiko vizitë",
+    "editTitle": "Ndrysho vizitën",
+    "what": "Çfarë?",
+    "date": "Data",
+    "time": "Ora",
+    "morning": "Paradite",
+    "afternoon": "Pasdite",
+    "exact": "Ora…",
+    "none": "Pa orë",
+    "installer": "Montuesi",
+    "installerLoad": "· punët në këtë datë",
+    "noInstaller": "Pa montues",
+    "noInstallerHelp": "Vizita mbetet e pacaktuar derisa t’ia caktoni dikujt.",
+    "free": "{name} është i lirë në këtë datë.",
+    "freeShort": "i lirë",
+    "jobs": "{n} punë",
+    "busy": "{when}, {name} ka {n} punë:",
+    "busyItem": "{at} — {type} te {client} ({city})",
+    "noTime": "Pa orë",
+    "note": "Shënim për montuesin",
+    "notePh": "p.sh. Merrni silikon të bardhë",
+    "notePhProject": "p.sh. Kati 4: 10 dyer",
+    "save": "Ruaj",
+    "saveSend": "Ruaj dhe dërgo",
+    "remove": "Hiq vizitën",
+    "removeTitle": "Hiq vizitën?",
+    "removeHelp": "Vizita hiqet nga orari. Në historik mbetet një rresht.",
+    "removeYes": "Hiq"
+  },
+  "visitDone": {
+    "finishRemaining": "Puna u përfundua",
+    "note": "Shënim i shkurtër",
+    "notePhMeasure": "p.sh. priza 2×, uji majtas",
+    "yes": "Po, u krye",
+    "howMany": "Sa {unit} u montuan?",
+    "close": "Porosia është e kryer",
+    "save": "Ruaj"
+  },
+  "compose": {
+    "installer": "Montuesi",
+    "to": "Për",
+    "call": "Thirr {name}",
+    "channel": "Kanali",
+    "text": "Teksti",
+    "editable": "(mund ta ndryshoni)",
+    "viberHelp": "Viber nuk lejon tekst të parapërgatitur: teksti kopjohet dhe hapet biseda, ju vetëm e ngjitni.",
+    "smsHelp": "SMS vetëm si rrugëdalje: te numrat e huaj kushton.",
+    "noInternal": "Shënimi i brendshëm i porosisë nuk përfshihet kurrë.",
+    "send": "Dërgo me {channel}",
+    "sendViber": "Kopjo dhe hap Viber",
+    "preview": "Parapamje në telefon (demo)",
+    "wasSent": "U dërgua?",
+    "wasSentHelp": "Shënohet vetëm kur ju thoni po. Aplikacioni nuk dërgon asgjë vetë.",
+    "yesSent": "Po, u dërgua",
+    "notSent": "Jo",
+    "previewTitle": "Parapamje e mesazhit",
+    "back": "Kthehu",
+    "today": "Sot",
+    "previewNote": "Simulim: kështu e sheh {name} në telefon. Asgjë nuk u dërgua.",
+    "closePreview": "Mbyll parapamjen",
+    "pick": "Kujt t’ia dërgoj?",
+    "assign": "Vizita do t’i caktohet {name}.",
+    "collect": "Shto “Mblidh {amount}” në mesazh",
+    "collectDay": "Shto “Mblidh” në mesazh",
+    "titleTo": "Dërgo {name}",
+    "notNow": "Nuk sugjerohet tani:",
+    "notNowTail": "Mund ta dërgoni me dorë nëse vendosni ju.",
+    "lastReminder": "Kujtesa e fundit: {ago} · {channel}",
+    "language": "Gjuha e mesazhit",
+    "templates": "Mesazhi",
+    "notFound": "Nuk u gjet",
+    "nothingToSend": "Nuk ka punë të hapura për këtë ditë.",
+    "reason": {
+      "noDebt": "nuk ka borxh",
+      "unknownDue": "afat i panjohur",
+      "notDue": "afati i pagesës është {date}",
+      "paused": "kujtesat në pauzë deri më {date}",
+      "noReminders": "klienti është “Mos sugjero kujtesa”",
+      "recent": "kujtesa e fundit u dërgua {ago}"
+    }
+  },
+  "agenda": {
+    "collect": "Mblidh {amount}",
+    "sent": "dërguar",
+    "done": "Kryer",
+    "markDone": "U krye"
+  },
+  "link": {
+    "copy": "Kopjo",
+    "copied": "Linku u kopjua.",
+    "new": "Link i ri",
+    "newTitle": "Link i ri?",
+    "newSub": "p.sh. linku u dërgua në numër të gabuar.",
+    "newHelp": "Linku i vjetër nuk do të hapet më: tregon vetëm “Ky link nuk është më aktiv. Na kontaktoni.”",
+    "newYes": "Krijo link të ri",
+    "language": "Gjuha e klientit",
+    "languageHelp": "Mesazhet dhe faqja e klientit në këtë gjuhë.",
+    "channel": "Merr mesazhe në"
+  },
+  "installers": {
+    "add": "Shto",
+    "addTitle": "Shto montues",
+    "editTitle": "Ndrysho montuesin",
+    "sub": "Montuesit nuk hyjnë në aplikacion: marrin punët në WhatsApp/Viber.",
+    "name": "Emri",
+    "namePh": "p.sh. Driton",
+    "phone": "Telefoni",
+    "prefix": "Prefiksi",
+    "channel": "Merr mesazhe në",
+    "active": "Aktiv",
+    "activeHelp": "Një montues jo aktiv nuk del më te zgjedhjet për vizita të reja. Historiku mbetet.",
+    "save": "Ruaj",
+    "inactive": "jo aktiv",
+    "editLabel": "Ndrysho {name}"
+  },
+  "templates": {
+    "title": "Mesazhet për klientët",
+    "help": "Tekstet e përgatitura në shqip, anglisht dhe gjermanisht. Asgjë nuk dërgohet vetë: çdo mesazh e shikon dhe e dërgon një person.",
+    "ownerOnly": "Vetëm pronari mund t’i ndryshojë tekstet e mesazheve.",
+    "language": "Gjuha",
+    "save": "Ruaj mesazhet",
+    "vars": "Fjalët në kllapa plotësohen vetë:",
+    "type": {
+      "deposit": "Avansi/Kapari u pranua",
+      "visit": "Vijmë për …",
+      "link": "Linku i porosisë",
+      "thanks": "Faleminderit",
+      "reminder": "Kujtesë për pagesë (e para)",
+      "reminderAgain": "Kujtesë për pagesë (e radhës, më e butë)",
+      "free": "Mesazh i lirë"
+    }
+  },
+  "demoDate": {
+    "title": "Data e demos",
+    "now": "Sot në aplikacion: {date}{n, plural, =0 {} one { (+# ditë)} other { (+# ditë)}}",
+    "plus1": "+1 ditë",
+    "plus7": "+7 ditë",
+    "reset": "Kthe në sot",
+    "help": "Vetëm në modalitetin demo, vetëm në këtë shfletues: vonesat dhe butonat “Kujtesë” ndryshojnë menjëherë."
   }
 }

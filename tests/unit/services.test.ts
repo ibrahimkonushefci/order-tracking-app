@@ -183,7 +183,7 @@ describe('orders: the three stages by key', () => {
       { name: 'Arta Krasniqi', phoneCc: '+383', phone: '044 600 700', productType: 'Garderobë', price: '1.200', deposit: '400', method: 'cash', city: 'Prishtinë' },
       TODAY,
     );
-    expect(r.number).toBe('2026-012');
+    expect(r.number).toBe('2026-016');
     const b = await book();
     expect(b.clients.filter(c => c.name === 'Arta Krasniqi')).toHaveLength(1);
     const o = b.orders.find(x => x.id === r.id)!;
@@ -414,7 +414,7 @@ describe('permissions: Zyra can’t delete or export', () => {
 describe('export', () => {
   it('Pronari gets one .xlsx with five sheets and a complete JSON copy', async () => {
     const x = await buildExport(db, owner, TODAY);
-    expect(x.json.orders).toHaveLength(11);
+    expect(x.json.orders).toHaveLength(15);
     expect(x.json.openingBalances).toHaveLength(2);
     expect(x.sheets.map(s => s.name)).toEqual(['Porositë', 'Pagesat', 'Vizitat', 'Borxhet e bartura', 'Klientët']);
     const orders = x.sheets[0];

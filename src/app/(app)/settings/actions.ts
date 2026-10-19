@@ -30,3 +30,18 @@ export async function setDepositWord(form: FormData) {
   });
   revalidatePath('/settings');
 }
+
+/** Demo date control ("Simulo: kalo X ditë përpara"): demo mode only, per browser. */
+export async function setDemoDays(form: FormData) {
+  await requirePermission('daily');
+  if (process.env.DEMO_MODE !== 'true') return;
+  const { cookies } = await import('next/headers');
+  const { DEMO_DAYS_COOKIE } = await import('@/server/today');
+  const jar = await cookies();
+  const cur = Number(jar.get(DEMO_DAYS_COOKIE)?.value ?? 0) || 0;
+  const step = form.get('step');
+  const next = step === 'reset' ? 0 : Math.min(365, Math.max(0, cur + Number(step)));
+  if (next) jar.set(DEMO_DAYS_COOKIE, String(next), { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 });
+  else jar.delete(DEMO_DAYS_COOKIE);
+  revalidatePath('/', 'layout');
+}

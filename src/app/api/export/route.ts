@@ -1,7 +1,7 @@
 import { getCurrentUser } from '@/auth/session';
 import { ForbiddenError } from '@/auth/permissions';
 import { getDb } from '@/db/client';
-import { todayIso } from '@/lib/dates';
+import { appToday } from '@/server/today';
 import { buildExport } from '@/services/export';
 
 /** "Eksporto të dhënat": Pronari only (checked here and in the service), .xlsx or the complete .json. */
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
   if (!u?.companyId) return new Response('Unauthorized', { status: 401 });
   const format = new URL(req.url).searchParams.get('format') === 'json' ? 'json' : 'xlsx';
   try {
-    const x = await buildExport(await getDb(), { id: u.id, role: u.role, companyId: u.companyId, firstName: u.firstName }, todayIso());
+    const x = await buildExport(await getDb(), { id: u.id, role: u.role, companyId: u.companyId, firstName: u.firstName }, await appToday());
     const headers = (type: string, ext: string) => ({
       'content-type': type,
       'content-disposition': `attachment; filename="${x.base}.${ext}"`,

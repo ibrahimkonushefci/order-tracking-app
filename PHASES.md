@@ -9,7 +9,7 @@ The app is built as a finished-looking demo that I show and sell to owners. It d
 | 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | **Approved 19.10.2026**: v10 (commit `b861ff6`) is the design baseline for all phases. Physical-phone check still pending |
 | 2 | Foundation | Running app shell: brand, auth (Pronari/Zyra), i18n, `/setup`, first fixtures | Built 19.10.2026 (app on port 3100). Independent review: two P2 findings (phone logout, brand text contrast) and the setup i18n tidy-up fixed and verified 19.10.2026 |
 | 3 | Orders & money core | Orders, 3 stages, projects, payments, cash with installers, opening balances, debts list, Sot, export | Built 19.10.2026. Review fixes (form values kept on errors, "Ndrysho borxhin", part corrections) done and committed 19.10.2026 |
-| 4 | Orari, WhatsApp & tracking page | Visits, installers, job sharing, customer messages, tracking page, on a temporary HTTPS test deployment | Not started |
+| 4 | Orari, WhatsApp & tracking page | Visits, installers, job sharing, customer messages, tracking page, on a temporary HTTPS test deployment | Built 19.10.2026 (no photos); waiting for my phone checks + approval |
 | 5 | Demo-ready | Full seed data, demo mode, polished sales environment, QR flow, PWA, pitch kit | Not started |
 | 6 | Production readiness & first client | Backups, tested restore, real auth, pilot checkpoint passed | Not started |
 

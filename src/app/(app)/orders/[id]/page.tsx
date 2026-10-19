@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
@@ -23,7 +24,7 @@ import {
 import { PaymentButton } from '@/components/sheets/payment';
 import { Linkified, mapsLink } from '@/components/linkify';
 import { getCompany } from '@/db/queries';
-import { fmtDate, fmtDateTime } from '@/lib/dates';
+import { fmtDate, fmtDateTime, isoOf } from '@/lib/dates';
 import { ago, fmtDay, lateSpan } from '@/lib/fmt';
 import { eur } from '@/lib/money';
 import { fmtPhone } from '@/lib/phone';
@@ -31,16 +32,24 @@ import { lastReminder } from '@/domain/debts';
 import { loadHistory, loadOrder } from '@/services/book';
 import { pageContext } from '@/server/context';
 import { listInstallers } from '@/db/queries';
-import { chatHref } from '@/components/debt-row';
+import { VisitButton, VisitDoneButton } from '@/components/sheets/visit';
+import { ContactPrefs, CopyLink, NewLinkButton } from '@/components/sheets/link';
+import { reminderCheck, templatesFor } from '@/domain/messages';
+import { dueVisit, nextVisit as nextVisitOf } from '@/domain/visits';
+import { jobLites, trackingUrl } from '@/server/jobs';
+import { visitOrderView, visitView } from '@/server/views';
+import { pageBook } from '@/server/context';
 
+const timeLabel = (v: string) => (v === 'morning' ? 'paradite' : v === 'afternoon' ? 'pasdite' : v);
 const VISIT_ICON: Record<string, IconName> = { measure: 'ruler', install: 'tool', delivery: 'truck', repair: 'tool' };
 
 /**
  * Order detail (spec §3): one alert at a time, the stage control, the money, the visits,
  * then quiet rows that open in place, the rare actions and the append-only history.
  */
-export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ new?: string }> }) {
   const { id } = await params;
+  const { new: justCreated } = await searchParams;
   const { db, user, companyId, today, label } = await pageContext();
   const o = await loadOrder(db, companyId, id);
   if (!o) notFound();
@@ -58,6 +67,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const pauseOn = !!o.pausedUntil && o.pausedUntil >= today;
   const last = lastReminder(o.messages);
   const installed = installedQty(o);
+  const book = await pageBook();
+  const jobs = jobLites(book.orders, today);
+  const vo = visitOrderView(o);
+  const activeInst = installers.filter(i => i.active || o.visits.some(v => v.installerId === i.id)).map(i => ({ id: i.id, name: i.name }));
+  const rem = reminderCheck(tot, o, o.client.noReminders, today);
+  const link = await trackingUrl(o.trackingToken);
+  const firstTemplate = templatesFor(o, today)[0];
 
   const view: OrderView = {
     id: o.id,
@@ -117,7 +133,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   }
 
   /* Status: stepper, project progress, next visit line, the primary action. */
-  const nextVisit = o.visits.filter(v => !v.doneAt && v.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+  const nextVisit = nextVisitOf(o.visits, today);
+  const dv = o.stage !== 'cancelled' ? dueVisit(o.visits, today) : null;
   let info = '';
   if (o.stage === 'done') info = t('doneOn', { stage: labels.done, date: fmtDate(o.doneAt) });
   if (nextVisit) info += `${info ? ' · ' : ''}${t('nextVisit', { type: w(`visit.${nextVisit.type}`), day: fmtDay(nextVisit.date, today, tt).toLowerCase(), who: instName(nextVisit.installerId) })}`;
@@ -204,23 +221,44 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     const sub = [instName(v.installerId)];
     if (v.quantity) sub.push(`${v.quantity} ${o.unit ?? ''} · ${eur(partValue(o, v))}`);
     if (v.note) sub.push(v.note);
+    if (v.lastSentAt && !v.doneAt) sub.push(t('sentAgo', { ago: ago(isoOf(v.lastSentAt), today, tt) }));
+    const main = (
+      <>
+        <span className={`visit__icon visit__icon--${v.type}`}>
+          <Icon name={VISIT_ICON[v.type]} />
+        </span>
+        <span className="grow">
+          <b>{w(`visit.${v.type}`)}</b> <span className="muted">· {v.doneAt ? fmtDate(v.doneAt) : `${fmtDay(v.date, today, tt)}${v.time ? ` · ${timeLabel(v.time)}` : ''}`}</span>
+          <span className="visit__sub">{sub.join(' · ')}</span>
+        </span>
+      </>
+    );
     return (
       <div className={`visit vt--${v.type}${v.doneAt ? ' visit--done' : ''}`} key={v.id}>
-        <div className="visit__main">
-          <span className={`visit__icon visit__icon--${v.type}`}>
-            <Icon name={VISIT_ICON[v.type]} />
-          </span>
-          <span className="grow">
-            <b>{w(`visit.${v.type}`)}</b> <span className="muted">· {v.doneAt ? fmtDate(v.doneAt) : fmtDay(v.date, today, tt)}</span>
-            <span className="visit__sub">{sub.join(' · ')}</span>
-          </span>
-        </div>
+        {!v.doneAt && o.stage !== 'cancelled' ? (
+          <VisitButton o={vo} visit={visitView(v)} installers={activeInst} jobs={jobs} today={today} className="visit__main" ariaLabel={t('editVisit')}>
+            {main}
+          </VisitButton>
+        ) : (
+          <div className="visit__main">{main}</div>
+        )}
         {v.doneAt && proj && v.quantity && o.stage !== 'cancelled' ? (
           <PartEditButton o={view} part={{ id: v.id, quantity: v.quantity, date: v.doneAt, installerId: v.installerId, value: v.value }} installers={inst} today={today} canDelete={canDeletePay} />
         ) : v.doneAt ? (
           <Badge tone="success" icon="check">
             {t('visitDone')}
           </Badge>
+        ) : o.stage !== 'cancelled' ? (
+          <>
+            {v.date <= today ? (
+              <VisitDoneButton o={vo} visit={visitView(v)} installers={activeInst} className="btn btn--soft btn--sm">
+                {t('markDone')}
+              </VisitDoneButton>
+            ) : null}
+            <Link className="icon-btn icon-btn--whatsapp" href={`/send/visit/${o.id}/${v.id}`} aria-label={t('sendToInstaller')}>
+              <Icon name="whatsapp" />
+            </Link>
+          </>
         ) : null}
       </div>
     );
@@ -252,6 +290,19 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       />
       <div className="detail-layout">
         {alert}
+        {justCreated && o.payments.some(p => !p.deletedAt) && firstTemplate !== 'reminder' ? (
+          <Link className="strip" href={`/compose/order/${o.id}?t=deposit`}>
+            <span className={`strip__icon strip__icon--${ch}`}>
+              <Icon name={ch} />
+            </span>
+            <span className="grow">
+              <b>{t('thankDeposit', { word: (company?.depositWord ?? 'Avans').toLowerCase() })}</b> <span className="muted">{t('thankDepositSub')}</span>
+            </span>
+            <span className="strip__cta">
+              {t('write')} <Icon name="right" />
+            </span>
+          </Link>
+        ) : null}
         <div className="detail-primary">
           <section className="card">
             <div className="card__body">
@@ -270,17 +321,29 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               )}
               {projBlock}
               {info ? <div className="small muted">{info}</div> : null}
-              {proj && (o.stage === 'new' || o.stage === 'active') ? <PartButton o={view} installers={inst} today={today} /> : null}
+              {dv ? (
+                <VisitDoneButton o={vo} visit={visitView(dv)} installers={activeInst} className="btn btn--primary btn--block">
+                  <Icon name="check" /> {w(`visitDone.${dv.type}`)}
+                  {dv.date < today ? ` (${fmtDay(dv.date, today, tt).toLowerCase()})` : ''}
+                </VisitDoneButton>
+              ) : proj && (o.stage === 'new' || o.stage === 'active') ? (
+                <PartButton o={view} installers={inst} today={today} />
+              ) : null}
             </div>
           </section>
 
           <section className="card">
             <div className="card__head">
               <h2 className="card__title">{t('visits')}</h2>
+              {o.stage !== 'cancelled' ? (
+                <VisitButton o={vo} installers={activeInst} jobs={jobs} today={today} className="card__link">
+                  <Icon name="plus" /> {t('plan')}
+                </VisitButton>
+              ) : null}
             </div>
             <div className="card__body">
               {visitsOpen.length ? <div className="list list--flush">{visitsOpen.map(visitRow)}</div> : null}
-              {!visitsOpen.length && !visitsDone.length ? <div className="small muted">{t('noVisits')}</div> : null}
+              {!visitsOpen.length && !visitsDone.length ? <div className="small muted">{t('noVisitsPlan')}</div> : null}
               {visitsDone.length ? (
                 <details className="fold fold--inline">
                   <summary>
@@ -294,7 +357,6 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   </div>
                 </details>
               ) : null}
-              <span className="phase-note">{t('visitsLater')}</span>
             </div>
           </section>
 
@@ -341,13 +403,38 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     <Icon name="phone" />
                   </a>
                 </div>
-                <a className={`btn btn--${ch} btn--sm btn--fit`} href={chatHref(ch, o.client.phone)} target="_blank" rel="noopener">
+                <Link className={`btn btn--${ch} btn--sm btn--fit`} href={`/compose/order/${o.id}`}>
                   <Icon name={ch} /> {t('writeClient')}
-                </a>
+                </Link>
+                <ContactPrefs kind="client" id={o.clientId} language={o.client.language} channel={o.client.channel} />
                 <NoRemindersToggle kind="client" id={o.clientId} value={o.client.noReminders} label={t('noReminders')} />
                 <div className="xs subtle">{t('clientHelp')}</div>
               </>,
             )}
+            {o.stage !== 'cancelled'
+              ? fold(
+                  'link',
+                  'link',
+                  t('trackingPage'),
+                  t('trackingSum', { lang: w(`lang.${o.client.language}`) }),
+                  <>
+                    <div className="mono-box">
+                      <Icon name="link" />
+                      <span className="ellipsis grow">{link}</span>
+                    </div>
+                    <div className="btn-row">
+                      <Link className="btn btn--soft btn--sm" href={`/compose/order/${o.id}?t=link`}>
+                        <Icon name="whatsapp" /> {t('sendLink')}
+                      </Link>
+                      <a className="btn btn--secondary btn--sm" href={`/t/${o.trackingToken}`} target="_blank" rel="noopener">
+                        <Icon name="eye" /> {t('previewLink')}
+                      </a>
+                      <CopyLink url={link} />
+                    </div>
+                    <NewLinkButton orderId={o.id} />
+                  </>,
+                )
+              : null}
             {o.internalNote
               ? fold(
                   'notes',
@@ -417,7 +504,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   <span>{tm('lastReminder', { ago: ago(new Date(last.sentAt).toISOString().slice(0, 10), today, tt), channel: last.channel })}</span>
                 </div>
               ) : null}
-              {tot.remaining > 0 && o.stage !== 'cancelled' ? (
+              {(tot.remaining > 0 && o.stage !== 'cancelled') || rem.ok ? (
                 <div className="btn-row">
                   <PaymentButton
                     className="btn btn--secondary"
@@ -431,6 +518,11 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   >
                     <Icon name="plus" /> {tm('record')}
                   </PaymentButton>
+                  {rem.ok ? (
+                    <Link className={`btn btn--${ch}`} href={`/compose/order/${o.id}?t=reminder`}>
+                      <Icon name={ch} /> {t('reminder')}
+                    </Link>
+                  ) : null}
                 </div>
               ) : null}
               <details className="fold fold--inline">
