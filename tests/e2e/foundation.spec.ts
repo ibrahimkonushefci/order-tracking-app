@@ -54,7 +54,7 @@ test('Pronari: the v10 shell, navigation and owner-only settings', async ({ page
   for (const name of ['Driton', 'Faton', 'Besnik']) await expect(page.getByText(name, { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Kapar' })).toBeEnabled();
   await expect(page.getByRole('link', { name: 'Hap konfigurimin e markës' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Excel/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Excel/ })).toBeVisible();
 });
 
 test('Zyra: same screens, but no settings changes, export or brand setup', async ({ page }) => {

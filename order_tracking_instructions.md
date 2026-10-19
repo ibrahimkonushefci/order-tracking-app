@@ -65,10 +65,10 @@ Almost nobody in Kosovo uses regular SMS for business anymore, and SMS to +49/+4
 | i18n | next-intl | Works with App Router and server components |
 | Validation | zod, with Albanian error messages | Shared between forms and server actions |
 | PWA | Serwist | Installable on phones, caches the app shell |
-| File storage | `StorageProvider` abstraction: local disk (demo) → Cloudflare R2 (S3 API) in production | R2 has no egress fees. **Compress photos in the browser before upload** (max ~1600px, JPEG ~80%), because notebook/installation photos from phones are 3–8 MB |
+| File storage | **None in v1.** Order/job photos are out of scope for v1 (decided 19.10.2026). Company logos are brand assets bundled with the deployment (`brands/<slug>/`), not uploads | If photos are added later: a `StorageProvider` abstraction (local disk → Cloudflare R2), compression in the browser before upload (max ~1600px, JPEG ~80%) |
 | Export | `.xlsx` generated on the server (e.g. exceljs) + JSON | The owner opens it in Excel; the JSON is a complete copy |
 | Tests | Vitest (logic) + Playwright (a few key flows) | Same as my other projects |
-| Hosting | Vercel (Pro plan, functions in Frankfurt) + Neon + R2. One Vercel project and one database per client | Hobby plan is not allowed for commercial use. No cron/scheduler needed in v1 |
+| Hosting | Vercel (Pro plan, functions in Frankfurt) + Neon. One Vercel project and one database per client | Hobby plan is not allowed for commercial use. No cron/scheduler needed in v1 |
 
 Keep a `companyId` on all main tables so multi-tenancy is easy later, but deploy one instance per client for now.
 
@@ -180,7 +180,7 @@ The app must look like modern software on a mid-range phone, and be **scannable 
   - Moving to **E kryer** asks, in one sheet: did the customer pay the rest (no / all / part, and where the money is: in the office or with the installer), and, if money remains, **"Kur paguan pjesën tjetër?"**: `Brenda javës` (default, 7 days) · `Brenda muajit` (30 days) · `Në një datë` · `Nuk e di` (→ "Afat i panjohur").
 - **Visits (Vizitat)**: an order has zero or more visits: **Matje**, **Montim**, **Dërgesë** or **Riparim**. Each has a date, an optional time (**"Paradite"**, **"Pasdite"**, an exact hour, or none), an optional installer and a short note. A pickup order simply has no visit.
   - Marking an installation/delivery visit done opens the same sheet as "E kryer" (the €800 phone call, §5), with "Porosia është e kryer" pre-checked.
-  - Marking a measurement done offers to attach the **notebook photo** ("Foto e fletores"). The installer usually sends it on WhatsApp; the owner adds it from the phone's gallery.
+  - A measurement is simply marked done. (The notebook photo, "Foto e fletores", is out of scope for v1; the measurements stay in the installer's WhatsApp chat.)
 - **Multi-unit projects** (e.g. 100 doors for a building under construction, kitchens for 24 apartments): an optional switch on the new-order form, **"Montohet në disa herë? (p.sh. 100 dyer për një ndërtesë)"**, adds **Sasia** and **Njësia** (`copë` / `m²` / `banesa`) and a payment term for each part (`Brenda javës` / `Brenda muajit` / `Nuk e di`). Off by default, so normal orders never see it.
   - **"Shëno montim"** records a part installed: date, installer, quantity ("8 copë"). Its value is quantity × unit price (contract ÷ quantity), editable for mixed products. Planned project visits record their quantity when marked done.
   - The order shows progress: **"40 / 100 copë"** and "€10.000 nga €25.000 të montuara".
@@ -190,8 +190,8 @@ The app must look like modern software on a mid-range phone, and be **scannable 
 - **Pauzo kujtesat deri më…**: any order or opening balance can have reminders paused until a date, with a short reason ("Premtoi të paguajë kur vjen në Kosovë").
 - **Ndrysho porosinë**: every field can be edited, including the price and the project quantity. A price change takes an optional note ("+1 dollap"). Each change is written to the history ("Çmimi: €5.000 → €5.200 · +1 dollap"). There is no separate discount or adjustments list.
 - **Anulo / Fshij**: cancelling keeps the order (out of all totals). Deleting is for orders created by mistake: Pronari only, and only when the order has no payments.
-- **Photos** are for the company's own records: notebook pages, finished work. They are never shown to customers.
-- **Views**: a **list** with search (name, phone, order number; "avans"/"kapar" finds orders with only a deposit) and stage chips (incl. "Projekte"), and a **three-column board** on tablet/desktop. **Order detail**: one alert at a time (cash with an installer, remaining work), the stage control, the money, the visits, then quiet rows that open in place (place & directions, client, tracking page link, photos, internal note, history).
+- **Photos are out of scope for v1** (decided 19.10.2026): no notebook or installation photos, no camera capture, no uploads. They may be added later for the company's own records, never shown to customers.
+- **Views**: a **list** with search (name, phone, order number; "avans"/"kapar" finds orders with only a deposit) and stage chips (incl. "Projekte"), and a **three-column board** on tablet/desktop. **Order detail**: one alert at a time (cash with an installer, remaining work), the stage control, the money, the visits, then quiet rows that open in place (place & directions, client, tracking page link, internal note, history).
 
 ### 4. Payments & debts
 - **Record a payment**: amount, method (Kesh / Bankë / Kartelë), date, note, and for cash **where the money is now**: **"Në zyrë"** or **"Te montuesi (Driton)"**.
@@ -311,7 +311,7 @@ Both see all money. Check the role in every server action.
 - `opening_balance`: name, phone, channel, amount, forWhat, workDone, dueDate (null = unknown), dueApprox, note, `noReminders`, pause
 - `message`: recordId, recipient (client or installer), type, channel, text, sentBy, sentAt
 - `history`: recordId, who, when, text, old → new (append-only)
-- `photo`: orderId, kind (notebook/after/other), storage key
+- `photo`: orderId, kind (notebook/after/other), storage key (table reserved for later; unused in v1)
 
 ## Demo mode & seed data
 
@@ -328,6 +328,7 @@ Both see all money. Check the role in every server action.
 - Automatic message sending, a ready-to-send queue, reminder schedules, real WhatsApp/Viber/SMS APIs
 - Promised delivery dates, "at risk" warnings, delay notices
 - Photos or balances on the tracking page
+- Order/job photos of any kind (notebook pages, installation photos, camera capture, compression, file storage/R2): may be added after v1
 - Payment plans and contract tranche schedules, retention (garancia), per-item prices inside a project
 - Partial cash handovers from installers
 - Charts and monthly reports, English/German staff screens (i18n keys are ready)
@@ -357,9 +358,8 @@ Both see all money. Check the role in every server action.
 
 Barely visible in a sales demo, but required before real money and real customers are in the app:
 - **Database backups**: Neon point-in-time restore plus a nightly `pg_dump` to separate storage (a backup bucket, not the app's own database), kept 30 days.
-- **File storage is append-only**: every upload gets a new unique key and is never overwritten in place. Deleting a photo in the app only marks it deleted; the file is removed later by a cleanup job after the backup retention period.
-- **File backups**: R2 doesn't support bucket versioning (Cloudflare lists `GetBucketVersioning`/`PutBucketVersioning` as unimplemented), so use a nightly copy of the photo bucket into **dated backup folders** in a separate backup bucket, kept for **30 days**. Earlier copies must survive if a file in the app bucket is later overwritten or deleted.
-- **Tested restore**: a written restore procedure, actually run once on a copy (database + files + users + settings) before go-live, then every 3 months. A backup that has never been restored doesn't count.
+- **Files**: v1 stores no uploaded files (photos are out of scope), so there is no file backup. If photos are added later: append-only storage (a new unique key per upload, deletes only mark), and a nightly copy into dated backup folders kept 30 days (R2 has no bucket versioning).
+- **Tested restore**: a written restore procedure, actually run once on a copy (database + users + settings) before go-live, then every 3 months. A backup that has never been restored doesn't count.
 - **Corrections are traceable**: every payment edit/delete is in the append-only history. The Excel export stays as the owner's own copy, but it is not the backup.
 - **Tracking link replacement** working and tested.
 - Real auth: demo login buttons and `/setup` PIN disabled, Pronari and Zyra passwords set.
@@ -371,6 +371,6 @@ The project is built in phases; see [PHASES.md](PHASES.md). The first phase is a
 Before you start coding the app, give me the plan, the data model (Drizzle schema) and the folder structure. At the end, write a `README.md` covering:
 - how to run it locally (offline, PGlite)
 - how to rebrand it for a new client in under 15 minutes
-- how to deploy a client instance (Vercel + Neon + R2)
+- how to deploy a client instance (Vercel + Neon)
 - how backups work and how to restore
 - where to plug in real WhatsApp/Viber/SMS providers later

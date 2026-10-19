@@ -34,3 +34,10 @@
 .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .setup-preview>*{grid-area:auto}
 .setup-preview .app-header__brand>.app-header__logo{display:block}
+
+/* Phase 3 */
+.form-page--order .card__body>.form-alert{grid-column:1/-1}
+.pay--deleted .pay__amount{text-decoration:line-through;color:var(--color-text-subtle)}
+.pay--deleted .small{color:var(--color-text-subtle)}
+/* Night Mode's danger tint is light, so its button text is dark (white on #F1A097 is ~2:1). */
+:root[data-theme="dark"] .btn--danger{color:#1A1A1A}

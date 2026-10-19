@@ -7,6 +7,7 @@ import type { Brand } from '@/brand/schema';
 import { BrandLogo } from '../brand-logo';
 import { Icon } from '../icons';
 import { ThemeToggle } from '../theme';
+import { Toaster } from '../sheet';
 import { MainTabs, SecondaryTabs, SettingsGear } from './nav';
 
 /**
@@ -77,6 +78,8 @@ export async function Shell({
           </nav>
         </div>
       </div>
+      <div id="sheet-root" />
+      <Toaster />
     </div>
   );
 }
@@ -86,9 +89,14 @@ export function Page({ nav, children }: { nav: string; children: ReactNode }) {
   return <div className={`content content--${nav}`}>{children}</div>;
 }
 
-export function PageHead({ title, sub, right }: { title: ReactNode; sub?: ReactNode; right?: ReactNode }) {
+export function PageHead({ title, sub, right, back, backLabel }: { title: ReactNode; sub?: ReactNode; right?: ReactNode; back?: string; backLabel?: string }) {
   return (
     <div className="page-head">
+      {back ? (
+        <Link className="back" href={back} aria-label={backLabel}>
+          <Icon name="left" />
+        </Link>
+      ) : null}
       <div className="grow">
         <h1>{title}</h1>
         {sub ? <div className="page-head__sub">{sub}</div> : null}

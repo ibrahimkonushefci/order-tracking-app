@@ -8,7 +8,7 @@ The app is built as a finished-looking demo that I show and sell to owners. It d
 |---|---|---|---|
 | 1 | Interactive HTML prototype | Clickable version of the key screens, for me to feel the workflow | **Approved 19.10.2026**: v10 (commit `b861ff6`) is the design baseline for all phases. Physical-phone check still pending |
 | 2 | Foundation | Running app shell: brand, auth (Pronari/Zyra), i18n, `/setup`, first fixtures | Built 19.10.2026 (app on port 3100). Independent review: two P2 findings (phone logout, brand text contrast) and the setup i18n tidy-up fixed and verified 19.10.2026 |
-| 3 | Orders & money core | Orders, 3 stages, projects, payments, cash with installers, opening balances, debts list, Sot, export | In progress (started 19.10.2026) |
+| 3 | Orders & money core | Orders, 3 stages, projects, payments, cash with installers, opening balances, debts list, Sot, export | Built 19.10.2026. Review fixes (form values kept on errors, "Ndrysho borxhin", part corrections) done and committed 19.10.2026 |
 | 4 | Orari, WhatsApp & tracking page | Visits, installers, job sharing, customer messages, tracking page, on a temporary HTTPS test deployment | Not started |
 | 5 | Demo-ready | Full seed data, demo mode, polished sales environment, QR flow, PWA, pitch kit | Not started |
 | 6 | Production readiness & first client | Backups, tested restore, real auth, pilot checkpoint passed | Not started |
@@ -131,7 +131,7 @@ Spec sections: 1 Sot, 2 Borxhet, 3 Orders, 4 Payments & debts, 9 Export, Permiss
 ## Phase 4: Orari, WhatsApp & tracking page
 
 Spec sections: 5 Orari & installers, 6 Customer tracking page, 7 Messages to customers.
-- Visits (Matje, Montim, Dërgesë, Riparim) with optional times, Orari by installer, "Nga ditët e kaluara", the €800 call sheet from a visit, project parts from visits, notebook photo with compression.
+- Visits (Matje, Montim, Dërgesë, Riparim) with optional times, Orari by installer, "Nga ditët e kaluara", the €800 call sheet from a visit, project parts from visits. (Photos are out of scope for v1, decided 19.10.2026: no notebook/installation photos, camera capture, compression or R2.)
 - Punët e montuesve: installer load on the chips in "Planifiko vizitë", and the "Montuesit" tab (7-day grid, per-installer summary).
 - Installer messages: one visit, and one installer's whole day; WhatsApp primary, Viber via clipboard, "U dërgua?" logging.
 - Customer templates (sq/en/de) from the order and the debts list, the green "Kujtesë" rule with "Kujtesa e fundit", demo date control.
@@ -160,7 +160,7 @@ After a client buys. Spec section: Production readiness.
 - Adjustments the client asked for during the sale.
 - Nightly database backups and dated file backups, a **tested restore** on a copy.
 - Real auth only: demo buttons and setup PIN off, Pronari and Zyra accounts.
-- Deploy the client instance (Vercel + Neon EU + R2).
+- Deploy the client instance (Vercel + Neon EU). Brand assets (logo) ship with the deployment; no file storage in v1.
 - Onboarding: sit with the owner and enter the notebook debts as opening balances and the installers with their phones. **Agree who on the client's side keeps it up to date** (usually the office): marking work done, recording payments, confirming cash from installers.
 
 **Done when the pilot checkpoint is passed**, agreed with the owner:
@@ -176,4 +176,4 @@ After a client buys. Spec section: Production readiness.
 ## Parallel / later
 
 - **brand.json v2 migration** for 3d_designer and Doors & laminate (separate task, any time after Phase 2).
-- Backlog (from the spec's "Out of scope"), added only when a client needs it: installer app, automatic sending and real messaging APIs, payment plans and project tranches, retention, partial cash handovers, receipts, service/warranty module, English/German staff UI, charts, quotes, drag-and-drop calendar, multi-tenancy, 3D designer → order hand-off.
+- Backlog (from the spec's "Out of scope"), added only when a client needs it: order/job photos (notebook pages, installation photos, R2 storage), installer app, automatic sending and real messaging APIs, payment plans and project tranches, retention, partial cash handovers, receipts, service/warranty module, English/German staff UI, charts, quotes, drag-and-drop calendar, multi-tenancy, 3D designer → order hand-off.

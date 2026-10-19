@@ -136,14 +136,13 @@ export default async function SettingsPage() {
             <>
               <div className="help">{t('settings.exportHelp')}</div>
               <div className="btn-row">
-                <button className="btn btn--primary" type="button" disabled title={t('phase.later3')}>
-                  <Icon name="download" /> Excel (.xlsx)
-                </button>
-                <button className="btn btn--secondary" type="button" disabled title={t('phase.later3')}>
-                  <Icon name="download" /> Kopje e plotë (.json)
-                </button>
+                <a className="btn btn--primary" href="/api/export?format=xlsx" download>
+                  <Icon name="download" /> {t('settings.exportXlsx')}
+                </a>
+                <a className="btn btn--secondary" href="/api/export?format=json" download>
+                  <Icon name="download" /> {t('settings.exportJson')}
+                </a>
               </div>
-              <span className="phase-note">{t('phase.later3')}</span>
             </>
           ) : (
             <div className="callout callout--neutral">
