@@ -2,15 +2,27 @@
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { ForbiddenError, type Action } from '@/auth/permissions';
 import { requirePermission } from '@/auth/session';
 import { getDb } from '@/db/client';
 import { company, history } from '@/db/schema';
 
 const wordSchema = z.enum(['Avans', 'Kapar']);
 
+/** These are plain form actions: a role that may not use them (the UI hides them) gets nothing, not an error page. */
+async function allowed(action: Action) {
+  try {
+    return await requirePermission(action);
+  } catch (e) {
+    if (e instanceof ForbiddenError) return null;
+    throw e;
+  }
+}
+
 /** "Fjala për paradhënien": a company/brand setting, so Pronari only. */
 export async function setDepositWord(form: FormData) {
-  const u = await requirePermission('settings');
+  const u = await allowed('settings');
+  if (!u) return;
   const word = wordSchema.parse(form.get('word'));
   if (!u.companyId) throw new Error('no company');
   const db = await getDb();
@@ -33,8 +45,7 @@ export async function setDepositWord(form: FormData) {
 
 /** Demo date control ("Simulo: kalo X ditë përpara"): demo mode only, per browser. */
 export async function setDemoDays(form: FormData) {
-  await requirePermission('daily');
-  if (process.env.DEMO_MODE !== 'true') return;
+  if (!(await allowed('daily')) || process.env.DEMO_MODE !== 'true') return;
   const { cookies } = await import('next/headers');
   const { DEMO_DAYS_COOKIE } = await import('@/server/today');
   const jar = await cookies();

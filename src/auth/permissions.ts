@@ -29,4 +29,3 @@ export function assertCan(role: Role | null | undefined, action: Action) {
   if (!can(role, action)) throw new ForbiddenError(action);
 }
 
-export const ROLE_LABEL: Record<Role, string> = { owner: 'Pronari', office: 'Zyra' };

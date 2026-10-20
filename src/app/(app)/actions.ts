@@ -156,6 +156,7 @@ export async function editOrderAction(id: string, f: FormData) {
   return run(async (db, a) => {
     const r = await O.editOrder(db, a, id, {
       name: s(f, 'name'),
+      phoneCc: s(f, 'phoneCc'),
       phone: s(f, 'phone'),
       productType: s(f, 'productType'),
       description: s(f, 'description'),

@@ -218,6 +218,16 @@ describe('orders: the three stages by key', () => {
     expect(h).toContain('Çmimi: €4.500 → €4.700 · +1 dollap');
   });
 
+  it('Ndrysho porosinë: the phone keeps the chosen prefix (a diaspora number typed without +49)', async () => {
+    const arta = byName(await book(), 'Arta Krasniqi');
+    const base = { name: 'Arta Krasniqi', productType: 'Kuzhinë', description: arta.description, price: '4.500', city: 'Prishtinë', directions: arta.directions, internalNote: '' };
+    await editOrder(db, office, arta.id, { ...base, phoneCc: '+49', phone: '0151 2345 6789' });
+    expect((await loadOrder(db, owner.companyId, arta.id))!.client.phone).toBe('+4915123456789');
+    // A number typed with its own prefix wins over the select.
+    await editOrder(db, office, arta.id, { ...base, phoneCc: '+383', phone: '+41 79 123 45 67' });
+    expect((await loadOrder(db, owner.companyId, arta.id))!.client.phone).toBe('+41791234567');
+  });
+
   it('remaining work: "Puna u përfundua" clears it and its pause', async () => {
     const m = byName(await book(), 'Mimoza Rexhepi');
     await clearRemainingWork(db, office, m.id);

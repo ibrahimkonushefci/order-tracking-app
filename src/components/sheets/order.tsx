@@ -10,7 +10,7 @@ import { useTranslations } from 'next-intl';
 import * as A from '@/app/(app)/actions';
 import { addDays } from '@/lib/dates';
 import { eur } from '@/lib/money';
-import { Chips, Field, FormAlert, HolderField, MethodField, MoneyInput, ReasonField, SheetActions, TermField, useAction, type InstallerOpt } from '../forms';
+import { Chips, Field, FormAlert, HolderField, MethodField, MoneyInput, PhoneInput, ReasonField, SheetActions, TermField, useAction, type InstallerOpt } from '../forms';
 import { Icon, type IconName } from '../icons';
 import { Sheet, toast } from '../sheet';
 
@@ -392,6 +392,7 @@ export function OrderMoreActions({
   canPause,
   canRemaining,
   canDelete,
+  hasPayments,
   products,
   cities,
   today,
@@ -399,7 +400,9 @@ export function OrderMoreActions({
   o: OrderView;
   canPause: boolean;
   canRemaining: boolean;
+  /** Pronari: "Fshij porosinë" shows; with active payments it only explains why it can't. */
   canDelete: boolean;
+  hasPayments: boolean;
   products: string[];
   cities: string[];
   today: string;
@@ -413,12 +416,12 @@ export function OrderMoreActions({
       {canPause ? <Action icon="pause" label={t('pause')} sub={t('pauseSub')} onClick={() => setSheet('pause')} /> : null}
       {canRemaining ? <Action icon="tool" label={t('remaining')} onClick={() => setSheet('remaining')} /> : null}
       {o.stage !== 'cancelled' ? <Action icon="x" label={t('cancel')} sub={t('cancelSub')} onClick={() => setSheet('cancel')} /> : null}
-      {canDelete ? <Action icon="trash" label={t('delete')} sub={t('deleteSub')} onClick={() => setSheet('delete')} /> : null}
+      {canDelete ? <Action icon="trash" label={t('delete')} sub={hasPayments ? t('deleteHasPayments') : t('deleteSub')} onClick={() => setSheet('delete')} /> : null}
       {sheet === 'edit' ? <EditOrderSheet o={o} products={products} cities={cities} onClose={close} /> : null}
       {sheet === 'pause' ? <PauseSheet kind="order" id={o.id} today={today} onClose={close} /> : null}
       {sheet === 'remaining' ? <RemainingSheet id={o.id} onClose={close} /> : null}
       {sheet === 'cancel' ? <CancelSheet o={o} onClose={close} /> : null}
-      {sheet === 'delete' ? <DeleteOrderSheet o={o} onClose={close} /> : null}
+      {sheet === 'delete' ? <DeleteOrderSheet o={o} hasPayments={hasPayments} onClose={close} /> : null}
     </div>
   );
 }
@@ -441,7 +444,7 @@ function CancelSheet({ o, onClose }: { o: OrderView; onClose: () => void }) {
   );
 }
 
-function DeleteOrderSheet({ o, onClose }: { o: OrderView; onClose: () => void }) {
+function DeleteOrderSheet({ o, hasPayments, onClose }: { o: OrderView; hasPayments: boolean; onClose: () => void }) {
   const t = useTranslations('more');
   const { errors, pending, submit } = useAction(() => A.deleteOrderAction(o.id), onClose);
   return (
@@ -449,11 +452,17 @@ function DeleteOrderSheet({ o, onClose }: { o: OrderView; onClose: () => void })
       <form onSubmit={submit} className="form">
         <div className="callout callout--warning">
           <Icon name="alert" />
-          <span>{t('deleteHelp')}</span>
+          <span>{hasPayments ? t('deleteHasPayments') : t('deleteHelp')}</span>
         </div>
         <FormAlert errors={errors} />
         {errors.confirm ? <div className="error">{errors.confirm}</div> : null}
-        <SheetActions label={t('deleteYes')} tone="danger" pending={pending} onCancel={onClose} />
+        {hasPayments ? (
+          <button className="btn btn--secondary btn--lg" type="button" onClick={onClose}>
+            {t('close')}
+          </button>
+        ) : (
+          <SheetActions label={t('deleteYes')} tone="danger" pending={pending} onCancel={onClose} />
+        )}
       </form>
     </Sheet>
   );
@@ -501,7 +510,7 @@ function EditOrderSheet({ o, products, cities, onClose }: { o: OrderView; produc
           <input className="input" id="e-name" name="name" defaultValue={o.clientName} autoComplete="off" />
         </Field>
         <Field name="phone" label={tn('phone')} errors={errors} htmlFor="e-phone">
-          <input className="input" id="e-phone" name="phone" inputMode="tel" defaultValue={o.clientPhone} autoComplete="off" />
+          <PhoneInput id="e-phone" value={o.clientPhone} prefixLabel={tn('prefix')} />
         </Field>
         <Field label={tn('product')}>
           <Chips name="productType" value={product} onChange={setProduct} options={types.map(x => [x, x] as const)} />

@@ -94,7 +94,3 @@ export function brandCssVars(colors: Brand['colors']): Record<string, string> {
   };
 }
 
-export const cssVarsToString = (vars: Record<string, string>) =>
-  Object.entries(vars)
-    .map(([k, v]) => `${k}:${v}`)
-    .join(';');

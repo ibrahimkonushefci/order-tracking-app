@@ -43,7 +43,6 @@ export interface Job<O extends VisitOrder = VisitOrder> {
 const timeKey = (t: string | null) => (!t ? '12:30' : t === 'morning' ? '08:00' : t === 'afternoon' ? '13:00' : t);
 export const visitSort = (a: Pick<VisitLite, 'date' | 'time'>, b: Pick<VisitLite, 'date' | 'time'>) => (a.date + timeKey(a.time)).localeCompare(b.date + timeKey(b.time));
 
-export const isExactTime = (t: string | null | undefined) => !!t && /^\d{2}:\d{2}$/.test(t);
 
 /** Visit types where installers usually take the rest of the money. */
 export const collectsCash = (v: Pick<VisitLite, 'type'>) => v.type === 'install' || v.type === 'delivery';

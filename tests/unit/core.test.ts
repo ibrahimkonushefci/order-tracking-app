@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { can, assertCan, ForbiddenError, type Action } from '@/auth/permissions';
 import { eur, parseEur } from '@/lib/money';
 import { fmtDate, fmtLong, todayIso } from '@/lib/dates';
-import { fmtPhone } from '@/lib/phone';
+import { fmtPhone, splitPhone } from '@/lib/phone';
 
 describe('permissions (spec table)', () => {
   const daily: Action[] = ['daily', 'edit'];
@@ -58,5 +58,14 @@ describe('dates and phones', () => {
   it('phone display', () => {
     expect(fmtPhone('+38344281734')).toBe('+383 44 281 734');
     expect(fmtPhone('+4915112345678')).toBe('+49 15 112 345678');
+  });
+  it('a saved number goes back into the prefix select and the number field', () => {
+    expect(splitPhone('+38344281734')).toEqual({ cc: '+383', local: '44 281 734' });
+    expect(splitPhone('+383 44 281 734')).toEqual({ cc: '+383', local: '44 281 734' });
+    expect(splitPhone('+4915112345678')).toEqual({ cc: '+49', local: '15 112 345678' });
+    expect(splitPhone('+12125550123')).toEqual({ cc: '+1', local: '21 255 50123' });
+    expect(splitPhone('+447700900123')).toEqual({ cc: '+383', local: '+447700900123' });
+    expect(splitPhone('')).toEqual({ cc: '+383', local: '' });
+    expect(splitPhone(null)).toEqual({ cc: '+383', local: '' });
   });
 });

@@ -514,6 +514,8 @@ export async function clearRemainingWork(db: Db, actor: Actor, id: string) {
 
 export interface EditOrderInput {
   name: string;
+  /** The prefix select; ignored when the number starts with "+" or "00". */
+  phoneCc?: string;
   phone: string;
   productType: string;
   description?: string;
@@ -535,7 +537,7 @@ export async function editOrder(db: Db, actor: Actor, id: string, input: EditOrd
     const o = await mustLoad(tx, actor, id);
     const name = text(input.name, 120);
     if (!name) throw new FieldError('name', 'nameRequired');
-    const phone = toE164('+383', input.phone);
+    const phone = toE164(input.phoneCc ?? '+383', input.phone);
     if (!phone) throw new FieldError('phone', 'phoneInvalid');
     const price = money('price', input.price, true);
     const productType = text(input.productType, 60) || o.productType;

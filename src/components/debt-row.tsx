@@ -13,11 +13,6 @@ import { eur } from '@/lib/money';
 import { Avatar, MiniBar } from './cues';
 import { Icon, type IconName } from './icons';
 
-export function chatHref(channel: string, phone: string) {
-  const n = phone.replace(/[^\d]/g, '');
-  return channel === 'viber' ? `viber://chat?number=%2B${n}` : channel === 'sms' ? `sms:+${n}` : `https://wa.me/${n}`;
-}
-
 export async function DebtRow({ d, today, installers, flash }: { d: Row; today: string; installers: { id: string; name: string }[]; flash?: boolean }) {
   const t = await getTranslations('debts');
   const tt = await getTranslations('time');

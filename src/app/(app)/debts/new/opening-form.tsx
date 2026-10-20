@@ -6,9 +6,8 @@
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createOpeningAction } from '../../actions';
-import { Field, FormAlert, MoneyInput, useAction } from '@/components/forms';
+import { Field, FormAlert, MoneyInput, PhoneInput, useAction } from '@/components/forms';
 import { Icon } from '@/components/icons';
-import { fmtPhone, PHONE_CODES } from '@/lib/phone';
 
 type Mode = 'date' | 'month' | 'unknown';
 
@@ -55,14 +54,7 @@ export function OpeningFields({ today, errors, initial, idPrefix = 'ob', dueRese
         <input className="input" id={id('name')} name="name" autoComplete="off" placeholder={t('namePh')} defaultValue={initial?.name} />
       </Field>
       <Field name="phone" label={t('phone')} opt errors={errors} htmlFor={id('phone')}>
-        <div className="input-group">
-          <select className="select" name="phoneCc" aria-label={t('prefix')} defaultValue="+383">
-            {PHONE_CODES.map(c => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-          <input className="input" id={id('phone')} name="phone" inputMode="tel" placeholder="44 123 456" defaultValue={initial ? fmtPhone(initial.phone) : undefined} />
-        </div>
+        <PhoneInput id={id('phone')} value={initial?.phone} prefixLabel={t('prefix')} />
       </Field>
       <Field name="amount" label={t('amount')} req errors={errors} htmlFor={`m-${idPrefix}-amount`}>
         <MoneyInput name="amount" id={`m-${idPrefix}-amount`} defaultValue={initial?.amount} />

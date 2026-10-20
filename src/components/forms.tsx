@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ActionResult } from '@/app/(app)/action-result';
+import { PHONE_CODES, splitPhone } from '@/lib/phone';
 import { Icon } from './icons';
 import { toast } from './sheet';
 
@@ -91,6 +92,21 @@ export function Field({
 }
 
 /** The amount input with the € sign; accepts "4500", "4.500", "1250,50". */
+/** "Prefiksi" and the number (form fields `phoneCc` and `phone`); a saved number is split into both. */
+export function PhoneInput({ id, value, prefixLabel }: { id: string; value?: string | null; prefixLabel: string }) {
+  const { cc, local } = splitPhone(value);
+  return (
+    <div className="input-group">
+      <select className="select" name="phoneCc" aria-label={prefixLabel} defaultValue={cc}>
+        {PHONE_CODES.map(c => (
+          <option key={c}>{c}</option>
+        ))}
+      </select>
+      <input className="input" id={id} name="phone" inputMode="tel" placeholder="44 123 456" defaultValue={local || undefined} autoComplete="off" />
+    </div>
+  );
+}
+
 export function MoneyInput({ name, defaultValue, id, autoFocus }: { name: string; defaultValue?: number | null; id?: string; autoFocus?: boolean }) {
   const v = defaultValue && defaultValue > 0 ? (defaultValue / 100).toFixed(defaultValue % 100 ? 2 : 0).replace('.', ',') : '';
   return (

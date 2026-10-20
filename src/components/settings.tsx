@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as A from '@/app/(app)/actions';
 import { DEFAULT_TEMPLATES, TEMPLATE_TYPES, TEMPLATE_VARS, type Lang, type TemplateType } from '@/domain/messages';
-import { fmtPhone, PHONE_CODES } from '@/lib/phone';
-import { Chips, Field, FormAlert, SheetActions, useAction } from './forms';
+import { Chips, Field, FormAlert, PhoneInput, SheetActions, useAction } from './forms';
 import { Icon } from './icons';
 import { Sheet } from './sheet';
 
@@ -35,14 +34,7 @@ export function InstallerButton({ installer, className, children, ariaLabel }: {
               <input className="input" id="in-name" name="name" defaultValue={installer?.name} autoComplete="off" placeholder={t('namePh')} />
             </Field>
             <Field name="phone" label={t('phone')} req errors={errors} htmlFor="in-phone">
-              <div className="input-group">
-                <select className="select" name="phoneCc" aria-label={t('prefix')} defaultValue="+383">
-                  {PHONE_CODES.map(c => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
-                <input className="input" id="in-phone" name="phone" inputMode="tel" placeholder="44 123 456" defaultValue={installer ? fmtPhone(installer.phone) : undefined} />
-              </div>
+              <PhoneInput id="in-phone" value={installer?.phone} prefixLabel={t('prefix')} />
             </Field>
             <Field label={t('channel')}>
               <Chips name="channel" value={channel} onChange={setChannel} options={[['whatsapp', 'WhatsApp'], ['viber', 'Viber']]} />

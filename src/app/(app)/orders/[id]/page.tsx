@@ -636,7 +636,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                 o={view}
                 canPause={(tot.owed > 0 || o.stage === 'done') && !pauseOn && o.stage !== 'cancelled'}
                 canRemaining={o.stage === 'done' && !o.remainingWork}
-                canDelete={can(user.role, 'delete') && !o.payments.some(p => !p.deletedAt)}
+                canDelete={can(user.role, 'delete')}
+                hasPayments={o.payments.some(p => !p.deletedAt)}
                 products={productTypes(company?.productTypes, brand.businessType)}
                 cities={citiesFor(brand.contact.city)}
                 today={today}

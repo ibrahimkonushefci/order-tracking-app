@@ -52,4 +52,3 @@ export const brandSchema = z.object({
 });
 
 export type Brand = z.infer<typeof brandSchema>;
-export type BrandInput = z.input<typeof brandSchema>;

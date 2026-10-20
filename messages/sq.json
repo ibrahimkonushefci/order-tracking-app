@@ -41,10 +41,6 @@
     "you": "(ju)",
     "logoutAs": "Dil ({name})"
   },
-  "phase": {
-    "later3": "Vjen në fazën 3 (porositë dhe pagesat).",
-    "later4": "Vjen në fazën 4 (orari dhe WhatsApp)."
-  },
   "dashboard": {
     "morning": "Mirëmëngjes",
     "day": "Mirëdita",
@@ -637,7 +633,6 @@
     "visitsDone": "Të kryera ({n})",
     "partsSum": "{n, plural, one {# montim} other {# montime}}",
     "visitDone": "Kryer",
-    "visitsLater": "Planifikimi i vizitave dhe dërgimi te montuesit vijnë në fazën 4.",
     "place": "Adresa dhe udhëzimet",
     "openMaps": "Hap në Maps",
     "placeHelp": "Numrat e telefonit këtu hapen me një prekje. Një link i Google Maps shfaqet si “Hap në Maps”.",
@@ -745,6 +740,14 @@
     "clear": "Puna u përfundua",
     "cleared": "Puna u shënua e përfunduar."
   },
+  "errorPage": {
+    "notFoundTitle": "Faqja nuk u gjet",
+    "notFoundText": "Ky link nuk ekziston ose regjistrimi është fshirë.",
+    "home": "Kthehu në fillim",
+    "errorTitle": "Diçka shkoi keq",
+    "errorText": "Ndryshimet e ruajtura më parë nuk humbin. Provoni sërish; nëse përsëritet, rifreskoni faqen.",
+    "retry": "Provo sërish"
+  },
   "more": {
     "edit": "Ndrysho porosinë",
     "editSub": "Çmimi, produkti, vendi, sasia; çdo ndryshim ruhet në historik",
@@ -764,6 +767,8 @@
     "deleteTitle": "Fshij porosinë?",
     "deleteHelp": "Vetëm për porosi të krijuara gabimisht. Fshihet me gjithë vizitat. Historiku mbetet.",
     "deleteYes": "Fshij",
+    "deleteHasPayments": "Porosia ka pagesa aktive, ndaj nuk fshihet. Nëse u krijua gabimisht, fshini më parë pagesat te “Pagesat”; përndryshe anulojeni.",
+    "close": "Mbyll",
     "restore": "Rikthe porosinë"
   },
   "edit": {
