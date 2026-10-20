@@ -6,7 +6,7 @@ import { CATALOGS } from '@/db/demo/catalog';
 import { demoBrands } from '@/db/demo/load';
 import { getCompany } from '@/db/queries';
 import { dative } from '@/domain/visits';
-import { addDays } from '@/lib/dates';
+import { addDays, fmtLong } from '@/lib/dates';
 import { fmtPhone } from '@/lib/phone';
 import type { DemoInfo, DemoMoment } from '@/components/demo-bar';
 import type { loadBook } from '@/services/book';
@@ -107,6 +107,7 @@ export async function demoInfo(
     cases,
     qr,
     offset,
+    date: fmtLong(today),
     phone: phone ? fmtPhone(phone) : null,
     hasDemoData: !!c?.demo,
   };

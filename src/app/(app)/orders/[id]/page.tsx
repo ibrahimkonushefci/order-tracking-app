@@ -7,7 +7,7 @@ import { installedQty, isHeld, isProject, lateDays, orderTotals, partValue, payS
 import { Badge, PAY_TONE, PayLegend, Progress } from '@/components/cues';
 import { Icon, type IconName } from '@/components/icons';
 import { Page, PageHead } from '@/components/shell/shell';
-import { ConfirmCashButton } from '@/components/sheets/confirm-cash';
+import { HeldCashAlert } from '@/components/held-cash';
 import {
   ClearRemainingButton,
   NoRemindersToggle,
@@ -29,6 +29,7 @@ import { eur } from '@/lib/money';
 import { fmtPhone } from '@/lib/phone';
 import { lastReminder } from '@/domain/debts';
 import { loadHistory, loadOrder } from '@/services/book';
+import { partsFromVisits } from '@/services/orders';
 import { repairCleared } from '@/services/visits';
 import { pageContext } from '@/server/context';
 import { listInstallers } from '@/db/queries';
@@ -102,24 +103,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   /* One alert at a time, most urgent first. */
   let alert = null;
   if (held.length) {
-    const names = [...new Set(held.map(p => instName(p.heldBy)))].join(', ');
-    alert = (
-      <section className="alert alert--warning">
-        <div className="alert__title">
-          <Icon name="cash" />
-          <span>{t('heldTitle', { amount: eur(tot.held), names })}</span>
-        </div>
-        <div className="alert__line">
-          {t('heldLine')} <b className="num">{eur(proj ? tot.owed : Math.max(0, tot.remaining))}</b>
-        </div>
-        {held.map(p => (
-          <div className="alert__pay" key={p.id}>
-            <span className="small">{t('heldPay', { name: instName(p.heldBy), amount: eur(p.amount), day: fmtDay(p.date, today, tt).toLowerCase() })}</span>
-            <ConfirmCashButton paymentId={p.id} installer={instName(p.heldBy)} amount={p.amount} date={p.date} who={o.client.name} />
-          </div>
-        ))}
-      </section>
-    );
+    alert = <HeldCashAlert held={held} instName={instName} left={proj ? tot.owed : Math.max(0, tot.remaining)} who={o.client.name} today={today} />;
   } else if (o.remainingWork) {
     alert = (
       <section className="alert alert--info">
@@ -222,9 +206,13 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
     o.payments.filter(p => !p.deletedAt && p.date === date).map(p => `${eur(p.amount)} ${p.heldBy ? tm('withShort', { name: instName(p.heldBy) }).replace(/^T/, 't') : w('office')}`);
   const visitsOpen = o.visits.filter(v => !v.doneAt).sort((a, b) => a.date.localeCompare(b.date));
   const visitsDone = o.visits.filter(v => v.doneAt).sort((a, b) => b.doneAt!.localeCompare(a.doneAt!));
+  const partsDone = visitsDone.filter(v => v.quantity).length;
   /* "Nuk u krye" on a done repair offers to put "Ka punë të mbetura" back (the note it cleared, if any). */
   const restorable = o.stage === 'done' && !o.remainingWork ? visitsDone.filter(v => v.type === 'repair' && !v.quantity) : [];
   const cleared = new Map(await Promise.all(restorable.map(async v => [v.id, await repairCleared(db, companyId, o.id, v.id)] as const)));
+  /* "Nuk u krye" on a part that was a planned visit plans it again. */
+  const fromVisits = proj ? await partsFromVisits(db, companyId, o.id) : new Set<string>();
+  const plannedFor = (v: (typeof o.visits)[number]) => (fromVisits.has(v.id) ? { date: v.date, payments: paysOn(v.doneAt!) } : undefined);
   const restoreFor = (v: (typeof o.visits)[number]) => {
     if (!cleared.has(v.id)) return undefined;
     const c = cleared.get(v.id);
@@ -256,7 +244,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           <div className="visit__main">{main}</div>
         )}
         {v.doneAt && proj && v.quantity && o.stage !== 'cancelled' ? (
-          <PartEditButton o={view} part={{ id: v.id, quantity: v.quantity, date: v.doneAt, installerId: v.installerId, value: v.value }} installers={inst} today={today} canDelete={canDeletePay} />
+          <PartEditButton o={view} part={{ id: v.id, quantity: v.quantity, date: v.doneAt, installerId: v.installerId, value: v.value }} installers={inst} today={today} canDelete={canDeletePay} planned={plannedFor(v)} />
         ) : v.doneAt && !v.quantity && o.stage !== 'cancelled' ? (
           <>
             <Badge tone="success" icon="check">
@@ -368,7 +356,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                 <details className="fold fold--inline">
                   <summary>
                     <span className="grow">
-                      <span className="fold__title">{proj ? t('partsDone', { n: visitsDone.filter(v => v.quantity).length }) : t('visitsDone', { n: visitsDone.length })}</span>
+                      <span className="fold__title">{proj && partsDone === visitsDone.length ? t('partsDone', { n: partsDone }) : t('visitsDone', { n: visitsDone.length })}</span>
+                      {proj && partsDone > 0 && partsDone < visitsDone.length ? <span className="fold__sum">{t('partsSum', { n: partsDone })}</span> : null}
                     </span>
                     <Icon name="right" className="chev" />
                   </summary>
@@ -528,7 +517,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
               {last ? (
                 <div className="note-line">
                   <Icon name="message" />
-                  <span>{tm('lastReminder', { ago: ago(new Date(last.sentAt).toISOString().slice(0, 10), today, tt), channel: last.channel })}</span>
+                  <span>{tm('lastReminder', { ago: ago(isoOf(last.sentAt), today, tt), channel: w(`channelName.${last.channel}`) })}</span>
                 </div>
               ) : null}
               {(tot.remaining > 0 && o.stage !== 'cancelled') || rem.ok ? (
@@ -591,7 +580,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                                 {w(`method.${p.method}`)} · {fmtDate(p.date)} ·{' '}
                                 {p.heldBy
                                   ? p.handedAt
-                                    ? tm('handedBy', { name: instName(p.heldBy), date: fmtDate(new Date(p.handedAt).toISOString().slice(0, 10)) })
+                                    ? tm('handedBy', { name: instName(p.heldBy), date: fmtDate(isoOf(p.handedAt)) })
                                     : tm('withNotHanded', { name: instName(p.heldBy) })
                                   : w('office')}
                               </div>

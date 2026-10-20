@@ -597,27 +597,63 @@ export interface PartView {
   value: number | null;
 }
 
-export function PartEditButton({ o, part, installers, today, canDelete }: { o: OrderView; part: PartView; installers: InstallerOpt[]; today: string; canDelete: boolean }) {
+/** A part that was a planned visit marked done: "Nuk u krye" plans it again on `date`. */
+export interface PartPlanned {
+  date: string;
+  /** Payments recorded that day, listed (never changed) when it is reopened. */
+  payments: string[];
+}
+
+type PartEditProps = { o: OrderView; part: PartView; installers: InstallerOpt[]; today: string; canDelete: boolean; planned?: PartPlanned };
+
+export function PartEditButton(props: PartEditProps) {
   const t = useTranslations('project');
   return (
     <SheetButton className="btn btn--ghost btn--sm" ariaLabel={t('editTitle')} label={<><Icon name="edit" /> {t('edit')}</>}>
-      {close => <PartEditSheet o={o} part={part} installers={installers} today={today} canDelete={canDelete} onClose={close} />}
+      {close => <PartEditSheet {...props} onClose={close} />}
     </SheetButton>
   );
 }
 
-function PartEditSheet({ o, part, installers, today, canDelete, onClose }: { o: OrderView; part: PartView; installers: InstallerOpt[]; today: string; canDelete: boolean; onClose: () => void }) {
+function PartEditSheet({ o, part, installers, today, canDelete, planned, onClose }: PartEditProps & { onClose: () => void }) {
   const t = useTranslations('project');
   const p = o.project!;
   const [inst, setInst] = useState(part.installerId ?? '');
   const [other, setOther] = useState(part.value != null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [reopen, setReopen] = useState(false);
   const { errors, pending, submit } = useAction(f => A.editPartAction(o.id, part.id, f), onClose);
   const del = useAction(() => A.deletePartAction(o.id, part.id), onClose);
-  const date = part.date.split('-').reverse().join('.');
+  const back = useAction(f => A.reopenPartAction(o.id, part.id, f), onClose);
+  const fmt = (iso: string) => iso.split('-').reverse().join('.');
+  const date = fmt(part.date);
   return (
-    <Sheet open onClose={onClose} title={t('editTitle')} sub={t('editSub', { qty: part.quantity, unit: p.unit, date })}>
-      {confirmDelete ? (
+    <Sheet open onClose={onClose} title={reopen ? t('reopenTitle') : t('editTitle')} sub={t('editSub', { qty: part.quantity, unit: p.unit, date })}>
+      {reopen && planned ? (
+        <form onSubmit={back.submit} className="form">
+          <div className="callout callout--neutral">
+            <Icon name="help" />
+            <span>{t('reopenHelp', { date: fmt(planned.date) })}</span>
+          </div>
+          {o.stage === 'done' ? (
+            <label className="check">
+              <input type="checkbox" name="reopenOrder" value="1" defaultChecked={o.doneAt === part.date} />
+              <span>
+                {t('reopenOrder')}
+                <span className="check__sub">{t('reopenOrderSub')}</span>
+              </span>
+            </label>
+          ) : null}
+          {planned.payments.length ? (
+            <div className="callout callout--warning">
+              <Icon name="cash" />
+              <span>{t('reopenPays', { list: planned.payments.join(' · ') })}</span>
+            </div>
+          ) : null}
+          <FormAlert errors={back.errors} />
+          <SheetActions label={t('reopenYes')} pending={back.pending} onCancel={() => setReopen(false)} />
+        </form>
+      ) : confirmDelete ? (
         <form onSubmit={del.submit} className="form">
           <div className="callout callout--warning">
             <Icon name="alert" />
@@ -652,6 +688,11 @@ function PartEditSheet({ o, part, installers, today, canDelete, onClose }: { o: 
           <div className="help">{t('editHelp')}</div>
           <FormAlert errors={errors} />
           <SheetActions label={t('save')} pending={pending} onCancel={onClose}>
+            {planned ? (
+              <button className="btn btn--ghost btn--lg" type="button" onClick={() => setReopen(true)}>
+                <Icon name="refresh" /> {t('reopen')}
+              </button>
+            ) : null}
             {canDelete ? (
               <button className="btn btn--ghost-danger btn--lg" type="button" onClick={() => setConfirmDelete(true)}>
                 <Icon name="trash" /> {t('deletePart')}

@@ -5,6 +5,7 @@ For a workshop owner, on the laptop (or tablet), with the owner's own phone in t
 ## Before the meeting (10 minutes, see the rebrand checklist)
 - The app is rebranded with their logo and name, locally and online, and **Rivendos demon** was pressed today (laptop) and `pnpm deploy:demo` (or the online reset) was run.
 - On the laptop: signed in with **Hyr si {Pronari}**. Light mode unless the room is dark.
+- Sign in on the day of the meeting, not the night before: the online demo resets itself on the first visit of each day and signs out older sessions, so a tab left open overnight drops to the login page after one click.
 - Your own phone scanned the QR once today (the online page opens).
 - In the meeting, ask first: *"A mund t'jua dërgoj një mesazh provë në WhatsApp?"* Only with a yes, open **Më shumë… → Numri i takimit**, type their number and save. (It stays in this browser for 12 hours; "Hiqe" removes it.)
 

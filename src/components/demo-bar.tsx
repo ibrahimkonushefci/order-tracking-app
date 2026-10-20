@@ -7,7 +7,7 @@
  */
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   resetDemoAction,
@@ -17,7 +17,7 @@ import {
 } from '@/server/demo-actions';
 import { setDemoDays } from '@/app/(app)/settings/actions';
 import { PHONE_CODES } from '@/lib/phone';
-import { pathAfterBrandSwitch } from '@/lib/demo-paths';
+import { brandSwitchHref } from '@/lib/demo-paths';
 import { Icon } from './icons';
 import { QrCode } from './qr-code';
 import { Sheet } from './sheet';
@@ -39,6 +39,8 @@ export interface DemoInfo {
   cases: { n: string; label: string; href: string }[];
   qr: { key: string; label: string; url: string; preview: string }[];
   offset: number;
+  /** The (demo) date, e.g. "e enjte, 22.10.2026". */
+  date: string;
   phone: string | null;
   hasDemoData: boolean;
 }
@@ -66,6 +68,8 @@ export function DemoBar({ info }: { info: DemoInfo }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [qrKey, setQrKey] = useState(info.qr[0]?.key ?? '');
   const path = usePathname();
+  const search = useSearchParams().toString();
+  const brandHref = (slug: string) => brandSwitchHref(path, search, slug, slug === info.brandSlug);
   useEffect(() => {
     const open = () => setPanel('more');
     window.addEventListener(OPEN_EVENT, open);
@@ -97,7 +101,7 @@ export function DemoBar({ info }: { info: DemoInfo }) {
             {info.brands.map(b => (
               <a
                 key={b.slug}
-                href={`${b.slug === info.brandSlug ? path : pathAfterBrandSwitch(path)}?brand=${b.slug}`}
+                href={brandHref(b.slug)}
                 aria-current={b.slug === info.brandSlug ? 'page' : undefined}
               >
                 {b.name}
@@ -168,7 +172,7 @@ export function DemoBar({ info }: { info: DemoInfo }) {
                 {info.brands.map(b => (
                   <a
                     key={b.slug}
-                    href={`${b.slug === info.brandSlug ? path : pathAfterBrandSwitch(path)}?brand=${b.slug}`}
+                    href={brandHref(b.slug)}
                     aria-current={b.slug === info.brandSlug ? 'page' : undefined}
                   >
                     {b.name}
@@ -180,7 +184,7 @@ export function DemoBar({ info }: { info: DemoInfo }) {
           ) : null}
           <div className="field">
             <span className="label">
-              {info.offset ? t('dateOn', { n: info.offset }) : t('date')}
+              {info.offset ? t('dateOn', { n: info.offset, date: info.date }) : t('date')}
             </span>
             <form action={setDemoDays} className="btn-row">
               <button className="btn btn--secondary btn--sm" type="submit" name="step" value="1">

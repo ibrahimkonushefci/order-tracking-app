@@ -1,10 +1,11 @@
 import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
-import { lateDays, openingTotals } from '@/domain/balances';
-import { lastReminder, reminderCheck } from '@/domain/debts';
+import { isHeld, lateDays, openingTotals } from '@/domain/balances';
+import { lastReminder, REMINDER_GAP_DAYS, reminderCheck } from '@/domain/debts';
 import Link from 'next/link';
 import { ContactPrefs } from '@/components/sheets/link';
 import { Badge } from '@/components/cues';
+import { HeldCashAlert } from '@/components/held-cash';
 import { Icon } from '@/components/icons';
 import { Page, PageHead } from '@/components/shell/shell';
 import { EditOpeningButton, OpeningMoreActions, SetDueButton } from '@/components/sheets/opening';
@@ -12,7 +13,7 @@ import { UnpauseButton } from '@/components/sheets/order';
 import { PaymentButton } from '@/components/sheets/payment';
 import { firstName } from '@/components/cues';
 import { listInstallers } from '@/db/queries';
-import { fmtDate, fmtDateTime, fmtMonth } from '@/lib/dates';
+import { addDays, fmtDate, fmtDateTime, fmtMonth, isoOf } from '@/lib/dates';
 import { ago, lateSpan } from '@/lib/fmt';
 import { eur } from '@/lib/money';
 import { fmtPhone } from '@/lib/phone';
@@ -39,13 +40,15 @@ export default async function OpeningPage({ params }: { params: Promise<{ id: st
   const instName = (iid: string | null) => installers.find(i => i.id === iid)?.name ?? '—';
   const canDelete = can(user.role, 'delete');
   const workDone = /^\d{4}-\d{2}-\d{2}$/.test(ob.workDone) ? fmtDate(ob.workDone) : /^\d{4}-\d{2}$/.test(ob.workDone) ? fmtMonth(ob.workDone) : t('dontKnow');
-  const reminders = tot.owed <= 0 ? t('remNoDebt') : !ob.dueDate ? w('dueUnknown') : pauseOn ? tm('paused', { date: fmtDate(ob.pausedUntil), reason: ob.pauseReason ?? '' }) : ob.noReminders ? t('remOff') : (late ?? 0) <= 0 ? t('remNotDue', { date: fmtDate(ob.dueDate) }) : t('remPhase4');
-  const ch = ob.channel === 'viber' ? 'viber' : 'whatsapp';
   const rem = reminderCheck(tot, ob, ob.noReminders, today);
+  const reminders = tot.owed <= 0 ? t('remNoDebt') : !ob.dueDate ? w('dueUnknown') : pauseOn ? tm('paused', { date: fmtDate(ob.pausedUntil), reason: ob.pauseReason ?? '' }) : ob.noReminders ? t('remOff') : (late ?? 0) <= 0 ? t('remNotDue', { date: fmtDate(ob.dueDate) }) : rem.ok || !rem.lastAt ? t('remNow') : t('remNext', { date: fmtDate(addDays(rem.lastAt, REMINDER_GAP_DAYS)) });
+  const ch = ob.channel === 'viber' ? 'viber' : 'whatsapp';
+  const held = ob.payments.filter(p => !p.deletedAt && isHeld(p));
   return (
     <Page nav="debts">
       <PageHead back="/debts" backLabel={t('back')} title={ob.name} sub={ob.forWhat ? t('subFor', { what: ob.forWhat }) : t('sub')} />
       <div className="narrow">
+        {held.length ? <HeldCashAlert held={held} instName={instName} left={tot.owed} who={ob.name} today={today} /> : null}
         <section className="card">
           <div className="card__body">
             <div className="row">
@@ -92,7 +95,7 @@ export default async function OpeningPage({ params }: { params: Promise<{ id: st
             {last ? (
               <div className="note-line">
                 <Icon name="message" />
-                <span>{tm('lastReminder', { ago: ago(new Date(last.sentAt).toISOString().slice(0, 10), today, tt), channel: last.channel })}</span>
+                <span>{tm('lastReminder', { ago: ago(isoOf(last.sentAt), today, tt), channel: w(`channelName.${last.channel}`) })}</span>
               </div>
             ) : null}
             {ob.phone ? (
@@ -131,12 +134,12 @@ export default async function OpeningPage({ params }: { params: Promise<{ id: st
                 {[...ob.payments]
                   .sort((a, b) => b.date.localeCompare(a.date))
                   .map(p => (
-                    <div className="pay" key={p.id}>
+                    <div className={`pay${p.deletedAt ? ' pay--deleted' : ''}`} key={p.id}>
                       <div className="pay__top">
                         <div className="grow">
                           <div className="pay__amount">{eur(p.amount)}</div>
                           <div className="small muted">
-                            {w(`method.${p.method}`)} · {fmtDate(p.date)} · {p.heldBy ? (p.handedAt ? tm('handedBy', { name: instName(p.heldBy), date: fmtDate(new Date(p.handedAt).toISOString().slice(0, 10)) }) : tm('withNotHanded', { name: instName(p.heldBy) })) : w('office')}
+                            {w(`method.${p.method}`)} · {fmtDate(p.date)} · {p.heldBy ? (p.handedAt ? tm('handedBy', { name: instName(p.heldBy), date: fmtDate(isoOf(p.handedAt)) }) : tm('withNotHanded', { name: instName(p.heldBy) })) : w('office')}
                           </div>
                           {p.note ? <div className="xs subtle">{p.note}</div> : null}
                         </div>
@@ -145,19 +148,26 @@ export default async function OpeningPage({ params }: { params: Promise<{ id: st
                             {tm('deleted')}
                           </Badge>
                         ) : (
-                          <PaymentButton
-                            className="btn btn--ghost btn--sm"
-                            kind="opening"
-                            recordId={ob.id}
-                            payment={{ id: p.id, amount: p.amount, method: p.method, heldBy: p.heldBy, date: p.date, note: p.note }}
-                            suggest={p.amount}
-                            due={0}
-                            installers={inst}
-                            canDelete={canDelete}
-                            today={today}
-                          >
-                            <Icon name="edit" /> {tm('edit')}
-                          </PaymentButton>
+                          <>
+                            {p.heldBy && !p.handedAt ? (
+                              <Badge tone="warning" icon="clock">
+                                {tm('withShort', { name: instName(p.heldBy) })}
+                              </Badge>
+                            ) : null}
+                            <PaymentButton
+                              className="btn btn--ghost btn--sm"
+                              kind="opening"
+                              recordId={ob.id}
+                              payment={{ id: p.id, amount: p.amount, method: p.method, heldBy: p.heldBy, date: p.date, note: p.note }}
+                              suggest={p.amount}
+                              due={0}
+                              installers={inst}
+                              canDelete={canDelete}
+                              today={today}
+                            >
+                              <Icon name="edit" /> {tm('edit')}
+                            </PaymentButton>
+                          </>
                         )}
                       </div>
                     </div>

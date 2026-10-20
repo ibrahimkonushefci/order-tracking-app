@@ -322,6 +322,14 @@ export async function deletePartAction(orderId: string, visitId: string) {
   });
 }
 
+export async function reopenPartAction(orderId: string, visitId: string, f: FormData) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    const r = await O.reopenPart(db, a, orderId, visitId, { reopenOrder: on(f, 'reopenOrder') });
+    return { toast: r.reopenedOrder ? tt('partReopenedOrder') : tt('partReopened') };
+  });
+}
+
 /* ───────── Phase 4: visits ───────── */
 
 const visitInput = (f: FormData): V.VisitInput => ({ type: s(f, 'type'), date: s(f, 'date'), time: s(f, 'time'), exact: s(f, 'exact'), installerId: s(f, 'installerId'), note: s(f, 'note') });

@@ -258,7 +258,15 @@ export async function recordPartIn(tx: Tx, actor: Actor, id: string, input: Part
     await tx.update(orders).set({ stage: 'active' }).where(eq(orders.id, id));
     await log(tx, actor, 'order', id, th('stage', { from: label('new'), to: label('active') }), { field: 'stage', old: 'new', new: 'active' });
   }
-  await log(tx, actor, 'order', id, th('part', { qty: q!, unit: o.unit ?? '', who: instName ? ` · ${instName}` : '', value: value != null ? th('valueSuffix', { value: eur(value) }) : '', date: fmtDate(date) }));
+  // A planned visit that became this part carries a marker, so "Nuk u krye" can plan it again.
+  await log(
+    tx,
+    actor,
+    'order',
+    id,
+    th('part', { qty: q!, unit: o.unit ?? '', who: instName ? ` · ${instName}` : '', value: value != null ? th('valueSuffix', { value: eur(value) }) : '', date: fmtDate(date) }),
+    planned ? { field: FROM_VISIT, old: null, new: planned.id } : undefined,
+  );
   if (amount != null) {
     const holder = await checkHolder(tx, actor, input.holder);
     await insertPayment(tx, actor, { orderId: id }, { amount, method: holder === 'office' ? methodOf(input.method) : 'cash', holder, date: today, note: '' });
@@ -347,6 +355,47 @@ export async function deletePart(db: Db, actor: Actor, orderId: string, visitId:
       old: `${v.quantity}@${v.doneAt}`,
       new: null,
     });
+  });
+}
+
+/** History field marking a part that was a planned visit marked done ("Montimi u krye"). */
+const FROM_VISIT = 'partFromVisit';
+
+/** The parts of this order that were planned visits, so "Nuk u krye" can put them back. */
+export async function partsFromVisits(db: DbOrTx, companyId: string, orderId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ id: history.newValue })
+    .from(history)
+    .where(and(eq(history.companyId, companyId), eq(history.recordType, 'order'), eq(history.recordId, orderId), eq(history.field, FROM_VISIT)));
+  return new Set(rows.map(r => r.id).filter((x): x is string => !!x));
+}
+
+/**
+ * "Nuk u krye" on a part that was a planned visit marked done by mistake (both roles): the
+ * visit is planned again on its date, with its time, installer and note; progress follows.
+ * Payments are never touched, as with any visit. With `reopenOrder`, a project marked
+ * finished goes back to the active stage and its due date is removed.
+ */
+export async function reopenPart(db: Db, actor: Actor, orderId: string, visitId: string, input: { reopenOrder?: boolean }) {
+  allow(actor, 'edit');
+  return db.transaction(async tx => {
+    const { o, v } = await mustLoadPart(tx, actor, orderId, visitId);
+    if (o.stage === 'cancelled') throw new FieldError('quantity', 'cancelled');
+    if (!(await partsFromVisits(tx, actor.companyId, orderId)).has(visitId)) throw new NotFoundError('part');
+    const who = v.installerId ? ((await tx.select({ n: installer.name }).from(installer).where(eq(installer.id, v.installerId)))[0]?.n ?? '') : '';
+    await tx.update(visit).set({ doneAt: null, quantity: null, value: null }).where(eq(visit.id, visitId));
+    await log(tx, actor, 'order', orderId, th('partReopened', { qty: v.quantity!, unit: o.unit ?? '', who: who ? ` · ${who}` : '', date: fmtDate(v.doneAt) }), {
+      field: 'part',
+      old: `${v.quantity}@${v.doneAt}`,
+      new: 'planned',
+    });
+    const stage = !!input.reopenOrder && o.stage === 'done';
+    if (stage) {
+      const label = await stageLabels(tx, actor.companyId);
+      await tx.update(orders).set({ stage: 'active', doneAt: null, payTerm: null, dueDate: null }).where(eq(orders.id, orderId));
+      await log(tx, actor, 'order', orderId, th('stage', { from: label('done'), to: label('active') }), { field: 'stage', old: 'done', new: 'active' });
+    }
+    return { reopenedOrder: stage };
   });
 }
 

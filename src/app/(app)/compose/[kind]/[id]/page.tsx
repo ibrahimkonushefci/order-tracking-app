@@ -9,7 +9,7 @@ import { LANGS, openingMessage, orderMessage, reminderCheck, templatesFor, type 
 import { Compose } from '@/components/compose';
 import { Icon } from '@/components/icons';
 import { Page, PageHead } from '@/components/shell/shell';
-import { fmtDate } from '@/lib/dates';
+import { fmtDate, isoOf } from '@/lib/dates';
 import { ago } from '@/lib/fmt';
 import { loadOpening, loadOrder } from '@/services/book';
 import { pageContext } from '@/server/context';
@@ -63,7 +63,7 @@ export default async function ComposePage({ params, searchParams }: { params: Pr
         ago: check.lastAt ? ago(check.lastAt, today, tt) : '',
       })
     : '';
-  const lastIso = last ? (typeof last.sentAt === 'string' ? last.sentAt : last.sentAt.toISOString()).slice(0, 10) : null;
+  const lastIso = last ? isoOf(last.sentAt) : null;
   return (
     <Page nav={kind === 'opening' || type === 'reminder' ? 'debts' : 'orders'}>
       <PageHead back={back} backLabel={t('back')} title={title} sub={sub} />

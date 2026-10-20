@@ -18,7 +18,7 @@ import { activePayments } from '@/domain/balances';
 import { loadBook, loadHistory, loadOrder, type Book } from '@/services/book';
 import { FieldError, FieldErrors, type Actor } from '@/services/common';
 import { completeVisit, editDoneVisit, removeVisit, reopenVisit, repairCleared, saveVisit } from '@/services/visits';
-import { editPart, pauseOrder, setRemainingWork } from '@/services/orders';
+import { editPart, partsFromVisits, pauseOrder, reopenPart, setRemainingWork } from '@/services/orders';
 import { logCustomerMessage, logInstallerMessage, newTrackingLink, saveInstaller, saveTemplates, setClientContact } from '@/services/messages';
 import { ForbiddenError } from '@/auth/permissions';
 import { addDays } from '@/lib/dates';
@@ -432,6 +432,44 @@ describe('correcting a visit marked done', () => {
     const { id, v } = await naimDone();
     await db.update(orders).set({ stage: 'cancelled' }).where(eq(orders.id, id));
     expect(await err(reopenVisit(db, owner, id, v.id, {}, TODAY))).toBe('cancelled');
+  });
+});
+
+describe('"Nuk u krye" on a project visit marked done', () => {
+  it('plans it again with its time, installer and note; progress follows; the project can reopen; payments stay', async () => {
+    const ru = byName(await book(), 'Ndërtimi Rugova sh.p.k.');
+    const v = ru.visits.find(x => !x.doneAt)!;
+    const direct = ru.visits.find(x => x.doneAt && x.quantity)!;
+    const paid = orderTotals(ru).paid;
+    await completeVisit(db, office, ru.id, v.id, { pay: 'part', amount: '300', holder: 'office', method: 'cash', quantity: '3', finish: true }, TODAY);
+    expect((await loadOrder(db, owner.companyId, ru.id))!.stage).toBe('done');
+    expect(await partsFromVisits(db, owner.companyId, ru.id)).toEqual(new Set([v.id]));
+
+    const r = await reopenPart(db, office, ru.id, v.id, { reopenOrder: true });
+    expect(r.reopenedOrder).toBe(true);
+    const o = (await loadOrder(db, owner.companyId, ru.id))!;
+    expect(o.visits.find(x => x.id === v.id)).toMatchObject({ doneAt: null, quantity: null, value: null, date: v.date, time: v.time, installerId: v.installerId, note: v.note });
+    expect(installedQty(o)).toBe(installedQty(ru));
+    expect(o).toMatchObject({ stage: 'active', doneAt: null, dueDate: null });
+    expect(orderTotals(o).paid).toBe(paid + 30000);
+    const h = (await loadHistory(db, 'order', ru.id)).map(x => x.text);
+    expect(h.some(x => x.startsWith('Montimi u rikthye si vizitë e planifikuar: 3 copë'))).toBe(true);
+
+    // Planned again: nothing to reopen. A part recorded directly ("Shëno montim") is corrected or deleted instead.
+    expect(await err(reopenPart(db, office, ru.id, v.id, {}))).toMatch(/not found: part/);
+    expect(await err(reopenPart(db, office, ru.id, direct.id, {}))).toMatch(/not found: part/);
+  });
+
+  it('without "Projekti nuk ka përfunduar" the stage stays; a cancelled project refuses', async () => {
+    const ru = byName(await book(), 'Ndërtimi Rugova sh.p.k.');
+    const v = ru.visits.find(x => !x.doneAt)!;
+    await completeVisit(db, office, ru.id, v.id, { pay: 'no', quantity: '2', finish: true }, TODAY);
+    expect((await reopenPart(db, owner, ru.id, v.id, {})).reopenedOrder).toBe(false);
+    expect((await loadOrder(db, owner.companyId, ru.id))!.stage).toBe('done');
+    await db.update(orders).set({ stage: 'active' }).where(eq(orders.id, ru.id));
+    await completeVisit(db, office, ru.id, v.id, { pay: 'no', quantity: '2' }, TODAY);
+    await db.update(orders).set({ stage: 'cancelled' }).where(eq(orders.id, ru.id));
+    expect(await err(reopenPart(db, office, ru.id, v.id, {}))).toBe('cancelled');
   });
 });
 

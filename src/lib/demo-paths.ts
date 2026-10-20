@@ -12,3 +12,15 @@ export function pathAfterBrandSwitch(path: string): string {
   if (/^\/send\//.test(p)) return '/schedule';
   return path;
 }
+
+/**
+ * The demo bar's brand link: the current screen with its filters (`?stage=…&view=…`), or, for
+ * the other brand, where the switch lands. `search` is the current query string without "?".
+ */
+export function brandSwitchHref(path: string, search: string, slug: string, same: boolean): string {
+  const q = new URLSearchParams(search);
+  q.delete('brand');
+  const here = q.size ? `${path}?${q}` : path;
+  const base = same ? here : pathAfterBrandSwitch(here);
+  return `${base}${base.includes('?') ? '&' : '?'}brand=${slug}`;
+}

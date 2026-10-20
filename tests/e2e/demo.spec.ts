@@ -136,6 +136,14 @@ test('switching brand from an order lands on the new brand’s list, same role (
   await expect(page).toHaveURL('/orders');
 });
 
+test('the brand buttons keep the current view and its filters', async ({ page }) => {
+  await demoLogin(page, 'Arben');
+  await page.goto('/orders?stage=project&view=kanban');
+  await switchToLumi(page);
+  await expect(page.locator('.app-header__title')).toHaveText('Lumi Dyer & Parket');
+  await expect(page).toHaveURL('/orders?stage=project&view=kanban');
+});
+
 test('switching brand from debt, message and installer screens; lists keep their place', async ({ page }) => {
   await demoLogin(page, 'Arben');
   await page.goto('/orders?q=Fatmir');
