@@ -4,6 +4,10 @@
  * the tracking page in the client's language without any login, and a replaced link.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { addDays, fmtDate, todayIso } from '../../src/lib/dates';
+
+/** Mimoza's reminder pause in the fixtures: today + 10 days (fixtures-phase3.ts). */
+const PAUSE = fmtDate(addDays(todayIso(), 10));
 
 const PASSWORD = process.env.FIXTURE_PASSWORD!;
 
@@ -19,7 +23,7 @@ async function login(page: Page, email: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Fjalëkalimi').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Hyr' }).click();
+  await page.getByRole('button', { name: 'Hyr', exact: true }).click();
   await expect(page).toHaveURL('/');
 }
 
@@ -252,7 +256,7 @@ test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" 
   await page.goto('/debts');
   await expect(mimoza().getByRole('link', { name: /Kujtesë/ })).toBeVisible();
 
-  // Nuk u krye: the note and the pause until 29.10 are offered, pre-ticked.
+  // Nuk u krye: the note and the pause (fixtures: today + 10 days) are offered, pre-ticked.
   await openOrder(page, 'Mimoza Rexhepi');
   await page.getByText('Të kryera (1)').click();
   await page.getByRole('button', { name: 'Ndrysho vizitën e kryer' }).click();
@@ -260,7 +264,7 @@ test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" 
   await sheet.getByRole('button', { name: 'Nuk u krye' }).click();
   await expect(sheet.getByRole('checkbox', { name: /Ka ende punë të mbetura/ })).toBeChecked();
   await expect(sheet.getByLabel('Çfarë ka mbetur?')).toHaveValue(/Një derë duhet rregulluar/);
-  await expect(sheet.getByRole('checkbox', { name: 'Pauzo kujtesat për borxh deri më 29.10.2026' })).toBeChecked();
+  await expect(sheet.getByRole('checkbox', { name: `Pauzo kujtesat për borxh deri më ${PAUSE}` })).toBeChecked();
   await shot('reopen-repair-sheet');
   await sheet.getByRole('button', { name: 'Po, rikthe' }).click();
   await expect(sheet).toHaveCount(0);
@@ -268,7 +272,7 @@ test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" 
   await expect(page.locator('.alert')).toContainText('Një derë duhet rregulluar');
   await page.getByText('Historiku', { exact: true }).click();
   await expect(page.locator('.timeline')).toContainText('Ka punë të mbetura: Një derë');
-  await expect(page.locator('.timeline')).toContainText('Kujtesat në pauzë deri më 29.10.2026: Punë të mbetura');
+  await expect(page.locator('.timeline')).toContainText(`Kujtesat në pauzë deri më ${PAUSE}: Punë të mbetura`);
   await shot('reopen-repair-order');
 
   // The customer sees the last step in progress again; no green reminder while paused.
@@ -277,7 +281,7 @@ test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" 
   await expect(customer.locator('body')).toContainText('Po përfundojmë detajet e fundit');
   await customer.screenshot({ path: info.outputPath('reopen-repair-tracking.png'), fullPage: true });
   await page.goto('/debts');
-  await expect(mimoza()).toContainText('Kujtesat në pauzë deri më 29.10');
+  await expect(mimoza()).toContainText(`Kujtesat në pauzë deri më ${PAUSE.slice(0, 5)}`);
   await expect(mimoza().getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
   await shot('reopen-repair-debts');
   await customer.context().close();

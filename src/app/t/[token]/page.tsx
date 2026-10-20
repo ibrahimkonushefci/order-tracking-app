@@ -1,10 +1,13 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { cache, type CSSProperties } from 'react';
+import { brandCssVars } from '@/brand/theme';
 import { and, eq, ne } from 'drizzle-orm';
-import { getActiveBrand } from '@/brand/active';
+import { getActiveBrand, isDemoMode } from '@/brand/active';
+import { readBrand } from '@/brand/files';
 import { BrandLogo } from '@/components/brand-logo';
 import { Icon } from '@/components/icons';
 import { getDb } from '@/db/client';
-import { client, orders, visit } from '@/db/schema';
+import { client, company, orders, visit } from '@/db/schema';
 import { installedQty, isProject } from '@/domain/balances';
 import { LANGS, type Lang } from '@/domain/messages';
 import { headlineKey, TRACKING_TEXT, trackingSteps, trackTime, warmDate } from '@/domain/tracking';
@@ -12,27 +15,57 @@ import { nextVisit } from '@/domain/visits';
 import { greetName } from '@/domain/messages';
 import { fmtPhone } from '@/lib/phone';
 import { appToday } from '@/server/today';
+import { ensureFreshDemo } from '@/server/demo';
 
-export const metadata: Metadata = { robots: { index: false, follow: false } };
+/** Demo: the order's own company decides the brand (the owner's phone has no brand cookie). */
+async function brandFor(o: Awaited<ReturnType<typeof findOrder>>) {
+  return isDemoMode() && o ? readBrand(o.brandSlug) : getActiveBrand();
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { brand } = await brandFor(await findOrder((await params).token));
+  return { title: { absolute: brand.companyName }, robots: { index: false, follow: false } };
+}
+
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Viewport> {
+  const { brand } = await brandFor(await findOrder((await params).token));
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+    themeColor: brand.colors.primary,
+  };
+}
 export const dynamic = 'force-dynamic';
 
 // The tracking page follows the visitor's device setting, not a saved staff choice.
 const deviceTheme = `document.documentElement.dataset.theme=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';`;
 
 /** The order behind a token, or null: unknown, replaced ("Link i ri") and cancelled links all look the same. */
-async function findOrder(token: string) {
+async function loadTracked(token: string) {
   if (!/^[0-9a-f]{32}$/.test(token)) return null;
   const db = await getDb();
   const [row] = await db
-    .select({ o: orders, c: client })
+    .select({ o: orders, c: client, brandSlug: company.brandSlug })
     .from(orders)
     .innerJoin(client, eq(client.id, orders.clientId))
+    .innerJoin(company, eq(company.id, orders.companyId))
     .where(and(eq(orders.trackingToken, token), ne(orders.stage, 'cancelled')))
     .limit(1);
   if (!row) return null;
   const visits = await db.select().from(visit).where(eq(visit.orderId, row.o.id));
-  return { ...row.o, client: row.c, visits };
+  return { ...row.o, client: row.c, visits, brandSlug: row.brandSlug };
 }
+/** Once per request: the metadata, the viewport and the page all need it. */
+const findOrder = cache(loadTracked);
 
 /**
  * Customer tracking page (spec §6): read-only, no login, noindex, in the client's language.
@@ -40,7 +73,11 @@ async function findOrder(token: string) {
  */
 export default async function TrackingPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const [{ brand, logoUrl }, o, today] = await Promise.all([getActiveBrand(), findOrder(token), appToday()]);
+  await ensureFreshDemo();
+  const [o, today] = await Promise.all([findOrder(token), appToday()]);
+  const { brand, logoUrl } = await brandFor(o);
+  // Demo: several brands share one instance, so the page carries its own brand colours.
+  const scope = isDemoMode() ? { className: 'trk brand-scope', style: brandCssVars(brand.colors) as CSSProperties } : { className: 'trk' };
   const lang: Lang = o ? (LANGS.find(l => l === o.client.language) ?? 'sq') : 'sq';
   const d = TRACKING_TEXT[lang];
   const tagline = brand.tagline[lang] || brand.tagline.sq;
@@ -64,7 +101,7 @@ export default async function TrackingPage({ params }: { params: Promise<{ token
     return (
       <>
         {head}
-        <div className="trk">
+        <div {...scope}>
           {hero}
           <main className="trk-body">
             <section className="trk-card trk-status">
@@ -103,7 +140,7 @@ export default async function TrackingPage({ params }: { params: Promise<{ token
   return (
     <>
       {head}
-      <div className="trk">
+      <div {...scope}>
         {hero}
         <main className="trk-body">
           <section className="trk-card trk-status">

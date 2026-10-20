@@ -31,6 +31,7 @@ export function Compose({
   collectLabel,
   log,
   demo,
+  demoPhone,
   sender,
   children,
 }: {
@@ -41,11 +42,15 @@ export function Compose({
   collectLabel?: string;
   log: Log;
   demo: boolean;
+  /** Demo mode: "Numri i takimit" (the owner's phone during the meeting), offered as the recipient. */
+  demoPhone?: string | null;
   /** Who the preview shows as the sender ("Teuta · Druri" or the company). */
   sender: string;
   children?: ReactNode;
 }) {
   const t = useTranslations('compose');
+  const td = useTranslations('demo');
+  const [toMeeting, setToMeeting] = useState(!!demoPhone);
   const router = useRouter();
   const [channel, setChannel] = useState<Channel>(to.channel);
   const [collect, setCollect] = useState(true);
@@ -54,7 +59,7 @@ export function Compose({
   const [asked, setAsked] = useState(false);
   const [preview, setPreview] = useState(false);
   const [pending, start] = useTransition();
-  const href = sendHref(channel, to.phone, text);
+  const href = sendHref(channel, toMeeting && demoPhone ? demoPhone : to.phone, text);
 
   const toggleCollect = (on: boolean) => {
     setCollect(on);
@@ -97,6 +102,32 @@ export function Compose({
           </a>
         </div>
         {children}
+        {demoPhone ? (
+          <div className="field demo-send">
+            <span className="label">{td('sendTo')}</span>
+            <div className="chips" role="radiogroup" aria-label={td('sendTo')}>
+              <label className="chip">
+                <input
+                  type="radio"
+                  name="send-to"
+                  checked={toMeeting}
+                  onChange={() => setToMeeting(true)}
+                />
+                <span>{td('sendMeeting', { phone: fmtPhone(demoPhone) })}</span>
+              </label>
+              <label className="chip">
+                <input
+                  type="radio"
+                  name="send-to"
+                  checked={!toMeeting}
+                  onChange={() => setToMeeting(false)}
+                />
+                <span>{td('sendReal', { name: to.name, phone: fmtPhone(to.phone) })}</span>
+              </label>
+            </div>
+            {toMeeting ? <div className="help">{td('sendMeetingHelp')}</div> : null}
+          </div>
+        ) : null}
         {textNoCollect != null ? (
           <label className="check">
             <input type="checkbox" checked={collect} onChange={e => toggleCollect(e.target.checked)} /> {collectLabel}

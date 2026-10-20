@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
-import { getActiveBrand } from '@/brand/active';
+import { getActiveBrand, isDemoMode } from '@/brand/active';
 import { citiesFor, productTypes } from '@/domain/catalog';
 import { installedQty, isHeld, isProject, lateDays, orderTotals, partValue, payStatus, unitPrice } from '@/domain/balances';
 import { Badge, PAY_TONE, PayLegend, Progress } from '@/components/cues';
@@ -35,6 +35,7 @@ import { pageContext } from '@/server/context';
 import { listInstallers } from '@/db/queries';
 import { DoneVisitEditButton, VisitButton, VisitDoneButton } from '@/components/sheets/visit';
 import { ContactPrefs, CopyLink, NewLinkButton } from '@/components/sheets/link';
+import { OrderQrButton } from '@/components/demo-bar';
 import { reminderCheck, templatesFor } from '@/domain/messages';
 import { dueVisit, nextVisit as nextVisitOf } from '@/domain/visits';
 import { jobLites, trackingUrl } from '@/server/jobs';
@@ -449,6 +450,13 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                         <Icon name="eye" /> {t('previewLink')}
                       </a>
                       <CopyLink url={link} />
+                      {isDemoMode() ? (
+                        <OrderQrButton
+                          url={link}
+                          preview={`/t/${o.trackingToken}`}
+                          label={o.client.name}
+                        />
+                      ) : null}
                     </div>
                     <NewLinkButton orderId={o.id} />
                   </>,

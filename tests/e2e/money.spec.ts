@@ -16,7 +16,7 @@ async function login(page: Page, email: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Fjalëkalimi').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Hyr' }).click();
+  await page.getByRole('button', { name: 'Hyr', exact: true }).click();
   await expect(page).toHaveURL('/');
 }
 

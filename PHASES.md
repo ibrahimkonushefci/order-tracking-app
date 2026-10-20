@@ -10,7 +10,7 @@ The app is built as a finished-looking demo that I show and sell to owners. It d
 | 2 | Foundation | Running app shell: brand, auth (Pronari/Zyra), i18n, `/setup`, first fixtures | Built 19.10.2026 (app on port 3100). Independent review: two P2 findings (phone logout, brand text contrast) and the setup i18n tidy-up fixed and verified 19.10.2026 |
 | 3 | Orders & money core | Orders, 3 stages, projects, payments, cash with installers, opening balances, debts list, Sot, export | Built 19.10.2026. Review fixes (form values kept on errors, "Ndrysho borxhin", part corrections) done and committed 19.10.2026 |
 | 4 | Orari, WhatsApp & tracking page | Visits, installers, job sharing, customer messages, tracking page, on a temporary HTTPS test deployment | Built 19.10.2026 (no photos). Review fixes (correcting done visits, reminder timing on the demo date) done and redeployed 19.10.2026; waiting for my phone checks + approval |
-| 5 | Demo-ready | Full seed data, demo mode, polished sales environment, QR flow, PWA, pitch kit | Not started |
+| 5 | Demo-ready | Full seed data, demo mode, polished sales environment, QR flow, PWA, pitch kit | Built 20.10.2026 ([docs/phase-5-notes.md](docs/phase-5-notes.md)); online demo updated. Waiting for my physical-phone checks (Phase 4's and Phase 5's) and approval |
 | 6 | Production readiness & first client | Backups, tested restore, real auth, pilot checkpoint passed | Not started |
 
 ## Rules for every phase
@@ -59,6 +59,7 @@ The full realistic seed dataset comes in Phase 5. Before that, keep a **small, r
 - Phase 3 adds: one normal order going through the three stages, **the €800 case** (recorded "Te montuesi"), cash not handed over for weeks, an overdue order, a client marked "Mos sugjero kujtesa", an opening balance with a known due date and one with "Nuk e di", a done order with remaining work and paused reminders, a village job with only a "Si të shkoni" description, a **multi-unit project** with several installed parts and partial payments (owing money, and one paid ahead), an edited and a deleted payment.
 - Phase 4 adds: visits today, tomorrow and from yesterday (not marked done), a realistic 7-day spread for three installers (on the coming Friday Driton has 2 jobs and Faton is free), tracking links for those orders (one replaced), and reminder history (one sent 3 days ago, one 20 days ago).
 - The same fixtures are used by the automated tests and the manual checklist in the phase report.
+- Phase 5 adds the full demo data separately (`pnpm demo`, "Rivendos demon"); the small fixture set stays for the regression tests.
 
 ---
 

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { isDemoMode } from '@/brand/active';
+import { demoPhone } from '@/server/demo';
 import { installerJobText } from '@/domain/messages';
 import { collectsCash, dative, toCollect } from '@/domain/visits';
 import { Compose } from '@/components/compose';
@@ -39,6 +40,7 @@ export default async function SendVisitPage({ params, searchParams }: { params: 
         collectLabel={t('collect', { amount: eur(amount) })}
         log={{ kind: 'installer', installerId: inst.id, visitIds: [v.id], mode: 'visit', assign, back: `/orders/${o.id}` }}
         demo={isDemoMode()}
+        demoPhone={await demoPhone()}
         sender={user.firstName}
       >
         <div className="field">

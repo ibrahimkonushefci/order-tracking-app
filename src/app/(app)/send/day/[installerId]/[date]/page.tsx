@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { isDemoMode } from '@/brand/active';
+import { demoPhone } from '@/server/demo';
 import { installerDayText } from '@/domain/messages';
 import { allJobs, collectsCash, dative, toCollect } from '@/domain/visits';
 import { Compose } from '@/components/compose';
@@ -31,6 +32,7 @@ export default async function SendDayPage({ params }: { params: Promise<{ instal
           collectLabel={t('collectDay')}
           log={{ kind: 'installer', installerId: inst.id, visitIds: items.map(x => x.v.id), mode: 'day', assign: false, back: date === today ? '/schedule' : `/schedule?d=${date === addDays(today, 1) ? 'tomorrow' : 'week'}` }}
           demo={isDemoMode()}
+          demoPhone={await demoPhone()}
           sender={user.firstName}
         />
       ) : (

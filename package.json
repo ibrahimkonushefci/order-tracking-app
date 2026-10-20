@@ -1,6 +1,6 @@
 {
   "name": "order-tracking",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "private": true,
   "packageManager": "pnpm@11.25.0",
   "engines": {
@@ -15,9 +15,12 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:demo-off": "playwright test --config playwright.demo-off.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "fixtures": "tsx scripts/fixtures.ts",
+    "demo": "tsx scripts/demo.ts",
+    "deploy:demo": "bash scripts/deploy-demo.sh",
     "vercel-build": "tsx scripts/migrate.ts && next build --webpack"
   },
   "dependencies": {

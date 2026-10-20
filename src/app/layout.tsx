@@ -16,7 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: brand.shortName,
     robots: { index: false, follow: false },
     manifest: '/manifest.webmanifest',
-    icons: { icon: '/brand/logo' },
+    icons: { icon: '/brand/logo', apple: '/brand/icon/180' },
+    appleWebApp: { capable: true, title: brand.shortName, statusBarStyle: 'default' },
   };
 }
 

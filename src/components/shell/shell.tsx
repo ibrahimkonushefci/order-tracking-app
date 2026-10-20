@@ -8,6 +8,7 @@ import { BrandLogo } from '../brand-logo';
 import { Icon } from '../icons';
 import { ThemeToggle } from '../theme';
 import { Toaster } from '../sheet';
+import { DemoBar, DemoHeaderButton, type DemoInfo } from '../demo-bar';
 import { MainTabs, SecondaryTabs, SettingsGear } from './nav';
 
 /**
@@ -19,19 +20,23 @@ export async function Shell({
   brand,
   logoUrl,
   cashDot,
+  demo,
   children,
 }: {
   user: CurrentUser;
   brand: Brand;
   logoUrl: string | null;
   cashDot: boolean;
+  /** Demo mode only: the demo bar (laptop) and the Demo button (phones). */
+  demo?: DemoInfo | null;
   children: ReactNode;
 }) {
   const t = await getTranslations();
   const role = t(`role.${user.role}`);
   return (
     <div className="app">
-      <div id="view">
+      <div id="view" className={demo ? 'view--demo' : undefined}>
+        {demo ? <DemoBar info={demo} /> : null}
         <div className="shell">
           <a className="skip-link" href="#main-content">
             {t('app.skip')}
@@ -46,6 +51,7 @@ export async function Shell({
                 </span>
               </span>
             </Link>
+            {demo ? <DemoHeaderButton /> : null}
             <ThemeToggle />
             <SettingsGear />
           </header>

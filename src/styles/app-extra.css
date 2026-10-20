@@ -41,3 +41,36 @@
 .pay--deleted .small{color:var(--color-text-subtle)}
 /* Night Mode's danger tint is light, so its button text is dark (white on #F1A097 is ~2:1). */
 :root[data-theme="dark"] .btn--danger{color:#1A1A1A}
+
+/* Phase 5 demo controls (demo mode only): the prototype's laptop demo bar, a header button on phones. */
+.view--demo{display:flex;flex-direction:column}
+.view--demo>.shell{flex:1;min-height:0;height:auto}
+.demo-bar{display:none}
+@container app (min-width:760px){
+ .demo-bar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 18px;background:var(--color-surface);border-bottom:1px solid var(--color-border);font-size:11px;white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+ .demo-btn{display:none}
+}
+.demo-bar__title{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
+.demo-bar button,.demo-bar a{border:1px solid var(--color-border);background:var(--color-surface);border-radius:5px;min-height:30px;font-size:11px;padding:4px 8px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;color:inherit;text-decoration:none;cursor:pointer}
+.demo-bar button:hover,.demo-bar a:hover{background:var(--color-surface-2)}
+.demo-bar svg{width:13px;height:13px}
+.demo-bar__spacer{flex:1}
+.demo-seg{display:flex;gap:2px;padding:2px;background:var(--color-surface-2);border-radius:6px}
+.demo-bar .demo-seg>*{border:0;min-height:26px;background:none}
+.demo-bar .demo-seg>[aria-pressed=true],.demo-bar .demo-seg>[aria-current=page]{background:var(--color-surface);box-shadow:var(--shadow-1);color:var(--color-primary-ink)}
+.demo-bar__moments{display:flex;gap:4px}
+.demo-bar .demo-bar__moments>*{border-color:transparent;color:var(--color-text-muted)}
+.demo-bar__moments b{font-size:9px;width:16px;height:16px;border:1px solid var(--color-border);border-radius:50%;display:grid;place-items:center;font-weight:500}
+.demo-bar__note{color:var(--color-warning);display:inline-flex;align-items:center;gap:4px}
+.panel-links>button{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:8px 12px;border:0;background:none;font:inherit;font-size:12px;color:inherit;text-align:left;cursor:pointer}
+.panel-links>button+a,.panel-links>a+button{border-top:1px solid var(--color-border)}
+.panel-links>button b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--color-primary-soft);color:var(--color-primary-ink);font-size:10px}
+.qr-panel{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0}.qr-panel .btn-row{justify-content:flex-start}
+.qr-box{display:grid;place-items:center;padding:16px;background:#fff;border:1px solid var(--color-border);border-radius:10px}
+.qr{display:block;width:min(232px,100%);height:auto}
+.auth__demo{display:grid;gap:10px}
+.auth__demo .btn{justify-content:flex-start}
+.auth__demo .btn small{margin-left:auto;font-weight:400;opacity:.8}
+.auth__or{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-subtle)}
+.auth__or::before,.auth__or::after{content:"";flex:1;height:1px;background:var(--color-border)}
+.demo-send{display:grid;gap:6px}

@@ -18,6 +18,8 @@ type Fields = {
   depositWord: 'Avans' | 'Kapar';
   primary: string;
   accent: string;
+  owner: string;
+  office: string;
 };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -134,6 +136,9 @@ export function SetupForm({
             {field('shortName', t('shortName'))}
             {field('phone', t('phone'), { inputMode: 'tel', placeholder: '+38344123456' })}
             {field('city', t('city'))}
+            {field('owner', t('owner'), { autoComplete: 'off', placeholder: 'Arben Gashi' })}
+            {field('office', t('office'), { autoComplete: 'off', placeholder: 'Teuta Berisha' })}
+            <div className="help">{t('peopleHelp')}</div>
             <div className="field">
               <label className="label" htmlFor="f-businessType">
                 {t('businessType')}
@@ -157,7 +162,12 @@ export function SetupForm({
                 ))}
               </div>
             </div>
-            {state.ok ? (
+            {state.readOnly ? (
+              <div className="callout callout--warning" role="alert">
+                <Icon name="alert" />
+                <span>{t('readOnly')}</span>
+              </div>
+            ) : state.ok ? (
               <div className="callout callout--success" role="status">
                 <Icon name="check" />
                 <span>{t('applied')}</span>
@@ -171,6 +181,7 @@ export function SetupForm({
             <button className="btn btn--primary btn--block" type="submit" disabled={pending}>
               {pending ? t('applying') : t('apply')}
             </button>
+            <div className="help">{t('applyHelp')}</div>
           </form>
         </div>
       </section>
@@ -186,7 +197,7 @@ export function SetupForm({
               <span className="app-header__titles">
                 <span className="app-header__title">{name}</span>
                 <span className="app-header__sub" style={{ display: 'block' }}>
-                  {t('previewRole', { name: ownerName })}
+                  {t('previewRole', { name: f.owner.trim().split(/\s+/)[0] || ownerName })}
                 </span>
               </span>
             </span>

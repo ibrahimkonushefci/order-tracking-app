@@ -11,7 +11,22 @@ import { Icon } from './icons';
 const noop = () => () => {};
 const useMounted = () => useSyncExternalStore(noop, () => true, () => false);
 
-export function Sheet({ open, onClose, title, sub, children }: { open: boolean; onClose: () => void; title: ReactNode; sub?: ReactNode; children: ReactNode }) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  sub,
+  children,
+  autoFocusField = true,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: ReactNode;
+  sub?: ReactNode;
+  children: ReactNode;
+  /** false: focus the close button even on laptops (sheets whose first field isn't the point, e.g. the demo panel). */
+  autoFocusField?: boolean;
+}) {
   const t = useTranslations('ui');
   const mounted = useMounted();
   const box = useRef<HTMLDivElement>(null);
@@ -32,7 +47,7 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
     };
     document.addEventListener('keydown', onKey);
     // Focus the first typing field on devices with a pointer; on phones the close button (no keyboard pop-up).
-    const first = box.current?.querySelector<HTMLElement>('.input--money, textarea, input:not([type=radio]):not([type=checkbox]):not([type=hidden]):not([type=date]):not([type=month])');
+    const first = !autoFocusField ? null : box.current?.querySelector<HTMLElement>('.input--money, textarea, input:not([type=radio]):not([type=checkbox]):not([type=hidden]):not([type=date]):not([type=month])');
     if (first && window.matchMedia('(hover: hover)').matches) first.focus();
     else box.current?.querySelector<HTMLElement>('.sheet-close')?.focus({ preventScroll: true });
     return () => {
@@ -41,6 +56,7 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
       if (view) view.inert = false;
       before?.focus?.({ preventScroll: true });
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- read once when the sheet opens
   }, [open]);
 
   if (!open || !mounted) return null;

@@ -1,16 +1,16 @@
 'use server';
-import { eq } from 'drizzle-orm';
-import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requirePermission } from '@/auth/session';
 import { grantSetupAccess, hasSetupAccess, pinMatches } from '@/auth/setup-pin';
-import { BRAND_COOKIE, getActiveBrand, isDemoMode } from '@/brand/active';
+import { getActiveBrand, isDemoMode } from '@/brand/active';
 import { writeBrand } from '@/brand/files';
 import { BUSINESS_TYPES, brandSchema } from '@/brand/schema';
 import { slugify } from '@/brand/slug';
-import { getDb } from '@/db/client';
-import { company, history } from '@/db/schema';
+import { writePeople } from '@/db/demo/load';
+import { DEFAULT_PEOPLE } from '@/db/demo/seed';
+import { resetDemo, signInDemo } from '@/server/demo';
 
 export type PinState = { error?: boolean };
 
@@ -36,12 +36,26 @@ const fieldsSchema = z.object({
   depositWord: z.enum(['Avans', 'Kapar']),
   primary: hex,
   accent: hex,
+  owner: z
+    .string()
+    .trim()
+    .max(60)
+    .refine(v => v === '' || v.length >= 2),
+  office: z
+    .string()
+    .trim()
+    .max(60)
+    .refine(v => v === '' || v.length >= 2),
 });
 
 type Field = keyof z.infer<typeof fieldsSchema>;
 /** Errors are i18n keys under `setup` (the form translates them), never raw zod text. */
 export type SetupErrorKey = `errors.${Field}` | 'logoInvalid' | 'pinExpired';
-export type ApplyState = { ok?: boolean; errors?: Partial<Record<Field | 'logo', SetupErrorKey>> };
+export type ApplyState = {
+  ok?: boolean;
+  readOnly?: boolean;
+  errors?: Partial<Record<Field | 'logo', SetupErrorKey>>;
+};
 
 const MAX_LOGO = 2 * 1024 * 1024;
 
@@ -57,9 +71,9 @@ async function readLogo(file: FormDataEntryValue | null) {
   return null;
 }
 
-/** "Apliko": writes /brands/<slug>/ (laptop demo), switches this browser to it, updates the company. */
+/** "Apliko dhe rimbush demon": writes /brands/<slug>/ (laptop demo), reseeds the demo data and signs in as its Pronari. */
 export async function applyBrand(_prev: ApplyState, form: FormData): Promise<ApplyState> {
-  const u = await requirePermission('setup');
+  await requirePermission('setup');
   if (!isDemoMode() || !(await hasSetupAccess())) return { errors: { companyName: 'pinExpired' } };
   const parsed = fieldsSchema.safeParse(Object.fromEntries(form));
   const logo = await readLogo(form.get('logo'));
@@ -95,26 +109,20 @@ export async function applyBrand(_prev: ApplyState, form: FormData): Promise<App
     depositWord: f.depositWord,
     demo: true,
   });
-  await writeBrand(brand, logo);
-
-  (await cookies()).set(BRAND_COOKIE, slug, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
-  if (u.companyId) {
-    const db = await getDb();
-    await db.transaction(async tx => {
-      const [c] = await tx.select().from(company).where(eq(company.id, u.companyId!)).limit(1);
-      if (!c) return;
-      await tx.update(company).set({ brandSlug: slug, depositWord: f.depositWord }).where(eq(company.id, c.id));
-      await tx.insert(history).values({
-        companyId: c.id,
-        recordType: 'settings',
-        userId: u.id,
-        text: `Marka: ${c.brandSlug} → ${slug}`,
-        field: 'brand',
-        oldValue: c.brandSlug,
-        newValue: slug,
+  try {
+    await writeBrand(brand, logo);
+    if (f.owner || f.office || !sameBrand)
+      await writePeople(slug, {
+        owner: f.owner || DEFAULT_PEOPLE.owner.name,
+        office: f.office || DEFAULT_PEOPLE.office.name,
       });
-    });
+  } catch {
+    // A deployment's file system is read-only: brands are added through Git there.
+    return { readOnly: true };
   }
-  revalidatePath('/', 'layout');
-  return { ok: true };
+  // "Apply & reseed demo": the demo data starts again, this brand as its own company with its
+  // name, city and business type; this browser continues as its Pronari.
+  await resetDemo(slug);
+  await signInDemo('owner', slug);
+  redirect('/');
 }

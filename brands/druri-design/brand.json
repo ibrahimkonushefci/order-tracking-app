@@ -37,13 +37,9 @@
     "iban": "",
     "website": ""
   },
-  "languages": [
-    "sq",
-    "en",
-    "de"
-  ],
+  "languages": ["sq", "en", "de"],
   "defaultLanguage": "sq",
-  "businessType": "doors_floors",
+  "businessType": "kitchens",
   "depositWord": "Avans",
   "modules": {
     "orderTracking": true

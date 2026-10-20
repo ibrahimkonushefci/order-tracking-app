@@ -10,6 +10,7 @@ import { ThemeSeg } from '@/components/theme';
 import { fmtPhone } from '@/lib/phone';
 import { logout } from '@/auth/actions';
 import { setDemoDays, setDepositWord } from './actions';
+import { InstallCard } from '@/components/install-card';
 import { InstallerButton, TemplatesEditor } from '@/components/settings';
 import { pageContext } from '@/server/context';
 import { fmtLong } from '@/lib/dates';
@@ -102,6 +103,8 @@ export default async function SettingsPage() {
           <div className="help">{t('settings.appearanceHelp')}</div>
         </div>
       </section>
+
+      <InstallCard />
 
       <section className="card">
         <div className="card__head">

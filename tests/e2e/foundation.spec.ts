@@ -6,7 +6,7 @@ async function login(page: Page, email: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Fjalëkalimi').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Hyr' }).click();
+  await page.getByRole('button', { name: 'Hyr', exact: true }).click();
   await expect(page).toHaveURL('/');
 }
 
@@ -31,7 +31,7 @@ test('a wrong password shows the Albanian error', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill('arben@druri.test');
   await page.getByLabel('Fjalëkalimi').fill('wrong-password');
-  await page.getByRole('button', { name: 'Hyr' }).click();
+  await page.getByRole('button', { name: 'Hyr', exact: true }).click();
   await expect(page.locator('.error[role=alert]')).toHaveText('Email ose fjalëkalim i gabuar.');
 });
 
@@ -50,8 +50,9 @@ test('Pronari: the v10 shell, navigation and owner-only settings', async ({ page
     await expect(page.locator('.tabbar').getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
   }
   await page.goto('/settings');
-  await expect(page.getByText('Arben', { exact: true })).toBeVisible();
-  for (const name of ['Driton', 'Faton', 'Besnik']) await expect(page.getByText(name, { exact: true })).toBeVisible();
+  const main = page.locator('#main-content');
+  await expect(main.getByText('Arben', { exact: true })).toBeVisible();
+  for (const name of ['Driton', 'Faton', 'Besnik']) await expect(main.getByText(name, { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Kapar' })).toBeEnabled();
   await expect(page.getByRole('link', { name: 'Hap konfigurimin e markës' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Excel/ })).toBeVisible();

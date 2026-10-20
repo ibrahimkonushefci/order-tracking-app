@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { isDemoMode } from '@/brand/active';
+import { demoPhone } from '@/server/demo';
 import { openingTotals, orderTotals } from '@/domain/balances';
 import { lastReminder } from '@/domain/debts';
 import { LANGS, openingMessage, orderMessage, reminderCheck, templatesFor, type Lang, type MessageKind } from '@/domain/messages';
@@ -72,6 +73,7 @@ export default async function ComposePage({ params, searchParams }: { params: Pr
         text={text}
         log={{ kind: 'customer', record: kind, id, type, language: lang }}
         demo={isDemoMode()}
+        demoPhone={await demoPhone()}
         sender={sender.companyName}
       >
         {list.length > 1 ? (

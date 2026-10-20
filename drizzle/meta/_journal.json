@@ -15,6 +15,13 @@
       "when": 1792413011820,
       "tag": "0001_history_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792489534832,
+      "tag": "0002_demo_state",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@ import { Icon } from '@/components/icons';
 import { Page, PageHead } from '@/components/shell/shell';
 import { PinForm } from './pin-form';
 import { SetupForm } from './setup-form';
+import { readPeople } from '@/db/demo/load';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('setup');
@@ -19,6 +20,7 @@ export default async function SetupPage() {
   const t = await getTranslations('setup');
   const blocked = !isDemoMode() ? t('disabled') : !can(me.role, 'setup') ? t('ownerOnly') : null;
   const { brand, logoUrl, fallback } = await getActiveBrand();
+  const people = await readPeople(fallback ? '' : brand.slug);
   return (
     <Page nav="setup">
       <PageHead title={t('title')} sub={t('sub')} />
@@ -40,6 +42,8 @@ export default async function SetupPage() {
             depositWord: brand.depositWord,
             primary: brand.colors.primary,
             accent: brand.colors.accent,
+            owner: people.owner.name,
+            office: people.office.name,
           }}
           initialSlug={fallback ? '' : brand.slug}
           logoUrl={logoUrl}
