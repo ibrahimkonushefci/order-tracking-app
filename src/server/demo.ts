@@ -10,6 +10,7 @@
 import 'server-only';
 import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
+import { notFound, redirect } from 'next/navigation';
 import { getAuth } from '@/auth/auth';
 import { BRAND_COOKIE, isDemoMode } from '@/brand/active';
 import { getDb } from '@/db/client';
@@ -20,6 +21,15 @@ import { toE164 } from '@/services/common';
 import { DEMO_DAYS_COOKIE } from './today';
 
 export const DEMO_PHONE_COOKIE = 'ot-demo-phone';
+
+/**
+ * A record screen whose record isn't in this company. In demo mode (several brands, stale URLs
+ * after a brand switch or a reset) go to its list; otherwise the usual 404.
+ */
+export function missingRecord(list: '/orders' | '/debts' | '/schedule'): never {
+  if (isDemoMode()) redirect(list);
+  notFound();
+}
 
 /** The reachable HTTPS demo (e.g. https://order-tracking-test.vercel.app) for QR codes and links. */
 export function publicBase(): string | null {

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { isDemoMode } from '@/brand/active';
-import { demoPhone } from '@/server/demo';
+import { demoPhone, missingRecord } from '@/server/demo';
 import { installerDayText } from '@/domain/messages';
 import { allJobs, collectsCash, dative, toCollect } from '@/domain/visits';
 import { Compose } from '@/components/compose';
@@ -18,7 +18,7 @@ export default async function SendDayPage({ params }: { params: Promise<{ instal
   const b = await pageBook();
   const t = await getTranslations('compose');
   const inst = b.installers.find(i => i.id === installerId);
-  if (!inst) notFound();
+  if (!inst) missingRecord('/schedule');
   const items = allJobs(b.orders).filter(x => x.v.installerId === inst.id && x.v.date === date && !x.v.doneAt);
   const can = items.some(x => collectsCash(x.v) && toCollect(x.o) > 0);
   return (

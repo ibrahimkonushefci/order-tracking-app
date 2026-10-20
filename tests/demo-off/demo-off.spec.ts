@@ -61,6 +61,10 @@ test('signed in: no demo bar, panel, QR or meeting number; tracking links stay o
   await expect(page.getByText('Numri i takimit')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Parapamje në telefon/ })).toHaveCount(0);
 
+  // An unknown record stays a 404 (the demo-mode fallback to the list is demo only).
+  const missing = await page.goto('/orders/00000000-0000-4000-8000-000000000000');
+  expect(missing?.status()).toBe(404);
+
   await page.goto('/settings');
   await expect(page.getByText('Data e demos')).toHaveCount(0);
   await page.goto('/setup');

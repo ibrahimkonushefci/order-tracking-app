@@ -55,6 +55,13 @@ Built 20.10.2026 on top of Phase 4 (`24aad69`). The design follows the approved 
 - **QR**: generated codes were decoded with macOS's own QR reader (CoreImage), including a screenshot of the panel: it reads `https://order-tracking-test.vercel.app/t/<token>`.
 - Two existing tests needed fixing, without behaviour changes: one hard-coded the date 29.10.2026 (it failed on any later day), and the demo bar's "Arben" made one text lookup ambiguous; the login helpers now click the exact "Hyr" button.
 
+## Review fix (20.10.2026): brand switch from a record screen
+The independent review found that switching brand on a record screen (e.g. "4 Pagesa €800" → "Lumi") kept the old company's order ID in the URL, so the new brand showed a 404.
+- One rule, `pathAfterBrandSwitch` (`src/lib/demo-paths.ts`): an order, a notebook debt (`/debts/<id>`), a customer message (`/compose/…`) or an installer send screen (`/send/…`) falls back to its list (Porositë, Borxhet, Orari). Sot, the lists with their filters, and the new-order/new-debt forms are kept.
+- Used by the brand links of the laptop demo bar and the phone's Demo panel, and again on the server by `/demo/brand`, so a typed or old `?brand=` link is safe too. The role is kept (Teuta → Vjosa, Arben → Burim).
+- The record screens themselves, in demo mode, send a record that isn't in the signed-in company to the list instead of a 404 (`missingRecord`), e.g. an old URL from the browser history after a switch or a reset. With demo mode off they still answer 404.
+- Tested: 2 unit tests (the rule for every screen type, lists and forms unchanged), 2 Playwright tests on laptop and phone (from the €800 order as Zyra: lands on Lumi's Porositë as Vjosa, and the old URL redirects; from a debt, both compose screens, a visit send and a day send, each to its list as Burim; Sot and three filtered lists keep their URL), the demo-off check (an unknown order is still a 404), and the reviewer's steps in the browser. Unit tests 132, Playwright 76 (local).
+
 ## Still pending (needs you and real phones)
 - Phase 1 and Phase 4 physical-phone checks (thumb comfort, a real WhatsApp arriving with tappable numbers and a working link, a tracking link on another phone).
 - Phase 5: install on a mid-range Android, the laptop with Wi-Fi off, the QR scanned by a real phone camera, a message to a real "Numri i takimit". See the checklist in the Phase 5 report and `docs/pitch-kit/rebrand-checklist.md`.

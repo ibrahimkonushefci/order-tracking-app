@@ -110,6 +110,65 @@ test('?brand= switches the logo, the people and the data together; the tracking 
   await expect(page.locator('.app-header__sub')).toHaveText('Pronari · Arben');
 });
 
+/** Clicks "Lumi" where the person would: the demo bar on laptops, the Demo panel on phones. */
+async function switchToLumi(page: Page) {
+  if (isPhone(page)) {
+    const sheet = await openPanel(page);
+    await sheet.getByRole('link', { name: 'Lumi', exact: true }).click();
+  } else {
+    await page.locator('.demo-bar').getByRole('link', { name: 'Lumi', exact: true }).click();
+  }
+}
+
+test('switching brand from an order lands on the new brand’s list, same role (no 404)', async ({ page }) => {
+  await demoLogin(page, 'Teuta');
+  const sheet = await openPanel(page);
+  await sheet.getByRole('link', { name: 'Driton telefonon: “Mora €800”' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Fatmir Krasniqi');
+  const druriOrder = new URL(page.url()).pathname;
+  await switchToLumi(page);
+  await expect(page).toHaveURL('/orders');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Porositë');
+  await expect(page.locator('.app-header__title')).toHaveText('Lumi Dyer & Parket');
+  await expect(page.locator('.app-header__sub')).toHaveText('Zyra · Vjosa');
+  // The old order's URL, typed or from history, is handled by the server too.
+  await page.goto(druriOrder);
+  await expect(page).toHaveURL('/orders');
+});
+
+test('switching brand from debt, message and installer screens; lists keep their place', async ({ page }) => {
+  await demoLogin(page, 'Arben');
+  await page.goto('/orders?q=Fatmir');
+  await page.locator('a[href^="/orders/"]:visible', { hasText: 'Fatmir Krasniqi' }).first().click();
+  const orderId = new URL(page.url()).pathname.split('/')[2];
+  const visitSend = await page.locator('a[href^="/send/visit/"]').first().getAttribute('href');
+  await page.goto('/debts');
+  const debt = await page.locator('a[href^="/debts/"]:not([href="/debts/new"])').first().getAttribute('href');
+  await page.goto('/schedule?d=tomorrow');
+  const day = await page.locator('a[href^="/send/day/"]').first().getAttribute('href');
+  const cases: [string, string][] = [
+    [debt!, '/debts'],
+    [`/compose/order/${orderId}?t=link`, '/orders'],
+    [`/compose/opening/${debt!.split('/')[2]}`, '/debts'],
+    [visitSend!, '/schedule'],
+    [day!, '/schedule'],
+  ];
+  for (const [from, to] of cases) {
+    await page.goto(`${from}${from.includes('?') ? '&' : '?'}brand=lumi-dyer`);
+    await expect(page, from).toHaveURL(to);
+    await expect(page.locator('.app-header__sub')).toHaveText('Pronari · Burim');
+    await page.goto('/?brand=druri-design');
+    await expect(page.locator('.app-header__sub')).toHaveText('Pronari · Arben');
+  }
+  // Dashboard and lists stay where they are, with their filters.
+  for (const p of ['/', '/debts', '/orders?stage=done', '/schedule?d=tomorrow']) {
+    await page.goto(`${p}${p.includes('?') ? '&' : '?'}brand=lumi-dyer`);
+    await expect(page).toHaveURL(p);
+    await expect(page.locator('.app-header__title')).toHaveText('Lumi Dyer & Parket');
+    await page.goto('/?brand=druri-design');
+  }
+});
+
 test('the QR opens the tracking page on the public HTTPS demo', async ({ page }) => {
   await demoLogin(page, 'Arben');
   const sheet = await openPanel(page);

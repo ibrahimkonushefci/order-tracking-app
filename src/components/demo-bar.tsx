@@ -17,6 +17,7 @@ import {
 } from '@/server/demo-actions';
 import { setDemoDays } from '@/app/(app)/settings/actions';
 import { PHONE_CODES } from '@/lib/phone';
+import { pathAfterBrandSwitch } from '@/lib/demo-paths';
 import { Icon } from './icons';
 import { QrCode } from './qr-code';
 import { Sheet } from './sheet';
@@ -96,7 +97,7 @@ export function DemoBar({ info }: { info: DemoInfo }) {
             {info.brands.map(b => (
               <a
                 key={b.slug}
-                href={`${path}?brand=${b.slug}`}
+                href={`${b.slug === info.brandSlug ? path : pathAfterBrandSwitch(path)}?brand=${b.slug}`}
                 aria-current={b.slug === info.brandSlug ? 'page' : undefined}
               >
                 {b.name}
@@ -167,7 +168,7 @@ export function DemoBar({ info }: { info: DemoInfo }) {
                 {info.brands.map(b => (
                   <a
                     key={b.slug}
-                    href={`${path}?brand=${b.slug}`}
+                    href={`${b.slug === info.brandSlug ? path : pathAfterBrandSwitch(path)}?brand=${b.slug}`}
                     aria-current={b.slug === info.brandSlug ? 'page' : undefined}
                   >
                     {b.name}

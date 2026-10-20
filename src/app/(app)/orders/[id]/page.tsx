@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
 import { getActiveBrand, isDemoMode } from '@/brand/active';
@@ -41,6 +40,7 @@ import { dueVisit, nextVisit as nextVisitOf } from '@/domain/visits';
 import { jobLites, trackingUrl } from '@/server/jobs';
 import { visitOrderView, visitView } from '@/server/views';
 import { pageBook } from '@/server/context';
+import { missingRecord } from '@/server/demo';
 
 const timeLabel = (v: string) => (v === 'morning' ? 'paradite' : v === 'afternoon' ? 'pasdite' : v);
 const VISIT_ICON: Record<string, IconName> = { measure: 'ruler', install: 'tool', delivery: 'truck', repair: 'tool' };
@@ -54,7 +54,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const { new: justCreated } = await searchParams;
   const { db, user, companyId, today, label } = await pageContext();
   const o = await loadOrder(db, companyId, id);
-  if (!o) notFound();
+  if (!o) missingRecord('/orders');
   const [hist, installers, company, { brand }] = await Promise.all([loadHistory(db, 'order', o.id, o.clientId), listInstallers(companyId), getCompany(companyId), getActiveBrand()]);
   const t = await getTranslations('order');
   const tm = await getTranslations('money');

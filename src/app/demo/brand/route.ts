@@ -6,6 +6,7 @@ import { readBrand } from '@/brand/files';
 import { getCompany } from '@/db/queries';
 import { signInDemo } from '@/server/demo';
 import { browserOrigin } from '@/lib/origin';
+import { pathAfterBrandSwitch } from '@/lib/demo-paths';
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!isDemoMode()) return new Response('Not found', { status: 404 });
   const slug = req.nextUrl.searchParams.get('slug') ?? '';
   const raw = req.nextUrl.searchParams.get('next') ?? '/';
-  const next =
+  let next =
     raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/demo/') ? raw : '/';
   const jar = await cookies();
   const { fallback } = await readBrand(slug);
@@ -24,6 +25,8 @@ export async function GET(req: NextRequest) {
     jar.set(BRAND_COOKIE, slug, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
     const u = await getCurrentUser();
     const c = u?.companyId ? await getCompany(u.companyId) : null;
+    // Another company: a record screen of the old one would be a 404 there, so go to its list.
+    if (!c || c.brandSlug !== slug) next = pathAfterBrandSwitch(next);
     if (u && c && c.brandSlug !== slug) await signInDemo(u.role, slug).catch(() => false);
   }
   return Response.redirect(new URL(next, browserOrigin(req)), 307);
