@@ -25,7 +25,8 @@ git archive HEAD | tar -x -C "$TMP"
 mkdir -p "$TMP/.vercel" && cp .vercel/project.json "$TMP/.vercel/"
 
 echo "Publikohet $(git rev-parse --short HEAD) në $APP_URL …"
-(cd "$TMP" && npx --yes vercel@latest deploy --prod --yes) | tail -3
+out="$( (cd "$TMP" && npx --yes vercel@latest deploy --prod --yes) 2>&1 )" || { echo "$out" | tail -20; echo "Publikimi dështoi."; exit 1; }
+echo "$out" | grep -E "Production|Aliased" || true
 
 echo "Rivendoset demo online …"
 curl -sS -X POST -H "x-fixtures-token: $FIXTURES_TOKEN" "$APP_URL/api/dev/fixtures?set=demo" \
