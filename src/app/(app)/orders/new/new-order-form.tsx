@@ -1,14 +1,14 @@
 'use client';
 /** "+ Porosi e re": the five fields and the place, plus the project switch. Lands on the new order. */
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createOrderAction } from '../../actions';
 import { Chips, Field, FormAlert, MethodField, MoneyInput, useAction } from '@/components/forms';
-import { PHONE_CODES } from '@/lib/phone';
+import { fmtPhone, PHONE_CODES, splitPhone } from '@/lib/phone';
 
 const UNITS = ['copë', 'm²', 'banesa'] as const;
 
-export function NewOrderForm({ products, cities, homeCity, depositWord, clients }: { products: string[]; cities: string[]; homeCity: string; depositWord: string; clients: string[] }) {
+export function NewOrderForm({ products, cities, homeCity, depositWord, clients }: { products: string[]; cities: string[]; homeCity: string; depositWord: string; clients: { name: string; phone: string }[] }) {
   const t = useTranslations('newOrder');
   const w = useTranslations('words');
   const [product, setProduct] = useState(products[0]);
@@ -17,25 +17,56 @@ export function NewOrderForm({ products, cities, homeCity, depositWord, clients 
   const [unit, setUnit] = useState<(typeof UNITS)[number]>('copë');
   const [term, setTerm] = useState('month');
   const { errors, pending, submit } = useAction(createOrderAction);
+  /* A client picked from the suggestions fills the phone, so the order goes to that client (same name and phone). */
+  const byName = useMemo(() => {
+    const m = new Map<string, { name: string; phone: string }[]>();
+    for (const c of clients) m.set(c.name.toLowerCase(), [...(m.get(c.name.toLowerCase()) ?? []), c]);
+    return m;
+  }, [clients]);
+  const [known, setKnown] = useState<{ name: string; phone: string } | null>(null);
+  const ccRef = useRef<HTMLSelectElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const filled = useRef(false);
+  const onName = (v: string) => {
+    const same = byName.get(v.trim().toLowerCase());
+    const c = same?.length === 1 ? same[0] : null;
+    setKnown(c);
+    if (!c || !ccRef.current || !phoneRef.current || (phoneRef.current.value && !filled.current)) return;
+    const { cc, local } = splitPhone(c.phone);
+    ccRef.current.value = cc;
+    phoneRef.current.value = local;
+    filled.current = true;
+  };
   return (
     <form className="card narrow form-page form-page--order" onSubmit={submit} noValidate>
       <div className="card__body form">
-        <Field name="name" label={t('client')} req errors={errors} help={t('clientHelp')} htmlFor="no-name">
-          <input className="input" id="no-name" name="name" autoComplete="off" placeholder={t('clientPh')} list="no-clients" />
+        <Field name="name" label={t('client')} req errors={errors} help={known ? t('clientKnown', { phone: fmtPhone(known.phone) }) : t('clientHelp')} htmlFor="no-name">
+          <input className="input" id="no-name" name="name" autoComplete="off" placeholder={t('clientPh')} list="no-clients" onChange={e => onName(e.target.value)} />
           <datalist id="no-clients">
-            {clients.map(c => (
-              <option key={c} value={c} />
+            {clients.map((c, i) => (
+              <option key={i} value={c.name} label={fmtPhone(c.phone)} />
             ))}
           </datalist>
         </Field>
         <Field name="phone" label={t('phone')} req errors={errors} htmlFor="f-phone">
           <div className="input-group">
-            <select className="select" name="phoneCc" aria-label={t('prefix')} defaultValue="+383">
+            <select className="select" name="phoneCc" aria-label={t('prefix')} defaultValue="+383" ref={ccRef}>
               {PHONE_CODES.map(c => (
                 <option key={c}>{c}</option>
               ))}
             </select>
-            <input className="input" id="f-phone" name="phone" inputMode="tel" placeholder="44 123 456" autoComplete="off" />
+            <input
+              className="input"
+              id="f-phone"
+              name="phone"
+              inputMode="tel"
+              placeholder="44 123 456"
+              autoComplete="off"
+              ref={phoneRef}
+              onChange={() => {
+                filled.current = false;
+              }}
+            />
           </div>
         </Field>
         <Field name="productType" label={t('product')} req errors={errors}>

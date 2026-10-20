@@ -139,6 +139,17 @@ describe('demo seed: the key cases', () => {
     expect(nextVisit(track.visits, TODAY)?.date).toBe(tomorrow);
   });
 
+  it('Besa is a returning client: her first order, five months ago, is done and paid', async () => {
+    const b = await bookOf(0);
+    const k = await keysOf(0);
+    const besa = b.orders.filter(o => o.client.name === 'Besa Zeka');
+    expect(besa).toHaveLength(2);
+    expect(new Set(besa.map(o => o.clientId)).size).toBe(1);
+    const first = besa.find(o => o.id !== k.keys.track)!;
+    expect(first.stage).toBe('done');
+    expect(orderTotals(first).remaining).toBe(0);
+  });
+
   it('the busy day: Driton 2 jobs, Besnik 1, Faton free', async () => {
     const b = await bookOf(0);
     const k = await keysOf(0);

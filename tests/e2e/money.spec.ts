@@ -135,6 +135,19 @@ test('Borxh i bartur with "Nuk e di" lands under "Afat i panjohur"', async ({ pa
   await expect(page.locator('.debt--new')).toContainText('Afat i panjohur');
 });
 
+test('a returning client: picking the name fills the phone, and each order lists the other', async ({ page }) => {
+  await login(page, 'teuta@druri.test');
+  await page.goto('/orders/new');
+  await page.locator('#no-name').fill('Arta Krasniqi');
+  await expect(page.locator('#f-phone')).toHaveValue('44 600 700');
+  await expect(page.getByText('Klient ekzistues · +383 44 600 700')).toBeVisible();
+  await page.locator('input[name=price]').fill('800');
+  await page.getByRole('button', { name: 'Ruaj porosinë' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Arta Krasniqi');
+  await page.locator('details.fold').filter({ has: page.locator('.fold__title', { hasText: /^Klienti$/ }) }).locator('summary').click();
+  await expect(page.locator('.panel-links a', { hasText: '2026-011' })).toBeVisible();
+});
+
 test('a failed save keeps everything typed: the new order and the notebook debt', async ({ page }) => {
   await login(page, 'teuta@druri.test');
   await page.goto('/orders/new');

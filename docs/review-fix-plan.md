@@ -30,7 +30,7 @@ Project rules that apply: work on `main` with no branches, commit only when aske
 
 ## Phase A: before the next client demo (about half a day)
 
-**Status: done 20.10.2026** (not committed, not deployed). Every item was reproduced in the browser on the demo data before its fix and checked again after. One detail differs from the plan: the "+1 ditë" panel now shows the real date ("Data e demos: E mërkurë, 21.10.2026 (+1 ditë)").
+**Status: done 20.10.2026**, committed (`3c58039`) and deployed to the online demo. Every item was reproduced in the browser on the demo data before its fix and checked again after. One detail differs from the plan: the "+1 ditë" panel now shows the real date ("Data e demos: E mërkurë, 21.10.2026 (+1 ditë)").
 
 Before fixing each item, reproduce it in the browser on the demo data (`pnpm demo`, port 3100), then fix it and check it again.
 
@@ -56,6 +56,8 @@ Before fixing each item, reproduce it in the browser on the demo data (`pnpm dem
 
 ## Phase B: worth fixing soon (about half a day)
 
+**Status: done 20.10.2026**, committed (`1a6f17e`) and deployed with Phase C. Two decisions made while doing it: the `.photo*` CSS stays (the approved design for the deferred photo feature), and `AGENTS.md` never appeared with `next dev` running, so `.gitignore` is unchanged. The error card was checked by build and type checks only (there is no way to trigger it in the browser without breaking a page on purpose); the not-found page was checked in the browser and on the production build (404, Albanian text).
+
 1. **F-06 phone prefixes**
    - Add `splitPhone(e164) → { cc, local }` to `src/lib/phone.ts`, based on `PHONE_CODES`. Unknown prefix → cc `+383` and the full number as typed.
    - `OpeningFields` (`debts/new/opening-form.tsx`) and `InstallerButton` (`components/settings.tsx`): default the select to `cc` and the input to the formatted `local`.
@@ -66,6 +68,10 @@ Before fixing each item, reproduce it in the browser on the demo data (`pnpm dem
 4. **Dead-code cleanup** (confirmed items only): `pnpm remove clsx tailwind-merge`; delete `src/auth/auth-client.ts`, `chatHref`, `ROLE_LABEL`, `cssVarsToString`, `isExactTime`, `BrandInput` and the strings `later3`/`later4`/`visitsLater`. Before deleting `.proto-fab`/`.photo*` in `src/styles/app.css`, grep each class once more. Also check whether `EmptyCard`'s `note`/`.phase-note` is still used. Run `next dev` once; if it creates `AGENTS.md`, add it to `.gitignore`.
 
 ## Phase C: two small features (about half a day)
+
+**Status: done 20.10.2026**, committed and deployed. R-01 is lighter than planned: the form already suggested client names (a native list), so picking or typing an existing name now fills the prefix and phone and says "Klient ekzistues · +383 …". Language and channel need no filling: they belong to the client record, which the new order joins. The demo data has no repeat clients, so R-04's list shows only after a second order for the same client is created (that's the natural demo flow anyway).
+
+Added afterwards (the user left the choice to me): the demo data now has one returning client. Besa Zeka (demo moment 2) also has her first order from five months ago, a kitchen, done and paid, so "Porositë e tjera të klientit" and "Klient ekzistues" can be shown without creating anything live. Each brand now has 56 clients instead of 57; orders and totals are unchanged. The demo script has an optional line for it under moment 2.
 
 Only these two recommendations pass the bar now: they help both the demo and daily use, cost little, and add no new screens.
 

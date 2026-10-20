@@ -19,7 +19,7 @@ export default async function NewOrderPage() {
         cities={citiesFor(brand.contact.city)}
         homeCity={brand.contact.city || 'Prishtinë'}
         depositWord={company?.depositWord ?? brand.depositWord}
-        clients={clients.map(c => c.name)}
+        clients={clients.map(c => ({ name: c.name, phone: c.phone }))}
       />
     </Page>
   );

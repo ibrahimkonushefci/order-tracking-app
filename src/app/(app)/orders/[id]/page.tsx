@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
 import { getActiveBrand, isDemoMode } from '@/brand/active';
 import { citiesFor, productTypes } from '@/domain/catalog';
-import { installedQty, isHeld, isProject, lateDays, orderTotals, partValue, payStatus, unitPrice } from '@/domain/balances';
+import { installedQty, isHeld, isProject, lateDays, openingTotals, orderTotals, partValue, payStatus, unitPrice } from '@/domain/balances';
 import { Badge, PAY_TONE, PayLegend, Progress } from '@/components/cues';
 import { Icon, type IconName } from '@/components/icons';
 import { Page, PageHead } from '@/components/shell/shell';
@@ -287,6 +287,12 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
     </details>
   );
   const ch = o.client.channel === 'viber' ? 'viber' : 'whatsapp';
+  /* The same client's other orders and notebook debts (same phone), from the book already loaded. */
+  const leftOf = (n: number) => (n > 0 ? t('otherLeft', { amount: eur(n) }) : t('otherPaid'));
+  const others = [
+    ...book.orders.filter(x => x.clientId === o.clientId && x.id !== o.id && x.stage !== 'cancelled').map(x => ({ href: `/orders/${x.id}`, label: `${x.number} · ${x.productType} · ${label(x.stage)}`, left: leftOf(orderTotals(x).remaining) })),
+    ...book.openings.filter(ob => ob.phone && ob.phone === o.client.phone).map(ob => ({ href: `/debts/${ob.id}`, label: ob.forWhat ? t('otherOpening', { what: ob.forWhat }) : t('otherOpeningPlain'), left: leftOf(openingTotals(ob).owed) })),
+  ];
 
   return (
     <Page nav="orders">
@@ -417,6 +423,19 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                 </Link>
                 <ContactPrefs kind="client" id={o.clientId} language={o.client.language} channel={o.client.channel} />
                 <NoRemindersToggle kind="client" id={o.clientId} value={o.client.noReminders} label={t('noReminders')} />
+                {others.length ? (
+                  <div className="field">
+                    <span className="label">{t('otherRecords')}</span>
+                    <div className="panel-links">
+                      {others.map(x => (
+                        <Link key={x.href} href={x.href}>
+                          <span className="grow">{x.label}</span>
+                          <span className="num small muted">{x.left}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="xs subtle">{t('clientHelp')}</div>
               </>,
             )}

@@ -31,6 +31,9 @@ On their phone: their logo, "Porosia juaj është në punë", **Montimi · Nesë
 
 Optional: choose **Liridona Shala · Deutsch** in the same sheet and scan again.
 
+Optional, if they ask about repeat customers: Besa ordered before. On **+ Porosi e re**, typing "Besa Zeka" fills her phone by itself ("Klient ekzistues"); on her order, **Klienti** lists her earlier kitchen, done and paid.
+> "Klientët e vjetër i njeh vetë: nuk i shkruani dy herë."
+
 ## 1:40 – 2:20 · Moment 3: Dërgoja Dritonit
 Tap **3 WhatsApp** ("Dërgoja Dritonit punët e nesërme").
 - The two jobs of tomorrow in one message: client, phone, place, directions, product, **Mblidh €…**.

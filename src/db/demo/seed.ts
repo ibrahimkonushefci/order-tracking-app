@@ -447,6 +447,9 @@ export function buildDemo(opts: {
   const otherDays = [2, 3, 4, 5, 6].filter(x => x !== busy);
   rows.busyDay = d(busy);
 
+  /* A returning client: Besa (moment 2) also has an older, paid order, shown under "Porositë e tjera të klientit". */
+  let returning: { client: ReturnType<typeof cust>; directions: string } | null = null;
+
   /* ═══════════ Key cases ═══════════ */
 
   // 1. The €800 case (live): installation today with Driton, who will collect the last €800.
@@ -478,12 +481,14 @@ export function buildDemo(opts: {
   // 2. The tracking page: installation tomorrow, paradite, with Driton (+ "Mblidh" in his list).
   {
     const c = cust('Besa Zeka');
+    const directions = 'Rr. Ismail Qemali 18, hyrja nga oborri, kati 2. Zilja: Zeka.';
+    returning = { client: c, directions };
     const o = order(c, {
       role: cat.second,
       key: 'track',
       created: -35,
       stage: 'active',
-      directions: 'Rr. Ismail Qemali 18, hyrja nga oborri, kati 2. Zilja: Zeka.',
+      directions,
     });
     const dep = deposit(o.price);
     pay(o, dep, -35, 'office', { method: 'bank', deposit: true });
@@ -993,19 +998,28 @@ export function buildDemo(opts: {
       : village
         ? `${vname}: ${pick(VILLAGE_REF)}.${i % 2 ? ` ${person}` : ''}`
         : `${pick(CITY_REF)}.`;
-    const c = cust(
-      pickC.n,
-      abroad
-        ? {
-            cc: abroad[1],
-            language: abroad[3],
-            note: `Jeton në ${abroad[2]}; puna në shtëpinë e familjes`,
-          }
-        : {},
-    );
+    // The oldest order (done and paid five months ago) is Besa's first one with the workshop.
+    const repeat = i === 0 ? returning : null;
+    const c =
+      repeat?.client ??
+      cust(
+        pickC.n,
+        abroad
+          ? {
+              cc: abroad[1],
+              language: abroad[3],
+              note: `Jeton në ${abroad[2]}; puna në shtëpinë e familjes`,
+            }
+          : {},
+      );
     const role = cat[roleKey];
-    const o = order(c, { role, created: -age, stage: stage === 'new' ? 'new' : 'active', city });
-    o.directions = directions;
+    const o = order(c, {
+      role,
+      created: -age,
+      stage: stage === 'new' ? 'new' : 'active',
+      city: repeat ? brand.contact.city || 'Prishtinë' : city,
+    });
+    o.directions = repeat?.directions ?? directions;
     const inst = installersByTurn[i % 3];
     const share = 0.3 + r() * 0.3;
     const dep = pat === 'none' ? 0 : deposit(o.price, share) || eur(200);
