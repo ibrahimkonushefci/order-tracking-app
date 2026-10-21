@@ -112,7 +112,7 @@ export type ReminderCheck =
   | { ok: false; reason: 'noDebt' | 'unknownDue' | 'notDue' | 'paused' | 'noReminders' | 'recent'; dueDate?: string; until?: string; lastAt?: string };
 
 /**
- * Spec §7: owed now > €0, a known due date has passed, reminders not paused, the client
+ * Spec §7: owed now > 0€, a known due date has passed, reminders not paused, the client
  * isn't "Mos sugjero kujtesa", and no reminder in the last 7 days. `today` carries the
  * demo date offset, so the buttons change live when the demo jumps forward.
  */

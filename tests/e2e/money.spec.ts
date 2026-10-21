@@ -29,73 +29,73 @@ async function openOrder(page: Page, name: string) {
 
 test('Sot and Borxhet add up', async ({ page }) => {
   await login(page, 'arben@druri.test');
-  await expect(page.locator('.hero__value')).toHaveText('€13.500');
-  await expect(page.locator('.hero__sub')).toContainText('gjithsej €15.250');
-  await expect(page.getByText('Driton: €800 për t’u dorëzuar')).toBeVisible();
+  await expect(page.locator('.hero__value')).toHaveText('13,500€');
+  await expect(page.locator('.hero__sub')).toContainText('gjithsej 15,250€');
+  await expect(page.getByText('Driton: 800€ për t’u dorëzuar')).toBeVisible();
   await page.goto('/debts');
-  await expect(page.locator('.summary')).toContainText('€13.500');
-  await expect(page.locator('.summary')).toContainText('€15.250');
+  await expect(page.locator('.summary')).toContainText('13,500€');
+  await expect(page.locator('.summary')).toContainText('15,250€');
   await expect(page.locator('.debt').filter({ hasText: 'Ilir Gashi' })).toContainText('Mos sugjero kujtesa');
   await expect(page.locator('.debt').filter({ hasText: 'Mimoza Rexhepi' })).toContainText('Kujtesat në pauzë');
   await expect(page.locator('.debt').filter({ hasText: 'Shpresa Leka' })).toContainText('Afat i panjohur');
 });
 
-test('the €800 call: E kryer, "Te Driton", then Konfirmo', async ({ page }) => {
+test('the 800€ call: E kryer, "Te Driton", then Konfirmo', async ({ page }) => {
   await login(page, 'teuta@druri.test');
   await openOrder(page, 'Arta Krasniqi');
   await page.locator('.stepper3 .st--active').click();
   await expect(page.locator('.stepper3 .st--active')).toHaveAttribute('aria-current', 'step');
   await page.locator('.stepper3 .st--done').click();
   const sheet = page.getByRole('dialog');
-  await sheet.getByText('Po, të gjitha €3.000').click();
+  await sheet.getByText('Po, të gjitha 3,000€').click();
   await sheet.getByText('Te Driton').click();
   await sheet.getByRole('button', { name: 'Po, u krye' }).click();
-  await expect(page.locator('.alert--warning')).toContainText('€3.000 te Driton · pa dorëzuar ende');
-  await expect(page.locator('.alert--warning')).toContainText('Për t’u mbledhur shtesë: €0');
-  await expect(page.locator('.money__value')).toHaveText('€0');
+  await expect(page.locator('.alert--warning')).toContainText('3,000€ te Driton · pa dorëzuar ende');
+  await expect(page.locator('.alert--warning')).toContainText('Për t’u mbledhur shtesë: 0€');
+  await expect(page.locator('.money__value')).toHaveText('0€');
   await page.goto('/cash');
-  await expect(page.locator('.card').filter({ hasText: 'Driton' })).toContainText('€3.800');
+  await expect(page.locator('.card').filter({ hasText: 'Driton' })).toContainText('3,800€');
   await page.goto('/debts');
   await expect(page.locator('.debt').filter({ hasText: 'Arta Krasniqi' })).toHaveCount(0);
   await openOrder(page, 'Arta Krasniqi');
   await page.getByRole('button', { name: 'Konfirmo: i mora paratë nga Driton' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Po, i mora €3.000' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Po, i mora 3,000€' }).click();
   await expect(page.locator('.alert--warning')).toHaveCount(0);
-  await expect(page.locator('.legend')).toContainText('Në zyrë €4.500');
+  await expect(page.locator('.legend')).toContainText('Në zyrë 4,500€');
 });
 
 test('a payment edited and deleted changes the balance and shows in the history', async ({ page }) => {
   await login(page, 'arben@druri.test');
   await openOrder(page, 'Valon Hoxha');
-  await expect(page.locator('.money__value')).toHaveText('€1.200');
+  await expect(page.locator('.money__value')).toHaveText('1,200€');
   await page.getByText('Pagesat dhe llogaria').click();
   await page.getByRole('button', { name: 'Ndrysho pagesën' }).click();
   const sheet = page.getByRole('dialog');
   await sheet.locator('input[name=amount]').fill('700');
   await sheet.getByRole('button', { name: 'Ruaj ndryshimet' }).click();
-  await expect(page.locator('.money__value')).toHaveText('€1.100');
+  await expect(page.locator('.money__value')).toHaveText('1,100€');
   await page.getByRole('button', { name: 'Ndrysho pagesën' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Fshij pagesën' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Shuma e gabuar' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Fshij pagesën' }).click();
-  await expect(page.locator('.money__value')).toHaveText('€1.800');
+  await expect(page.locator('.money__value')).toHaveText('1,800€');
   await page.getByText('Historiku').click();
-  await expect(page.locator('.timeline')).toContainText('Pagesa €700');
+  await expect(page.locator('.timeline')).toContainText('Pagesa 700€');
   await expect(page.locator('.timeline')).toContainText('u fshi: Shuma e gabuar');
-  await expect(page.locator('.timeline')).toContainText('Pagesa u ndryshua: €600 → €700');
+  await expect(page.locator('.timeline')).toContainText('Pagesa u ndryshua: 600€ → 700€');
 });
 
 test('a project: owed now, paid ahead, and "Shëno montim"', async ({ page }) => {
   await login(page, 'teuta@druri.test');
   await openOrder(page, 'Arbëria Invest sh.p.k.');
-  await expect(page.locator('.money__value')).toHaveText('€10.800');
-  await expect(page.locator('.proj2__gap')).toHaveText('E montuar, pa paguar: €10.800');
+  await expect(page.locator('.money__value')).toHaveText('10,800€');
+  await expect(page.locator('.proj2__gap')).toHaveText('E montuar, pa paguar: 10,800€');
   await openOrder(page, 'Ndërtimi Rugova sh.p.k.');
-  await expect(page.locator('.proj2__gap')).toHaveText('Paguar përpara: €1.400');
+  await expect(page.locator('.proj2__gap')).toHaveText('Paguar përpara: 1,400€');
   await page.getByRole('button', { name: 'Shëno montim' }).click();
   await page.getByRole('dialog').locator('input[name=quantity]').fill('2');
   await page.getByRole('dialog').getByRole('button', { name: 'Ruaj' }).click();
-  await expect(page.locator('.proj2__gap')).toHaveText('E montuar, pa paguar: €1.000');
+  await expect(page.locator('.proj2__gap')).toHaveText('E montuar, pa paguar: 1,000€');
   await expect(page.locator('.ring__label')).toContainText('5/12');
 });
 
@@ -202,10 +202,10 @@ test('Ndrysho borxhin: Zyra corrects the amount and an existing due date', async
   await sheet.locator('input[name=dueDate]').fill(new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10));
   await sheet.getByRole('button', { name: 'Ruaj ndryshimet' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.locator('.money__value')).toHaveText('€400');
+  await expect(page.locator('.money__value')).toHaveText('400€');
   await expect(page.locator('.badge--danger')).toContainText('5 ditë');
   await page.getByText('Historiku').click();
-  await expect(page.locator('.timeline')).toContainText('Shuma e borxhit: €450 → €400');
+  await expect(page.locator('.timeline')).toContainText('Shuma e borxhit: 450€ → 400€');
   await expect(page.locator('.timeline')).toContainText('Kur duhej paguar:');
 });
 
@@ -219,7 +219,7 @@ test('Montimet e kryera: Zyra edits a part, Pronari deletes one; payments stay',
   await sheet.locator('input[name=quantity]').fill('5');
   await sheet.getByRole('button', { name: 'Ruaj' }).click();
   await expect(page.locator('.ring__label')).toContainText('5/12');
-  await expect(page.locator('.proj2__gap')).toHaveText('E montuar, pa paguar: €1.000');
+  await expect(page.locator('.proj2__gap')).toHaveText('E montuar, pa paguar: 1,000€');
   await page.getByText('Historiku').click();
   await expect(page.locator('.timeline')).toContainText('Sasia: 3 copë → 5 copë');
 
@@ -232,5 +232,5 @@ test('Montimet e kryera: Zyra edits a part, Pronari deletes one; payments stay',
   await sheet.getByRole('button', { name: 'Fshij montimin' }).click();
   await sheet.getByRole('button', { name: 'Fshij montimin' }).click();
   await expect(page.locator('.ring__label')).toContainText('0/12');
-  await expect(page.locator('.proj2__gap')).toHaveText('Paguar përpara: €5.000');
+  await expect(page.locator('.proj2__gap')).toHaveText('Paguar përpara: 5,000€');
 });

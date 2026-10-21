@@ -2,7 +2,7 @@
 /**
  * Visits in the prototype's sheets: "Planifiko vizitë" / "Ndrysho vizitën" with each
  * installer's load on the chosen date and the helper box ("Punët e montuesve"), and
- * "U krye" in its four forms: measurement, repair, a project part, and the €800 call.
+ * "U krye" in its four forms: measurement, repair, a project part, and the 800€ call.
  */
 import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
@@ -445,7 +445,7 @@ function VisitDoneSheet({ o, visit: v, installers, onClose }: { o: VisitOrderVie
     );
   }
 
-  /* The €800 call: A pagoi klienti? · Ku janë paratë? · Porosia është e kryer. */
+  /* The 800€ call: A pagoi klienti? · Ku janë paratë? · Porosia është e kryer. */
   const rem = o.remaining;
   return (
     <Sheet open onClose={onClose} title={title} sub={sub}>

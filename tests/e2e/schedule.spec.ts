@@ -1,5 +1,5 @@
 /**
- * Phase 4 through the real screens, on the fixtures: the €800 call from a visit in three taps,
+ * Phase 4 through the real screens, on the fixtures: the 800€ call from a visit in three taps,
  * planning with installer load, sending an installer's day and a reminder by hand ("U dërgua?"),
  * the tracking page in the client's language without any login, and a replaced link.
  */
@@ -33,17 +33,17 @@ async function openOrder(page: Page, name: string) {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
 }
 
-test('the €800 call from the visit: three taps from the open order', async ({ page }) => {
+test('the 800€ call from the visit: three taps from the open order', async ({ page }) => {
   await login(page, 'teuta@druri.test');
   await openOrder(page, 'Naim Berisha');
   await page.getByRole('button', { name: 'Montimi u krye' }).click(); // 1
   const sheet = page.getByRole('dialog');
   await expect(sheet.locator('input[name=holder][value]:checked')).toHaveCount(0); // holder shows only once paid
-  await sheet.getByText('Po, të gjitha €2.800').click(); // 2
+  await sheet.getByText('Po, të gjitha 2,800€').click(); // 2
   await expect(sheet.getByRole('radio', { name: 'Te Besnik' })).toBeChecked(); // the visit's installer is preselected
   await sheet.getByRole('button', { name: 'Ruaj' }).click(); // 3
-  await expect(page.locator('.alert--warning')).toContainText('€2.800 te Besnik · pa dorëzuar ende');
-  await expect(page.locator('.money__value')).toHaveText('€0');
+  await expect(page.locator('.alert--warning')).toContainText('2,800€ te Besnik · pa dorëzuar ende');
+  await expect(page.locator('.money__value')).toHaveText('0€');
   await expect(page.locator('.stepper3 .st--done')).toHaveAttribute('aria-current', 'step');
 });
 
@@ -80,7 +80,7 @@ test('Dërgo Dritonit punët e nesërme → WhatsApp → "U dërgua?" → logged
   const text = page.locator('#msg-text');
   await expect(text).toHaveValue(/^Punët për nesër,/);
   await expect(text).toHaveValue(/Liridona Shala · \+49 15 112 345678/);
-  await expect(text).toHaveValue(/Mblidh: €900/);
+  await expect(text).toHaveValue(/Mblidh: 900€/);
   await page.getByText('Shto “Mblidh” në mesazh').click();
   await expect(text).not.toHaveValue(/Mblidh/);
   const send = page.getByRole('link', { name: 'Dërgo me WhatsApp' });
@@ -101,7 +101,7 @@ test('Borxhet: the green "Kujtesë" opens the prepared reminder; after "Po, u d�
   const valon = page.locator('.debt', { hasText: 'Valon Hoxha' });
   await expect(page.locator('.debt', { hasText: 'Blerim Hasani' }).getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
   await valon.getByRole('link', { name: /Kujtesë/ }).click();
-  await expect(page.locator('#msg-text')).toHaveValue(/vetëm një kujtesë e vogël për €1\.200/);
+  await expect(page.locator('#msg-text')).toHaveValue(/vetëm një kujtesë e vogël për 1,200€/);
   await expect(page.locator('#msg-text')).toHaveValue(/Teuta, Druri Design$/);
   await page.getByRole('button', { name: 'Viber' }).click();
   await expect(page.getByRole('link', { name: 'Kopjo dhe hap Viber' })).toHaveAttribute('href', 'viber://chat?number=%2B38344318902');
@@ -149,7 +149,7 @@ test('Orari → Montuesit: availability grid and the per-installer summary', asy
   await login(page, 'arben@druri.test');
   await page.goto('/schedule?d=team');
   await expect(page.locator('.avail__row', { hasText: 'Driton' }).locator('.avail__cell--2')).toHaveCount(1);
-  await expect(page.locator('.inst', { hasText: 'Driton' })).toContainText('€800');
+  await expect(page.locator('.inst', { hasText: 'Driton' })).toContainText('800€');
   await expect(page.locator('.inst', { hasText: 'Faton' })).toContainText('1 punë nga ditët e kaluara pa u shënuar');
   await page.locator('.avail__row', { hasText: 'Driton' }).locator('.avail__cell--2').click();
   await expect(page.locator('.agenda__item')).toHaveCount(2);
@@ -171,9 +171,9 @@ test('a visit marked done by mistake: "Nuk u krye" reopens it and the order; doi
   await openOrder(page, 'Naim Berisha');
   await page.getByRole('button', { name: 'Montimi u krye' }).click();
   let sheet = page.getByRole('dialog');
-  await sheet.getByText('Po, të gjitha €2.800').click();
+  await sheet.getByText('Po, të gjitha 2,800€').click();
   await sheet.getByRole('button', { name: 'Ruaj' }).click();
-  await expect(page.locator('.money__value')).toHaveText('€0');
+  await expect(page.locator('.money__value')).toHaveText('0€');
 
   // Ndrysho on the done visit: another installer, kept in the history.
   await page.getByText('Të kryera (1)').click();
@@ -186,16 +186,16 @@ test('a visit marked done by mistake: "Nuk u krye" reopens it and the order; doi
   await expect(page.locator('.timeline')).toContainText('Vizita e kryer u ndryshua:');
   await expect(page.locator('.timeline')).toContainText('· Besnik → Montim ·');
 
-  // Nuk u krye: the visit and the order are open again; the €2.800 with Besnik stays.
+  // Nuk u krye: the visit and the order are open again; the 2,800€ with Besnik stays.
   await page.getByRole('button', { name: 'Ndrysho vizitën e kryer' }).click();
   sheet = page.getByRole('dialog');
   await sheet.getByRole('button', { name: 'Nuk u krye' }).click();
   await expect(sheet.getByRole('checkbox', { name: /Porosia nuk është e kryer ende/ })).toBeChecked();
-  await expect(sheet).toContainText('Pagesat nuk ndryshojnë: €2.800 te Besnik');
+  await expect(sheet).toContainText('Pagesat nuk ndryshojnë: 2,800€ te Besnik');
   await sheet.getByRole('button', { name: 'Po, rikthe' }).click();
   await expect(page.getByRole('button', { name: 'Montimi u krye' })).toBeVisible();
   await expect(page.locator('.stepper3 .st--active')).toHaveAttribute('aria-current', 'step');
-  await expect(page.locator('.alert--warning')).toContainText('€2.800 te Besnik');
+  await expect(page.locator('.alert--warning')).toContainText('2,800€ te Besnik');
 
   // Marking it done again: nothing is left to pay, so no second payment.
   await page.getByRole('button', { name: 'Montimi u krye' }).click();
@@ -204,7 +204,7 @@ test('a visit marked done by mistake: "Nuk u krye" reopens it and the order; doi
   await sheet.getByRole('button', { name: 'Ruaj' }).click();
   await expect(page.locator('.stepper3 .st--done')).toHaveAttribute('aria-current', 'step');
   await page.getByText('Pagesat dhe llogaria').click();
-  await expect(page.locator('.pay:not(.pay--deleted)', { hasText: '€2.800' })).toHaveCount(1);
+  await expect(page.locator('.pay:not(.pay--deleted)', { hasText: '2,800€' })).toHaveCount(1);
 });
 
 test('demo date +7: a reminder logged then waits 7 simulated days, also after "Kthe në sot"', async ({ page }) => {
@@ -244,7 +244,7 @@ test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" 
   const customer = await (await browser.newContext()).newPage();
   const mimoza = () => page.locator('.debt', { hasText: 'Mimoza Rexhepi' });
 
-  // Riparimi u krye with "Puna u përfundua": the flag and its pause go, the €150 is due.
+  // Riparimi u krye with "Puna u përfundua": the flag and its pause go, the 150€ is due.
   await page.getByRole('button', { name: 'Riparimi u krye' }).click();
   let sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('checkbox', { name: /Puna u përfundua/ })).toBeChecked();

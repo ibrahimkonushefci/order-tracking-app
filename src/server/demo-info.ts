@@ -46,8 +46,8 @@ export async function demoInfo(
     },
     {
       n: '4',
-      short: 'Pagesa €800',
-      label: `${lead?.name ?? 'Montuesi'} telefonon: “Mora €800”`,
+      short: 'Pagesa 800€',
+      label: `${lead?.name ?? 'Montuesi'} telefonon: “Mora 800€”`,
       href: href('k800'),
     },
     {

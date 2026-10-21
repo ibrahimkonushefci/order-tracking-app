@@ -75,7 +75,7 @@ describe('demo seed: the size the spec asks for', () => {
   );
 
   it.each(BUSINESS_TYPES.map((t, i) => [t, i] as const))(
-    '%s: €15–30k outstanding, some overdue, some unknown due date',
+    '%s: 15–30k€ outstanding, some overdue, some unknown due date',
     async (_t, i) => {
       const b = await bookOf(i);
       const rows = debts(b.orders, b.openings, TODAY);
@@ -98,13 +98,13 @@ describe('demo seed: the size the spec asks for', () => {
         .select()
         .from(history)
         .where(eq(history.companyId, summary[i].companyId));
-      expect(lines.some(l => l.text.startsWith(`${word} €`))).toBe(true);
+      expect(lines.some(l => new RegExp(`^${word} [0-9,]+€`).test(l.text))).toBe(true);
     }
   });
 });
 
 describe('demo seed: the key cases', () => {
-  it('the €800 case is live: installation today with Driton, €800 left, nothing recorded yet', async () => {
+  it('the 800€ case is live: installation today with Driton, 800€ left, nothing recorded yet', async () => {
     for (const i of BUSINESS_TYPES.keys()) {
       const b = await bookOf(i);
       const k = await keysOf(i);
@@ -179,7 +179,7 @@ describe('demo seed: the key cases', () => {
     }
   });
 
-  it('cash with installers: one for weeks (Besnik €350), one exactly the balance (Faton)', async () => {
+  it('cash with installers: one for weeks (Besnik 350€), one exactly the balance (Faton)', async () => {
     const b = await bookOf(0);
     const cash = cashWithInstallers(b.orders, b.openings, b.installers, TODAY);
     const besnik = cash.find(g => g.name === 'Besnik')!;

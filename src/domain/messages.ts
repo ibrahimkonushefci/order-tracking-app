@@ -267,7 +267,7 @@ function jobLines(o: JobOrder, v: VisitLite, collect: boolean) {
   return lines.filter(Boolean);
 }
 
-/** One visit: "Montim · E enjte 23.10 · paradite", client and phone, place, directions, product, "Mblidh €800". */
+/** One visit: "Montim · E enjte 23.10 · paradite", client and phone, place, directions, product, "Mblidh 800€". */
 export function installerJobText(o: JobOrder, v: VisitLite, collect: boolean): string {
   const lines = jobLines(o, v, collect);
   const tl = timeSq(v.time);

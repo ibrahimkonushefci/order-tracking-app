@@ -206,7 +206,7 @@ export function SetupForm({
             <span className="hero__top">
               <span>{t('previewHero')}</span>
             </span>
-            <span className="hero__value">€12.400</span>
+            <span className="hero__value">12,400€</span>
             <span className="hero__sub">{t('previewHeroSub')}</span>
           </div>
           <div className="seg">

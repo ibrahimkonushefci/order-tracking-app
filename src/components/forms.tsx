@@ -91,7 +91,7 @@ export function Field({
   );
 }
 
-/** The amount input with the € sign; accepts "4500", "4.500", "1250,50". */
+/** The amount input with the € sign after it; accepts "4500", "4,500", "1250.50" (and the older "4.500", "1250,50"). */
 /** "Prefiksi" and the number (form fields `phoneCc` and `phone`); a saved number is split into both. */
 export function PhoneInput({ id, value, prefixLabel }: { id: string; value?: string | null; prefixLabel: string }) {
   const { cc, local } = splitPhone(value);
@@ -108,7 +108,7 @@ export function PhoneInput({ id, value, prefixLabel }: { id: string; value?: str
 }
 
 export function MoneyInput({ name, defaultValue, id, autoFocus }: { name: string; defaultValue?: number | null; id?: string; autoFocus?: boolean }) {
-  const v = defaultValue && defaultValue > 0 ? (defaultValue / 100).toFixed(defaultValue % 100 ? 2 : 0).replace('.', ',') : '';
+  const v = defaultValue && defaultValue > 0 ? (defaultValue / 100).toFixed(defaultValue % 100 ? 2 : 0) : '';
   return (
     <div className="money-wrap">
       <input className="input input--money" id={id ?? `m-${name}`} name={name} inputMode="decimal" defaultValue={v} autoComplete="off" placeholder="0" autoFocus={autoFocus} />

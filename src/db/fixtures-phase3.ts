@@ -2,18 +2,18 @@
  * Phase 3 fixtures (PHASES.md "Test fixtures"): the order and money cases, all fictional
  * and dated relative to `today`, so overdue days and "for weeks" stay true on any day.
  *
- *  2026-001  Arbëria Invest sh.p.k.  project, 24 banesa, 18 installed, owes €10.800 (overdue)
- *  2026-002  Valon Hoxha             overdue €1.200; avans edited €500 → €600
- *  2026-003  Mimoza Rexhepi          done, remaining work, reminders paused, owes €150
- *  2026-004  Fatmir Krasniqi         the €800 case: recorded "Te Driton" today, owes €0
- *  2026-005  Ilir Gashi              "Mos sugjero kujtesa" (a cousin), owes €900
- *  2026-006  Ndërtimi Rugova sh.p.k. project, 12 garderoba, 3 installed, paid ahead €1.400
- *  2026-007  Besa Morina             €750 with Faton for 24 days, owes €0
- *  2026-008  Liridona Shala          active; a €1.500 payment recorded twice and deleted
+ *  2026-001  Arbëria Invest sh.p.k.  project, 24 banesa, 18 installed, owes 10,800€ (overdue)
+ *  2026-002  Valon Hoxha             overdue 1,200€; avans edited 500€ → 600€
+ *  2026-003  Mimoza Rexhepi          done, remaining work, reminders paused, owes 150€
+ *  2026-004  Fatmir Krasniqi         the 800€ case: recorded "Te Driton" today, owes 0€
+ *  2026-005  Ilir Gashi              "Mos sugjero kujtesa" (a cousin), owes 900€
+ *  2026-006  Ndërtimi Rugova sh.p.k. project, 12 garderoba, 3 installed, paid ahead 1,400€
+ *  2026-007  Besa Morina             750€ with Faton for 24 days, owes 0€
+ *  2026-008  Liridona Shala          active; a 1,500€ payment recorded twice and deleted
  *  2026-009  Naim Berisha            village job with only a "Si të shkoni" description
  *  2026-010  Dritë Hyseni            done 3 days ago, still within the week
  *  2026-011  Arta Krasniqi           new, with avans: walk it through the three stages
- *  Borxh i bartur: Blerim Hasani €450 (due 60 days ago) · Shpresa Leka €1.100 ("Nuk e di")
+ *  Borxh i bartur: Blerim Hasani 450€ (due 60 days ago) · Shpresa Leka 1,100€ ("Nuk e di")
  */
 import { eq } from 'drizzle-orm';
 import { addDays } from '../lib/dates';
@@ -24,7 +24,7 @@ type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 type Installers = Record<'Driton' | 'Faton' | 'Besnik', string>;
 
 const eur = (n: number) => Math.round(n * 100);
-const fmt = (c: number) => '€' + String(Math.floor(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const fmt = (c: number) => String(Math.floor(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '€';
 const dmy = (iso: string) => iso.split('-').reverse().join('.');
 
 export async function loadPhase3(
@@ -91,7 +91,7 @@ export async function loadPhase3(
     });
     await hist('order', id, d(-130), 'owner', `Porosia u krijua · ${fmt(eur(67200))} · 24 banesa`);
     await pay({ orderId: id }, eur(20000), d(-120), 'owner', { method: 'bank' });
-    await hist('order', id, d(-120), 'owner', 'Pagesë €20.000 (bankë) · në zyrë');
+    await hist('order', id, d(-120), 'owner', 'Pagesë 20,000€ (bankë) · në zyrë');
     const parts: [number, number, string][] = [[4, -80, I.Driton], [6, -60, I.Faton], [5, -41, I.Driton], [3, -15, I.Besnik]];
     let first = true;
     for (const [qty, day, inst] of parts) {
@@ -101,10 +101,10 @@ export async function loadPhase3(
       await hist('order', id, d(day), 'office', `Montuar ${qty} banesa · ${inst === I.Driton ? 'Driton' : inst === I.Faton ? 'Faton' : 'Besnik'} · ${dmy(d(day))}`, '16:05');
     }
     await pay({ orderId: id }, eur(19600), d(-30), 'office', { method: 'bank' });
-    await hist('order', id, d(-30), 'office', 'Pagesë €19.600 (bankë) · në zyrë');
+    await hist('order', id, d(-30), 'office', 'Pagesë 19,600€ (bankë) · në zyrë');
   }
 
-  /* 2. Overdue order, with an edited payment (avans €500 → €600). */
+  /* 2. Overdue order, with an edited payment (avans 500€ → 600€). */
   {
     const c = await cust('Valon Hoxha', '+38344318902');
     const id = await order(c, {
@@ -120,8 +120,8 @@ export async function loadPhase3(
     });
     await hist('order', id, d(-60), 'office', `Porosia u krijua · ${fmt(eur(1800))}`);
     await pay({ orderId: id }, eur(600), d(-60), 'office', { note: 'Avans' });
-    await hist('order', id, d(-60), 'office', 'Avans €500 (kesh) · në zyrë', '09:35');
-    await hist('order', id, d(-59), 'owner', 'Pagesa u ndryshua: €500 → €600', '08:40');
+    await hist('order', id, d(-60), 'office', 'Avans 500€ (kesh) · në zyrë', '09:35');
+    await hist('order', id, d(-59), 'owner', 'Pagesa u ndryshua: 500€ → 600€', '08:40');
     await hist('order', id, d(-50), 'office', 'Faza: E re → Në punë');
     await hist('order', id, d(-40), 'office', 'Faza: Në punë → E kryer · pagesa: brenda javës', '17:10');
   }
@@ -129,7 +129,7 @@ export async function loadPhase3(
   /* 3. Done, remaining work, reminders paused. */
   {
     const c = await cust('Mimoza Rexhepi', '+38345220781');
-    const note = 'Një derë duhet rregulluar; klienti paguan €150 e fundit pas rregullimit.';
+    const note = 'Një derë duhet rregulluar; klienti paguan 150€ e fundit pas rregullimit.';
     const id = await order(c, {
       productType: 'Kuzhinë',
       description: 'Kuzhinë në formë U, antracit mat',
@@ -146,16 +146,16 @@ export async function loadPhase3(
     });
     await hist('order', id, d(-70), 'owner', `Porosia u krijua · ${fmt(eur(6000))}`);
     await pay({ orderId: id }, eur(3000), d(-70), 'owner');
-    await hist('order', id, d(-70), 'owner', 'Avans €3.000 (kesh) · në zyrë');
+    await hist('order', id, d(-70), 'owner', 'Avans 3,000€ (kesh) · në zyrë');
     await hist('order', id, d(-45), 'office', 'Faza: E re → Në punë');
     await pay({ orderId: id }, eur(2850), d(-12), 'office', { method: 'bank' });
-    await hist('order', id, d(-12), 'office', 'Pagesë €2.850 (bankë) · në zyrë', '15:00');
+    await hist('order', id, d(-12), 'office', 'Pagesë 2,850€ (bankë) · në zyrë', '15:00');
     await hist('order', id, d(-12), 'office', 'Faza: Në punë → E kryer · pagesa: brenda javës', '15:02');
     await hist('order', id, d(-11), 'owner', `Ka punë të mbetura: ${note}`);
     await hist('order', id, d(-11), 'owner', `Kujtesat në pauzë deri më ${dmy(d(10))}: Punë të mbetura`, '10:01');
   }
 
-  /* 4. The €800 case: Driton phoned "Mora €800" today. */
+  /* 4. The 800€ case: Driton phoned "Mora 800€" today. */
   {
     const c = await cust('Fatmir Krasniqi', '+38344512330');
     const id = await order(c, {
@@ -169,16 +169,16 @@ export async function loadPhase3(
       city: 'Podujevë',
       directions:
         'Fshati Orllan: te xhamia e vjetër, kthesa e dytë djathtas, shtëpia me fasadë të bardhë. Babai është në shtëpi gjithë ditën: 044 512 330',
-      internalNote: 'Zbritje €200 sepse e rekomandoi Shpendi.',
+      internalNote: 'Zbritje 200€ sepse e rekomandoi Shpendi.',
       created: -52,
     });
     await hist('order', id, d(-52), 'owner', `Porosia u krijua · ${fmt(eur(5000))}`);
     await pay({ orderId: id }, eur(4200), d(-52), 'owner');
-    await hist('order', id, d(-52), 'owner', 'Avans €4.200 (kesh) · në zyrë');
+    await hist('order', id, d(-52), 'owner', 'Avans 4,200€ (kesh) · në zyrë');
     await hist('order', id, d(-30), 'office', 'Faza: E re → Në punë');
     await tx.insert(visit).values({ companyId, orderId: id, type: 'install', date: today, time: 'morning', installerId: I.Driton, doneAt: today });
     await pay({ orderId: id }, eur(800), today, 'owner', { heldBy: I.Driton });
-    await hist('order', id, today, 'owner', 'Pagesë €800 kesh · te Driton', '14:20');
+    await hist('order', id, today, 'owner', 'Pagesë 800€ kesh · te Driton', '14:20');
     await hist('order', id, today, 'owner', 'Faza: Në punë → E kryer', '14:21');
   }
 
@@ -201,7 +201,7 @@ export async function loadPhase3(
     await hist('order', id, d(-30), 'owner', 'Faza: E re → E kryer · pagesa: brenda javës');
   }
 
-  /* 6. Project paid ahead: 12 wardrobes, avans €5.000, 3 installed (€3.600). */
+  /* 6. Project paid ahead: 12 wardrobes, avans 5,000€, 3 installed (3,600€). */
   {
     const c = await cust('Ndërtimi Rugova sh.p.k.', '+38339431200');
     const id = await order(c, {
@@ -218,7 +218,7 @@ export async function loadPhase3(
     });
     await hist('order', id, d(-35), 'owner', `Porosia u krijua · ${fmt(eur(14400))} · 12 copë`);
     await pay({ orderId: id }, eur(5000), d(-35), 'owner', { method: 'bank' });
-    await hist('order', id, d(-35), 'owner', 'Avans €5.000 (bankë) · në zyrë');
+    await hist('order', id, d(-35), 'owner', 'Avans 5,000€ (bankë) · në zyrë');
     await part(id, 3, d(-8), I.Besnik);
     await hist('order', id, d(-8), 'office', 'Faza: E re → Në punë', '16:00');
     await hist('order', id, d(-8), 'office', `Montuar 3 copë · Besnik · ${dmy(d(-8))}`, '16:05');
@@ -241,7 +241,7 @@ export async function loadPhase3(
     await hist('order', id, d(-40), 'office', `Porosia u krijua · ${fmt(eur(750))}`);
     await tx.insert(visit).values({ companyId, orderId: id, type: 'install', date: d(-24), time: 'afternoon', installerId: I.Faton, doneAt: d(-24) });
     await pay({ orderId: id }, eur(750), d(-24), 'office', { heldBy: I.Faton });
-    await hist('order', id, d(-24), 'office', 'Pagesë €750 kesh · te Faton', '17:30');
+    await hist('order', id, d(-24), 'office', 'Pagesë 750€ kesh · te Faton', '17:30');
     await hist('order', id, d(-24), 'office', 'Faza: E re → E kryer', '17:31');
   }
 
@@ -259,11 +259,11 @@ export async function loadPhase3(
     });
     await hist('order', id, d(-20), 'office', `Porosia u krijua · ${fmt(eur(2400))}`);
     await pay({ orderId: id }, eur(1500), d(-20), 'office', { method: 'bank' });
-    await hist('order', id, d(-20), 'office', 'Avans €1.500 (bankë) · në zyrë');
+    await hist('order', id, d(-20), 'office', 'Avans 1,500€ (bankë) · në zyrë');
     await hist('order', id, d(-15), 'office', 'Faza: E re → Në punë');
     await pay({ orderId: id }, eur(1500), d(-9), 'office', { method: 'bank', deletedAt: at(d(-8), '09:12') });
-    await hist('order', id, d(-9), 'office', 'Pagesë €1.500 (bankë) · në zyrë', '12:00');
-    await hist('order', id, d(-8), 'owner', `Pagesa €1.500 e ${dmy(d(-9))} u fshi: U regjistrua dy herë`, '09:12');
+    await hist('order', id, d(-9), 'office', 'Pagesë 1,500€ (bankë) · në zyrë', '12:00');
+    await hist('order', id, d(-8), 'owner', `Pagesa 1,500€ e ${dmy(d(-9))} u fshi: U regjistrua dy herë`, '09:12');
   }
 
   /* 9. Village job: only a "Si të shkoni" description. */
@@ -280,7 +280,7 @@ export async function loadPhase3(
     });
     await hist('order', id, d(-14), 'office', `Porosia u krijua · ${fmt(eur(3800))}`);
     await pay({ orderId: id }, eur(1000), d(-14), 'office');
-    await hist('order', id, d(-14), 'office', 'Avans €1.000 (kesh) · në zyrë');
+    await hist('order', id, d(-14), 'office', 'Avans 1,000€ (kesh) · në zyrë');
     await hist('order', id, d(-6), 'office', 'Faza: E re → Në punë');
   }
 
@@ -315,7 +315,7 @@ export async function loadPhase3(
     });
     await hist('order', id, d(-3), 'office', `Porosia u krijua · ${fmt(eur(4500))}`);
     await pay({ orderId: id }, eur(1500), d(-3), 'office', { method: 'card' });
-    await hist('order', id, d(-3), 'office', 'Avans €1.500 (kartelë) · në zyrë');
+    await hist('order', id, d(-3), 'office', 'Avans 1,500€ (kartelë) · në zyrë');
   }
 
   /* Opening balances from the notebook. */
@@ -335,7 +335,7 @@ export async function loadPhase3(
         createdAt: at(d(-2)),
       })
       .returning();
-    await hist('opening', ob.id, d(-2), 'owner', `Borxh i bartur u shtua: €450 · afati ${dmy(d(-60))}`);
+    await hist('opening', ob.id, d(-2), 'owner', `Borxh i bartur u shtua: 450€ · afati ${dmy(d(-60))}`);
     const [ob2] = await tx
       .insert(openingBalance)
       .values({
@@ -349,7 +349,7 @@ export async function loadPhase3(
         createdAt: at(d(-2), '10:05'),
       })
       .returning();
-    await hist('opening', ob2.id, d(-2), 'owner', 'Borxh i bartur u shtua: €1.100 · afat i panjohur', '10:05');
+    await hist('opening', ob2.id, d(-2), 'owner', 'Borxh i bartur u shtua: 1,100€ · afat i panjohur', '10:05');
   }
 
   await tx.update(company).set({ orderSeqYear: year, orderSeq: seq }).where(eq(company.id, companyId));

@@ -25,12 +25,12 @@ describe('permissions (spec table)', () => {
 });
 
 describe('money in integer cents', () => {
-  it('formats like the prototype', () => {
-    expect(eur(0)).toBe('€0');
-    expect(eur(80000)).toBe('€800');
-    expect(eur(1725000)).toBe('€17.250');
-    expect(eur(125050)).toBe('€1.250,50');
-    expect(eur(-125000)).toBe('−€1.250');
+  it('formats as 12,250€: comma for thousands, euro sign after', () => {
+    expect(eur(0)).toBe('0€');
+    expect(eur(80000)).toBe('800€');
+    expect(eur(1725000)).toBe('17,250€');
+    expect(eur(125050)).toBe('1,250.50€');
+    expect(eur(-125000)).toBe('−1,250€');
   });
   it('refuses floats', () => {
     expect(() => eur(10.5)).toThrow();
@@ -41,6 +41,13 @@ describe('money in integer cents', () => {
     expect(parseEur('1250,50')).toBe(125050);
     expect(parseEur('€ 1 250')).toBe(125000);
     expect(parseEur('12.5')).toBe(1250);
+    expect(parseEur('12,250')).toBe(1225000);
+    expect(parseEur('12,250€')).toBe(1225000);
+    expect(parseEur('1,250.50')).toBe(125050);
+    expect(parseEur('1.250,50')).toBe(125050);
+    expect(parseEur('1,000,000')).toBe(100000000);
+    expect(parseEur('12,5')).toBe(1250);
+    expect(parseEur('1,2345')).toBeNull();
     expect(parseEur('abc')).toBeNull();
     expect(parseEur('')).toBeNull();
   });

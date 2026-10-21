@@ -6,7 +6,7 @@
  * generator, so the same brand on the same day always gives the same data.
  *
  * The key cases (`keys`, used by the demo panel shortcuts and the QR):
- *  k800      Fatmir Krasniqi: installation today with Driton, €800 left (moment 4)
+ *  k800      Fatmir Krasniqi: installation today with Driton, 800€ left (moment 4)
  *  track     Besa Zeka: installation tomorrow, paradite, with Driton (moment 2, the QR)
  *            Driton's tomorrow: Besa + Rinor's measurement (moment 3)
  *  overdue   Shpend Berisha: overdue, last reminder 20 days ago → green "Kujtesë" (moment 1)
@@ -17,7 +17,7 @@
  *  edited    Naim Kelmendi: a deleted duplicate payment and an edited price
  *  revoked   Liridona Shala (German): the tracking link was replaced
  *  plan      Granit Kastrati: yesterday's measurement not marked done
- *  Cash with installers: Lindita €350 with Besnik for 23 days; Arbnor €1.150 with Faton since
+ *  Cash with installers: Lindita 350€ with Besnik for 23 days; Arbnor 1,150€ with Faton since
  *  yesterday (exactly the balance). The busy day: Driton has 2 jobs, Besnik 1, Faton is free.
  */
 import { createHash, randomUUID } from 'node:crypto';
@@ -94,7 +94,7 @@ function rng(seed: number) {
 
 const eur = (n: number) => Math.round(n * 100);
 const money = (c: number) =>
-  '€' + String(Math.round(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  String(Math.round(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '€';
 const dmy = (iso: string) => iso.split('-').reverse().join('.');
 const METHOD = { cash: 'kesh', bank: 'bankë', card: 'kartelë' } as const;
 const TERM = {
@@ -452,7 +452,7 @@ export function buildDemo(opts: {
 
   /* ═══════════ Key cases ═══════════ */
 
-  // 1. The €800 case (live): installation today with Driton, who will collect the last €800.
+  // 1. The 800€ case (live): installation today with Driton, who will collect the last 800€.
   {
     const c = cust('Fatmir Krasniqi', { phone: '+38344512330' });
     const o = order(c, {
@@ -465,7 +465,7 @@ export function buildDemo(opts: {
       city: 'Podujevë',
       directions:
         'Fshati Orllan: te xhamia e vjetër, kthesa e dytë djathtas, shtëpia me fasadë të bardhë. Babai Fatmir është në shtëpi gjithë ditën: 044 512 330',
-      internalNote: 'Zbritje €200 sepse e rekomandoi Shpendi.',
+      internalNote: 'Zbritje 200€ sepse e rekomandoi Shpendi.',
     });
     o.description = cat.main.descs[0];
     const dep = deposit(o.price);
@@ -558,7 +558,7 @@ export function buildDemo(opts: {
   // 6. Remaining work + paused reminders + a repair visit this week.
   {
     const c = cust('Mimoza Hoxha');
-    const note = 'Një derë duhet rregulluar; klienti paguan €150 e fundit pas rregullimit.';
+    const note = 'Një derë duhet rregulluar; klienti paguan 150€ e fundit pas rregullimit.';
     const o = order(c, {
       role: cat.main,
       key: 'remaining',
@@ -597,7 +597,7 @@ export function buildDemo(opts: {
     });
   }
 
-  // 7. Cash with an installer for weeks: the customer owes nothing, Besnik still has €350.
+  // 7. Cash with an installer for weeks: the customer owes nothing, Besnik still has 350€.
   {
     const c = cust('Lindita Bytyqi');
     const o = order(c, {
@@ -1029,7 +1029,7 @@ export function buildDemo(opts: {
         deposit: true,
       });
     if (i === 3) {
-      // An edited payment: the deposit was first typed €100 too low, then corrected.
+      // An edited payment: the deposit was first typed 100€ too low, then corrected.
       rows.history.at(-1)!.text = `${word} ${money(dep - eur(100))} (kesh) · në zyrë`;
       hist(
         'order',
@@ -1090,7 +1090,7 @@ export function buildDemo(opts: {
       return;
     }
     if (pat === 'late') {
-      // The customer paid part of the rest at the installation; €300–1.500 is still open.
+      // The customer paid part of the rest at the installation; 300–1,500€ is still open.
       const open = Math.max(
         eur(300),
         Math.min(eur(1500), Math.round((rest * (0.35 + r() * 0.25)) / 5000) * 5000),

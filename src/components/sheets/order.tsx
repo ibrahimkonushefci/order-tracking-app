@@ -104,7 +104,7 @@ export function StageControl({ o, labels, installers }: { o: OrderView; labels: 
   );
 }
 
-/* ───────── "E kryer" for a normal order (the €800 call, without the visit) ───────── */
+/* ───────── "E kryer" for a normal order (the 800€ call, without the visit) ───────── */
 
 export function DoneSheet({ o, labels, installers, onClose }: { o: OrderView; labels: Labels; installers: InstallerOpt[]; onClose: () => void }) {
   const t = useTranslations('done');

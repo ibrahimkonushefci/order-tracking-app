@@ -475,7 +475,7 @@
     "morning": "paradite",
     "afternoon": "pasdite",
     "yes": "Po",
-    "jsonNote": "Kopja e plotë e të dhënave. Shumat janë në centë (1250 = €12,50).",
+    "jsonNote": "Kopja e plotë e të dhënave. Shumat janë në centë (1250 = 12.50€).",
     "col": {
       "number": "Nr.",
       "client": "Klienti",
@@ -738,7 +738,7 @@
   },
   "remaining": {
     "title": "Ka punë të mbetura",
-    "sub": "p.sh. “Një derë duhet rregulluar; klienti paguan €150 e fundit pas rregullimit.”",
+    "sub": "p.sh. “Një derë duhet rregulluar; klienti paguan 150€ e fundit pas rregullimit.”",
     "what": "Çfarë ka mbetur?",
     "pause": "Pauzo kujtesat për borxh deri në përfundim",
     "save": "Ruaj",

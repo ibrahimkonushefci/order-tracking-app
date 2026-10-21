@@ -147,7 +147,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                       </Link>
                     ) : (
                       <div className="stat">
-                        <span className="stat__v">€0</span>
+                        <span className="stat__v">0€</span>
                         <span className="stat__l">{t('cashInHand')}</span>
                       </div>
                     )}

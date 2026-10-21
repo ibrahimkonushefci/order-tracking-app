@@ -50,22 +50,22 @@ test('one-tap logins for Pronari and Zyra, with the demo data', async ({ page })
   await expect(page.getByText('57 porosi')).toBeVisible();
 });
 
-test('the €800 moment from the demo panel: three taps, owed €0, the cash waits with Driton', async ({
+test('the 800€ moment from the demo panel: three taps, owed 0€, the cash waits with Driton', async ({
   page,
 }) => {
   await demoLogin(page, 'Arben');
   const sheet = await openPanel(page);
-  await sheet.getByRole('link', { name: 'Driton telefonon: “Mora €800”' }).click();
+  await sheet.getByRole('link', { name: 'Driton telefonon: “Mora 800€”' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Fatmir Krasniqi');
   await expect(
     page.locator('.money, .card').filter({ hasText: 'Mbetur nga totali' }).first(),
-  ).toContainText('€800');
+  ).toContainText('800€');
   await page.getByRole('button', { name: 'Montimi u krye' }).click(); // 1
   const done = page.getByRole('dialog');
-  await done.getByText('Po, të gjitha €800').click(); // 2
+  await done.getByText('Po, të gjitha 800€').click(); // 2
   await expect(done.getByRole('radio', { name: 'Te Driton' })).toBeChecked(); // the visit's installer
   await done.getByRole('button', { name: 'Ruaj' }).click(); // 3
-  await expect(page.locator('.alert--warning')).toContainText('€800 te Driton');
+  await expect(page.locator('.alert--warning')).toContainText('800€ te Driton');
   await page.goto('/cash');
   await expect(page.getByText('Fatmir Krasniqi')).toBeVisible();
 });
@@ -123,7 +123,7 @@ async function switchToLumi(page: Page) {
 test('switching brand from an order lands on the new brand’s list, same role (no 404)', async ({ page }) => {
   await demoLogin(page, 'Teuta');
   const sheet = await openPanel(page);
-  await sheet.getByRole('link', { name: 'Driton telefonon: “Mora €800”' }).click();
+  await sheet.getByRole('link', { name: 'Driton telefonon: “Mora 800€”' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Fatmir Krasniqi');
   const druriOrder = new URL(page.url()).pathname;
   await switchToLumi(page);
@@ -204,7 +204,7 @@ test('"Numri i takimit": the prepared message can go to the owner’s phone, rev
   const text = await page.locator('#msg-text').inputValue();
   expect(text).toContain('Besa Zeka');
   expect(text).toContain('Rinor Avdiu');
-  expect(text).toMatch(/Mblidh: €/);
+  expect(text).toMatch(/Mblidh: [0-9,]+€/);
   const wa = page.getByRole('link', { name: 'Dërgo me WhatsApp' });
   await expect(wa).toHaveAttribute('href', /^https:\/\/wa\.me\/38344000111\?text=/);
   await page.locator('label.chip', { hasText: 'Driton · +383 44 281 734' }).click();
@@ -226,9 +226,9 @@ test('demo date and "Rivendos demon" return to the predictable start', async ({ 
   await page.goto(`/orders?q=${encodeURIComponent('Fatmir Krasniqi')}`);
   await page.locator('a[href^="/orders/"]:visible', { hasText: 'Fatmir Krasniqi' }).first().click();
   await page.getByRole('button', { name: 'Montimi u krye' }).click();
-  await page.getByRole('dialog').getByText('Po, të gjitha €800').click();
+  await page.getByRole('dialog').getByText('Po, të gjitha 800€').click();
   await page.getByRole('dialog').getByRole('button', { name: 'Ruaj' }).click();
-  await expect(page.locator('.alert--warning')).toContainText('€800 te Driton');
+  await expect(page.locator('.alert--warning')).toContainText('800€ te Driton');
 
   sheet = await openPanel(page);
   await sheet.getByRole('button', { name: 'Rivendos demon' }).click();

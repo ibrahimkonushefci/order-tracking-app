@@ -159,8 +159,9 @@ export function Compose({
         </div>
         {channel === 'viber' ? <div className="help">{t('viberHelp')}</div> : channel === 'sms' ? <div className="help">{t('smsHelp')}</div> : null}
         {log.kind === 'installer' ? (
-          <div className="xs subtle">
-            <Icon name="book" /> {t('noInternal')}
+          <div className="note-line">
+            <Icon name="book" />
+            <span>{t('noInternal')}</span>
           </div>
         ) : null}
         <a className={`btn btn--${channel} btn--lg btn--block`} href={href} target={channel === 'whatsapp' ? '_blank' : undefined} rel="noopener" onClick={opened}>

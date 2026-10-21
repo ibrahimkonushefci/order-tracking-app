@@ -1,7 +1,7 @@
 /**
  * Visits (spec §5): Matje, Montim, Dërgesë, Riparim with an optional time and installer.
  * Planning, editing and removing a planned visit, and "U krye" in its four forms:
- * a measurement, a repair, a project part ("Sa u montuan?") and the €800 phone call
+ * a measurement, a repair, a project part ("Sa u montuan?") and the 800€ phone call
  * ("Montimi u krye": the payment, where the money is, and "Porosia është e kryer").
  */
 import { and, desc, eq } from 'drizzle-orm';
@@ -115,7 +115,7 @@ export interface VisitDoneInput extends Omit<DoneInput, 'pay'> {
 
 /**
  * "U krye" on a visit. The visit is marked done today; for a normal installation or
- * delivery the €800 sheet runs in the same transaction, so the customer's payment, the
+ * delivery the 800€ sheet runs in the same transaction, so the customer's payment, the
  * cash with the installer and the stage change are one step.
  */
 export async function completeVisit(db: Db, actor: Actor, orderId: string, visitId: string, input: VisitDoneInput, today: string) {

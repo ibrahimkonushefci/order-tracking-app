@@ -10,7 +10,7 @@
  *
  *  2026-012  Granit Morina    new; measurement yesterday, not marked done (Faton)
  *  2026-013  Rinor Sopi       new; measurement today, paradite (Faton)
- *  2026-014  Dardan Hoti      active; installation on Friday, paradite (Driton), collect €2.200
+ *  2026-014  Dardan Hoti      active; installation on Friday, paradite (Driton), collect 2,200€
  *  2026-015  Blerta Kelmendi  active; delivery later this week (Faton)
  */
 import { and, eq } from 'drizzle-orm';
@@ -63,7 +63,7 @@ export async function loadPhase4(
       .insert(orders)
       .values({ companyId, number, clientId: c.id, city: 'Prishtinë', trackingToken: token(), createdBy: users.office, createdAt: at(d(created), '09:30'), ...rest })
       .returning();
-    await hist('order', row.id, d(created), 'office', `Porosia u krijua · €${(o.price / 100).toLocaleString('de-DE')}`, '09:30');
+    await hist('order', row.id, d(created), 'office', `Porosia u krijua · ${(o.price / 100).toLocaleString('en-US')}€`, '09:30');
     return row.id;
   }
 
@@ -84,7 +84,7 @@ export async function loadPhase4(
   const rinor = await newOrder('Rinor Sopi', '+38349502771', { productType: 'Kuzhinë', description: 'Kuzhinë në kënd, banesë e re', price: eur(4200), city: 'Prishtinë', directions: 'Lagjja Dardania, Rr. Bajram Kelmendi 8, kati 5, banesa 17.', created: -2 });
   const dardan = await newOrder('Dardan Hoti', '+38344118905', { productType: 'Kuzhinë', description: 'Kuzhinë e drejtë 3 m, fronte gri mat', price: eur(3200), stage: 'active', city: 'Ferizaj', directions: 'Fshati Talinoc i Muhaxherëve: te xhamia, majtas 300 m, shtëpia me çati të kuqe. https://maps.app.goo.gl/talinoc-demo', created: -25 });
   await tx.insert(payment).values({ companyId, orderId: dardan, amount: eur(1000), date: d(-25), method: 'cash', createdBy: users.office, createdAt: at(d(-25), '11:00') });
-  await hist('order', dardan, d(-25), 'office', 'Avans €1.000 (kesh) · në zyrë', '11:00');
+  await hist('order', dardan, d(-25), 'office', 'Avans 1,000€ (kesh) · në zyrë', '11:00');
   await hist('order', dardan, d(-10), 'office', 'Faza: E re → Në punë');
   const blerta = await newOrder('Blerta Kelmendi', '+38345390442', { productType: 'Dollap banjoje', description: 'Dollap banjoje i varur, 80 cm', price: eur(480), stage: 'active', city: 'Prishtinë', directions: 'Rr. Agim Ramadani 17, hyrja B, kati 2.', created: -9 });
   await hist('order', blerta, d(-4), 'office', 'Faza: E re → Në punë');
@@ -126,7 +126,7 @@ export async function loadPhase4(
     type: 'deposit',
     channel: 'whatsapp',
     language: 'de',
-    text: 'Guten Tag Liridona, vielen Dank für Ihre Anzahlung von €1.500.',
+    text: 'Guten Tag Liridona, vielen Dank für Ihre Anzahlung von 1,500€.',
     sentBy: users.office,
     sentAt: at(d(-20), '10:20'),
   });

@@ -93,18 +93,18 @@ describe('balances: normal orders', () => {
   });
 });
 
-describe('the €800 case', () => {
+describe('the 800€ case', () => {
   const base = order({ stage: 'done', doneAt: TODAY, payTerm: 'week', dueDate: d(7), payments: [pay(420000, d(-52))] });
   const withDriton = { ...base, payments: [...base.payments, pay(80000, TODAY, { heldBy: 'driton' })] };
 
-  it('recorded "Te montuesi": owed €0, money in the office unchanged', () => {
+  it('recorded "Te montuesi": owed 0€, money in the office unchanged', () => {
     const t = orderTotals(withDriton);
     expect(t.owed).toBe(0);
     expect(t.held).toBe(80000);
     expect(t.inOffice).toBe(420000);
   });
 
-  it('Konfirmo moves the €800 into the office', () => {
+  it('Konfirmo moves the 800€ into the office', () => {
     const confirmed = { ...withDriton, payments: withDriton.payments.map(p => (p.heldBy ? { ...p, handedAt: new Date() } : p)) };
     expect(orderTotals(confirmed)).toMatchObject({ owed: 0, held: 0, inOffice: 500000 });
   });
@@ -121,26 +121,26 @@ describe('the €800 case', () => {
 });
 
 describe('projects: owed now = installed value − paid', () => {
-  // Spec example: €25.000 for 100 doors (€250 each), €5.000 avans.
+  // Spec example: 25,000€ for 100 doors (250€ each), 5,000€ avans.
   const proj = (visits: VisitRec[], payments = [pay(500000, d(-60))]) =>
     order({ price: 2500000, quantity: 100, projectPayTerm: 'month', visits, payments });
 
-  it('after 15 doors: owed €0, paid ahead €1.250', () => {
+  it('after 15 doors: owed 0€, paid ahead 1,250€', () => {
     const t = orderTotals(proj([part(5, d(-50)), part(10, d(-40))]));
     expect(t).toMatchObject({ earned: 375000, owed: 0, paidAhead: 125000, dueDate: null });
   });
 
-  it('after 40 doors: owed €5.000, late from the part that took the value past €5.000', () => {
+  it('after 40 doors: owed 5,000€, late from the part that took the value past 5,000€', () => {
     const visits = [part(15, d(-60)), part(10, d(-45)), part(15, d(-35))];
     const t = orderTotals(proj(visits));
     expect(t.earned).toBe(1000000);
     expect(t.owed).toBe(500000);
-    // Parts: €3.750 (due −30), €2.500 (due −15) → the €5.000 is used up inside the second part.
+    // Parts: 3,750€ (due −30), 2,500€ (due −15) → the 5,000€ is used up inside the second part.
     expect(t.dueDate).toBe(d(-15));
     expect(lateDays(t, TODAY)).toBe(15);
   });
 
-  it('after a €4.000 payment: owed €1.000', () => {
+  it('after a 4,000€ payment: owed 1,000€', () => {
     const visits = [part(15, d(-60)), part(10, d(-45)), part(15, d(-35))];
     const t = orderTotals(proj(visits, [pay(500000, d(-60)), pay(400000, d(-2))]));
     expect(t.owed).toBe(100000);

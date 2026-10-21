@@ -530,7 +530,7 @@ export interface EditOrderInput {
   projectPayTerm?: string;
 }
 
-/** Every field can be edited; each change is one history line ("Çmimi: €5.000 → €5.200 · +1 dollap"). */
+/** Every field can be edited; each change is one history line ("Çmimi: 5,000€ → 5,200€ · +1 dollap"). */
 export async function editOrder(db: Db, actor: Actor, id: string, input: EditOrderInput) {
   allow(actor, 'edit');
   return db.transaction(async tx => {

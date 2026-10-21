@@ -152,14 +152,14 @@ describe('prepared messages', () => {
     const ab = byName(b, 'Arbëria Invest sh.p.k.');
     const first = orderMessage('reminder', ab, 'sq', 'https://x/t/1', S, TODAY);
     expect(first).toContain('Përshëndetje Arbëria Invest,');
-    expect(first).toContain('për 18 banesa të montuara deri tani ka mbetur për t’u paguar €10.800');
+    expect(first).toContain('për 18 banesa të montuara deri tani ka mbetur për t’u paguar 10,800€');
     expect(first.endsWith('Teuta, Druri Design')).toBe(true);
     const valon = byName(b, 'Valon Hoxha');
-    expect(orderMessage('reminder', valon, 'sq', '', S, TODAY)).toContain('vetëm një kujtesë e vogël për €1.200');
-    expect(orderMessage('reminder', valon, 'en', '', S, TODAY)).toContain('just a small reminder about the €1.200 still open for order 2026-002');
-    expect(orderMessage('reminder', ab, 'de', '', S, TODAY)).toContain('für die bisher montierten 18 Wohnungen noch €10.800 offen');
+    expect(orderMessage('reminder', valon, 'sq', '', S, TODAY)).toContain('vetëm një kujtesë e vogël për 1,200€');
+    expect(orderMessage('reminder', valon, 'en', '', S, TODAY)).toContain('just a small reminder about the 1,200€ still open for order 2026-002');
+    expect(orderMessage('reminder', ab, 'de', '', S, TODAY)).toContain('für die bisher montierten 18 Wohnungen noch 10,800€ offen');
     const blerim = b.openings.find(x => x.name === 'Blerim Hasani')!;
-    expect(openingMessage('reminder', blerim, 45000, 'sq', S)).toContain('vetëm një kujtesë e vogël për €450 që ka mbetur për Garderobë, 2024');
+    expect(openingMessage('reminder', blerim, 45000, 'sq', S)).toContain('vetëm një kujtesë e vogël për 450€ që ka mbetur për Garderobë, 2024');
   });
 
   it('the visit and link templates carry the next visit and the tracking link', async () => {
@@ -170,7 +170,7 @@ describe('prepared messages', () => {
     expect(de).toContain('unser Team kommt morgen (Dienstag, 20.10.), vormittags zur Montage');
     expect(de).toContain('https://demo/t/abc');
     expect(orderMessage('visit', lir, 'sq', 'L', S, TODAY)).toContain('ekipi ynë vjen për montim nesër (të martën, 20.10), paradite.');
-    expect(orderMessage('deposit', lir, 'en', 'L', S, TODAY)).toContain('thank you for your deposit of €1.500');
+    expect(orderMessage('deposit', lir, 'en', 'L', S, TODAY)).toContain('thank you for your deposit of 1,500€');
     expect(orderMessage('thanks', byName(b, 'Dritë Hyseni'), 'sq', 'L', S, TODAY)).toContain('https://g.page/r/druri');
     expect(orderMessage('thanks', byName(b, 'Dritë Hyseni'), 'sq', 'L', { ...S, reviewUrl: '' }, TODAY)).not.toMatch(/:\s*\n\s*\n/);
   });
@@ -186,7 +186,7 @@ describe('prepared messages', () => {
       'Vushtrri',
       'Prindërit e Liridonës: Rr. Skënderbeu 14, kati 2. Nëna Hava: 044 207 118',
       'Garderobë deri në tavan, 3 m',
-      'Mblidh: €900',
+      'Mblidh: 900€',
       'Porosia 2026-008',
     ]);
     expect(installerJobText(lir, v, false)).not.toContain('Mblidh');
@@ -195,7 +195,7 @@ describe('prepared messages', () => {
     const jobs = allJobs(b.orders).filter(x => x.v.installerId === I.Driton && x.v.date === '2026-10-23');
     const day = installerDayText(jobs, '2026-10-23', TODAY, true);
     expect(day.split('\n')[0]).toBe('Punët për të premten, E premte 23.10 · 2 punë');
-    expect(day).toMatch(/1\) Montim · paradite\nDardan Hoti[\s\S]*Mblidh: €2\.200[\s\S]*2\) Matje · pasdite\nArta Krasniqi/);
+    expect(day).toMatch(/1\) Montim · paradite\nDardan Hoti[\s\S]*Mblidh: 2,200€[\s\S]*2\) Matje · pasdite\nArta Krasniqi/);
     expect(day).not.toMatch(/Arta[\s\S]*Mblidh/);
   });
 
@@ -237,7 +237,7 @@ describe('visits: plan, edit, remove, "U krye"', () => {
     expect((await loadOrder(db, owner.companyId, naim.id))!.visits.some(x => x.id === v.id)).toBe(false);
   });
 
-  it('the €800 call from a visit: paid in full "Te Besnik", order done, owes €0, cash waits with the installer', async () => {
+  it('the 800€ call from a visit: paid in full "Te Besnik", order done, owes 0€, cash waits with the installer', async () => {
     const naim = byName(await book(), 'Naim Berisha');
     const v = naim.visits.find(x => x.date === TODAY)!;
     const r = await completeVisit(db, office, naim.id, v.id, { pay: 'all', holder: I.Besnik, close: true }, TODAY);
@@ -475,7 +475,7 @@ describe('"Nuk u krye" on a project visit marked done', () => {
 
 describe('"Nuk u krye" on a repair that cleared "Ka punë të mbetura"', () => {
   const dmy = (iso: string) => iso.split('-').reverse().join('.');
-  const NOTE = 'Një derë duhet rregulluar; klienti paguan €150 e fundit pas rregullimit.';
+  const NOTE = 'Një derë duhet rregulluar; klienti paguan 150€ e fundit pas rregullimit.';
   const mimozaDone = async (today = TODAY) => {
     const m = byName(await book(), 'Mimoza Rexhepi');
     const rv = m.visits.find(x => x.type === 'repair')!;
@@ -489,7 +489,7 @@ describe('"Nuk u krye" on a repair that cleared "Ka punë të mbetura"', () => {
 
   it('puts the note and its pause back; tracking and the green "Kujtesë" follow; payments stay', async () => {
     const { id, rv, payCount } = await mimozaDone();
-    // The bug: once cleared, the €150 is due and the green button shows.
+    // The bug: once cleared, the 150€ is due and the green button shows.
     expect((await mimozaRem()).ok).toBe(true);
     expect(await repairCleared(db, owner.companyId, id, rv.id)).toEqual({ note: NOTE, until: d(10) });
     const r = await reopenVisit(db, office, id, rv.id, { restoreRemaining: true, remainingNote: NOTE, pause: true }, TODAY);

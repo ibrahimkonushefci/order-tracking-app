@@ -85,7 +85,7 @@ describe('Phase 3 fixtures', () => {
     expect(h).toMatchObject({ overdueSum: 1350000, unknownSum: 110000, upcomingSum: 65000, cashSum: 155000 });
   });
 
-  it('the €800 case: owed €0, €800 with Driton, no debt row', async () => {
+  it('the 800€ case: owed 0€, 800€ with Driton, no debt row', async () => {
     const o = byName(await book(), 'Fatmir Krasniqi');
     expect(orderTotals(o)).toMatchObject({ owed: 0, held: 80000, inOffice: 420000 });
   });
@@ -109,10 +109,10 @@ describe('Phase 3 fixtures', () => {
 });
 
 describe('orders: the three stages by key', () => {
-  it('new → active → E kryer with the €800 "Te Driton", then Konfirmo', async () => {
+  it('new → active → E kryer with the 800€ "Te Driton", then Konfirmo', async () => {
     const arta = byName(await book(), 'Arta Krasniqi');
     await setStage(db, office, arta.id, 'active');
-    // Remaining €3.000; the customer pays all of it to Driton.
+    // Remaining 3,000€; the customer pays all of it to Driton.
     const r = await markDone(db, office, arta.id, { pay: 'all', holder: inst.Driton, term: 'week' }, TODAY);
     expect(r.left).toBe(0);
     let o = (await loadOrder(db, owner.companyId, arta.id))!;
@@ -127,7 +127,7 @@ describe('orders: the three stages by key', () => {
     const h = (await loadHistory(db, 'order', arta.id)).map(x => x.text);
     expect(h).toContain('Faza: E re → Në punë');
     expect(h).toContain('Faza: Në punë → E kryer');
-    expect(h).toContain('Konfirmuar: Teuta i mori €3.000 nga Driton');
+    expect(h).toContain('Konfirmuar: Teuta i mori 3,000€ nga Driton');
   });
 
   it('marking done sets the due date from the term; "Nuk e di" leaves it unknown', async () => {
@@ -215,7 +215,7 @@ describe('orders: the three stages by key', () => {
       internalNote: '',
     });
     const h = (await loadHistory(db, 'order', arta.id)).map(x => x.text);
-    expect(h).toContain('Çmimi: €4.500 → €4.700 · +1 dollap');
+    expect(h).toContain('Çmimi: 4,500€ → 4,700€ · +1 dollap');
   });
 
   it('Ndrysho porosinë: the phone keeps the chosen prefix (a diaspora number typed without +49)', async () => {
@@ -265,7 +265,7 @@ describe('payments', () => {
     await editPayment(db, office, p.id, { amount: '800', method: 'cash', holder: 'office', date: p.date, note: p.note }, TODAY);
     const o = (await loadOrder(db, owner.companyId, valon.id))!;
     expect(orderTotals(o).owed).toBe(100000);
-    expect((await loadHistory(db, 'order', valon.id))[0].text).toBe('Pagesa u ndryshua: €600 → €800');
+    expect((await loadHistory(db, 'order', valon.id))[0].text).toBe('Pagesa u ndryshua: 600€ → 800€');
   });
 
   it('delete (Pronari) puts the debt back and writes history', async () => {
@@ -340,7 +340,7 @@ describe('opening balances: "Ndrysho borxhin"', () => {
     row = debts(bk.orders, bk.openings, TODAY).find(x => x.id === ob.id)!;
     expect(row).toMatchObject({ overdue: true, late: 7 });
     const h = (await loadHistory(db, 'opening', ob.id)).map(x => x.text);
-    expect(h).toEqual(expect.arrayContaining(['Klienti: Blerim Hasani → Blerim Hasan', 'Shuma e borxhit: €450 → €400']));
+    expect(h).toEqual(expect.arrayContaining(['Klienti: Blerim Hasani → Blerim Hasan', 'Shuma e borxhit: 450€ → 400€']));
     expect(h.filter(x => x.startsWith('Kur duhej paguar:'))).toHaveLength(3);
     // Nothing changed → nothing written.
     expect((await editOpening(db, office, ob.id, { ...base, name: 'Blerim Hasan', amount: '400', dueMode: 'date', dueDate: d(-7) }, TODAY)).changed).toBe(0);
@@ -389,7 +389,7 @@ describe('projects: correcting a recorded part', () => {
     expect(installedQty(o)).toBe(0);
     expect(orderTotals(o)).toMatchObject({ paid: 500000, owed: 0, paidAhead: 500000 });
     expect(o.payments.filter(p => !p.deletedAt)).toHaveLength(1);
-    expect((await loadHistory(db, 'order', ru.id))[0].text).toMatch(/^Montimi u fshi: 3 copë · Besnik · €3\.600/);
+    expect((await loadHistory(db, 'order', ru.id))[0].text).toMatch(/^Montimi u fshi: 3 copë · Besnik · 3,600€/);
   });
 });
 

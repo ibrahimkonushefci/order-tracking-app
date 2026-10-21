@@ -9,7 +9,7 @@ export interface Role {
   /** The product chip ("Produkti"), one of the catalog's PRODUCTS where possible. */
   type: string;
   descs: string[];
-  /** Price range in euros; the seed rounds to €50. */
+  /** Price range in euros; the seed rounds to 50€. */
   min: number;
   max: number;
 }
