@@ -1,5 +1,5 @@
 /**
- * Drizzle schema (approved in docs/phase-2-plan.md).
+ * Drizzle schema (approved in Phase 2).
  *
  * - Money is integer cents. Business dates are `date` strings (yyyy-MM-dd, Europe/Belgrade);
  *   audit times are timestamptz.
