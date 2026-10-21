@@ -1,8 +1,8 @@
 # macOS
 .DS_Store
 
-# Claude Code: personal, machine-local settings
-.claude/settings.local.json
+# Claude Code
+.claude/
 
 # Editors
 .idea/
@@ -32,3 +32,8 @@ public/sw.js.map
 public/swe-worker-*.js
 playwright-report/
 test-results/
+
+# Internal planning notes, reviews and sales material (kept locally, not published)
+docs/
+PHASES.md
+order_tracking_instructions.md
