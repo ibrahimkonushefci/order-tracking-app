@@ -41,13 +41,6 @@ export type PayTerm = 'week' | 'month' | 'date' | 'unknown';
 export type VisitType = 'measure' | 'install' | 'delivery' | 'repair';
 export type PayMethod = 'cash' | 'bank' | 'card';
 
-/** What the demo seed remembers per company (src/db/demo). */
-export interface DemoState {
-  seededOn: string;
-  /** Key case → order id, e.g. { k800, track, project, ahead }. */
-  keys: Record<string, string>;
-}
-
 /* ───────── Company (one per instance) ───────── */
 
 export const company = pgTable('company', {
@@ -63,8 +56,6 @@ export const company = pgTable('company', {
   /** Order numbers look like 2026-041: the sequence restarts each year. */
   orderSeqYear: integer('order_seq_year').notNull().default(0),
   orderSeq: integer('order_seq').notNull().default(0),
-  /** Demo mode only: the day the demo data was seeded and its key orders (shortcuts, QR). Null otherwise. */
-  demo: jsonb('demo').$type<DemoState>(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

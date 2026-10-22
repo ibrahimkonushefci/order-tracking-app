@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { cache, type CSSProperties } from 'react';
 import { brandCssVars } from '@/brand/theme';
 import { and, eq, ne } from 'drizzle-orm';
-import { getActiveBrand, isDemoMode } from '@/brand/active';
+import { getActiveBrand } from '@/brand/active';
 import { readBrand } from '@/brand/files';
 import { BrandLogo } from '@/components/brand-logo';
 import { Icon } from '@/components/icons';
@@ -13,13 +13,13 @@ import { LANGS, type Lang } from '@/domain/messages';
 import { headlineKey, TRACKING_TEXT, trackingSteps, trackTime, warmDate } from '@/domain/tracking';
 import { nextVisit } from '@/domain/visits';
 import { greetName } from '@/domain/messages';
+import { THEME_KEY } from '@/lib/theme-script';
 import { fmtPhone } from '@/lib/phone';
-import { appToday } from '@/server/today';
-import { ensureFreshDemo } from '@/server/demo';
+import { todayIso } from '@/lib/dates';
 
-/** Demo: the order's own company decides the brand (the owner's phone has no brand cookie). */
+/** The order's own company decides the brand: the client has no login, and one installation can host several companies. */
 async function brandFor(o: Awaited<ReturnType<typeof findOrder>>) {
-  return isDemoMode() && o ? readBrand(o.brandSlug) : getActiveBrand();
+  return o ? readBrand(o.brandSlug) : getActiveBrand();
 }
 
 export async function generateMetadata({
@@ -46,8 +46,8 @@ export async function generateViewport({
 }
 export const dynamic = 'force-dynamic';
 
-// The tracking page follows the visitor's device setting, not a saved staff choice.
-const deviceTheme = `document.documentElement.dataset.theme=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';`;
+// Light unless this browser chose Night Mode in the app (the same saved choice as the staff screens).
+const savedTheme = `var t=null;try{t=localStorage.getItem('${THEME_KEY}')}catch(e){}document.documentElement.dataset.theme=t==='dark'?'dark':'light';`;
 
 /** The order behind a token, or null: unknown, replaced ("Link i ri") and cancelled links all look the same. */
 async function loadTracked(token: string) {
@@ -73,11 +73,11 @@ const findOrder = cache(loadTracked);
  */
 export default async function TrackingPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  await ensureFreshDemo();
-  const [o, today] = await Promise.all([findOrder(token), appToday()]);
+  const o = await findOrder(token);
+  const today = todayIso();
   const { brand, logoUrl } = await brandFor(o);
-  // Demo: several brands share one instance, so the page carries its own brand colours.
-  const scope = isDemoMode() ? { className: 'trk brand-scope', style: brandCssVars(brand.colors) as CSSProperties } : { className: 'trk' };
+  // Several companies can share one installation, so the page carries its own brand colours.
+  const scope = { className: 'trk brand-scope', style: brandCssVars(brand.colors) as CSSProperties };
   const lang: Lang = o ? (LANGS.find(l => l === o.client.language) ?? 'sq') : 'sq';
   const d = TRACKING_TEXT[lang];
   const tagline = brand.tagline[lang] || brand.tagline.sq;
@@ -93,7 +93,7 @@ export default async function TrackingPage({ params }: { params: Promise<{ token
   );
   const head = (
     <>
-      <script dangerouslySetInnerHTML={{ __html: `${deviceTheme}document.documentElement.lang=${JSON.stringify(lang)};` }} />
+      <script dangerouslySetInnerHTML={{ __html: `${savedTheme}document.documentElement.lang=${JSON.stringify(lang)};` }} />
     </>
   );
 

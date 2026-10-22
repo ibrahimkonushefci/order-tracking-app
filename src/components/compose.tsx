@@ -3,7 +3,6 @@
  * The send screen (spec §5, §7): the prepared text, editable, then WhatsApp (primary),
  * Viber (text copied, chat opened) or SMS (small fallback). Nothing is sent by the app:
  * the person's own phone sends it, and on return the app asks "U dërgua?" and logs a "Po".
- * In demo mode a phone-style preview (MockProvider) shows how the message lands.
  */
 import { useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,9 +29,6 @@ export function Compose({
   textNoCollect,
   collectLabel,
   log,
-  demo,
-  demoPhone,
-  sender,
   children,
 }: {
   to: ComposeTarget;
@@ -41,25 +37,17 @@ export function Compose({
   textNoCollect?: string;
   collectLabel?: string;
   log: Log;
-  demo: boolean;
-  /** Demo mode: "Numri i takimit" (the owner's phone during the meeting), offered as the recipient. */
-  demoPhone?: string | null;
-  /** Who the preview shows as the sender ("Teuta · Druri" or the company). */
-  sender: string;
   children?: ReactNode;
 }) {
   const t = useTranslations('compose');
-  const td = useTranslations('demo');
-  const [toMeeting, setToMeeting] = useState(!!demoPhone);
   const router = useRouter();
   const [channel, setChannel] = useState<Channel>(to.channel);
   const [collect, setCollect] = useState(true);
   const [text, setText] = useState(initial);
   const [edited, setEdited] = useState(false);
   const [asked, setAsked] = useState(false);
-  const [preview, setPreview] = useState(false);
   const [pending, start] = useTransition();
-  const href = sendHref(channel, toMeeting && demoPhone ? demoPhone : to.phone, text);
+  const href = sendHref(channel, to.phone, text);
 
   const toggleCollect = (on: boolean) => {
     setCollect(on);
@@ -102,32 +90,6 @@ export function Compose({
           </a>
         </div>
         {children}
-        {demoPhone ? (
-          <div className="field demo-send">
-            <span className="label">{td('sendTo')}</span>
-            <div className="chips" role="radiogroup" aria-label={td('sendTo')}>
-              <label className="chip">
-                <input
-                  type="radio"
-                  name="send-to"
-                  checked={toMeeting}
-                  onChange={() => setToMeeting(true)}
-                />
-                <span>{td('sendMeeting', { phone: fmtPhone(demoPhone) })}</span>
-              </label>
-              <label className="chip">
-                <input
-                  type="radio"
-                  name="send-to"
-                  checked={!toMeeting}
-                  onChange={() => setToMeeting(false)}
-                />
-                <span>{td('sendReal', { name: to.name, phone: fmtPhone(to.phone) })}</span>
-              </label>
-            </div>
-            {toMeeting ? <div className="help">{td('sendMeetingHelp')}</div> : null}
-          </div>
-        ) : null}
         {textNoCollect != null ? (
           <label className="check">
             <input type="checkbox" checked={collect} onChange={e => toggleCollect(e.target.checked)} /> {collectLabel}
@@ -167,11 +129,6 @@ export function Compose({
         <a className={`btn btn--${channel} btn--lg btn--block`} href={href} target={channel === 'whatsapp' ? '_blank' : undefined} rel="noopener" onClick={opened}>
           {channel === 'sms' ? <Icon name="message" /> : <Icon name={channel} />} {channel === 'viber' ? t('sendViber') : t('send', { channel: channel === 'sms' ? 'SMS' : 'WhatsApp' })}
         </a>
-        {demo ? (
-          <button type="button" className="btn btn--secondary btn--sm btn--fit" onClick={() => setPreview(true)}>
-            <Icon name="eye" /> {t('preview')}
-          </button>
-        ) : null}
         {asked ? (
           <section className="callout callout--info sent-ask" role="dialog" aria-label={t('wasSent')}>
             <div className="grow">
@@ -189,33 +146,6 @@ export function Compose({
           </section>
         ) : null}
       </div>
-      {preview ? (
-        <div className={`chat${channel === 'viber' ? ' chat--viber' : channel === 'sms' ? ' chat--sms' : ''}`} role="dialog" aria-label={t('previewTitle')}>
-          <div className="chat__head">
-            <button className="back" style={{ color: 'inherit' }} onClick={() => setPreview(false)} aria-label={t('back')}>
-              <Icon name="left" />
-            </button>
-            <span className="chat__avatar chat__avatar--initial">{sender.charAt(0)}</span>
-            <div className="grow">
-              <div className="chat__name">{sender}</div>
-              <div className="chat__status">online</div>
-            </div>
-          </div>
-          <div className="chat__body">
-            <span className="chat__day">{t('today')}</span>
-            <span className="chat__note">{t('previewNote', { name: to.name })}</span>
-            <div className="bubble">
-              {text}
-              <span className="bubble__time">{new Date().toTimeString().slice(0, 5)}</span>
-            </div>
-          </div>
-          <div className="chat__foot">
-            <button className="btn btn--secondary btn--lg" onClick={() => setPreview(false)}>
-              {t('closePreview')}
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

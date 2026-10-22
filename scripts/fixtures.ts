@@ -1,10 +1,17 @@
 /**
  * pnpm fixtures: resets the database to the known fixture set.
  * PGlite allows one process per data folder, so while the app is running the
- * reset is done by the app itself (dev-only endpoint); otherwise directly.
+ * reset is done by the app itself (test-only endpoint); otherwise directly. Never on Postgres.
  */
 import './env';
+import { isPostgresUrl } from '../src/db/connect';
 import { FIXTURE_USERS } from '../src/db/fixtures';
+
+// Fixtures empty the whole database first: only ever on the laptop's PGlite folder.
+if (isPostgresUrl(process.env.DATABASE_URL)) {
+  console.error('DATABASE_URL është një bazë Postgres: fixtures ngarkohen vetëm në bazën lokale (PGlite).');
+  process.exit(1);
+}
 
 const port = process.env.PORT || '3100';
 const token = process.env.FIXTURES_TOKEN;

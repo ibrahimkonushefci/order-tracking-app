@@ -17,5 +17,4 @@ export const FALLBACK_BRAND: Brand = {
   businessType: 'furniture',
   depositWord: 'Avans',
   modules: { orderTracking: true },
-  demo: false,
 };

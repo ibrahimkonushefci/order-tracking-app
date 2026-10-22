@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
 import { isHeld, lateDays, openingTotals } from '@/domain/balances';
@@ -19,14 +20,13 @@ import { eur } from '@/lib/money';
 import { fmtPhone } from '@/lib/phone';
 import { loadHistory, loadOpening } from '@/services/book';
 import { pageContext } from '@/server/context';
-import { missingRecord } from '@/server/demo';
 
 /** Borxh i bartur: not an order (no stages, visits or tracking link), but payments, pauses and reminders work the same. */
 export default async function OpeningPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { db, companyId, today, user } = await pageContext();
   const ob = await loadOpening(db, companyId, id);
-  if (!ob) missingRecord('/debts');
+  if (!ob) notFound();
   const [hist, installers] = await Promise.all([loadHistory(db, 'opening', ob.id), listInstallers(companyId)]);
   const t = await getTranslations('opening');
   const tm = await getTranslations('money');

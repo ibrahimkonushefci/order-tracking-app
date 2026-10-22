@@ -1,5 +1,5 @@
 /* Generated from tokens.css: re-declares the token cascade inside .brand-scope, so a
-   preview with its own --brand-* values (/setup) derives every semantic colour from them. */
+   page with its own --brand-* values (the tracking page) derives every semantic colour from them. */
 .brand-scope {
   --brand-primary:#365C50; --brand-primary-contrast:#fff; --brand-hero:#365C50; --brand-accent:#B99A70;
   --brand-accent-contrast:#1A1A1A; --brand-background:#fff; --brand-text:#202824;

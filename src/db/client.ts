@@ -1,5 +1,5 @@
 /**
- * One database API for demo and production, selected only by DATABASE_URL:
+ * One database API for the laptop and production, selected only by DATABASE_URL:
  * - a `postgres://` URL → node-postgres (Neon in production)
  * - anything else (default `./data/pglite`) → embedded PGlite stored in that folder (offline laptop)
  */

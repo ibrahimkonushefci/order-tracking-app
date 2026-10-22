@@ -122,7 +122,7 @@ describe('the green "Kujtesë" rule', () => {
     expect(reminderCheck(t, r({ messages: [{ type: 'link', channel: 'whatsapp', sentAt: `${d(-1)}T10:00:00Z` }] }), false, TODAY)).toMatchObject({ ok: true });
   });
 
-  it('on the fixtures: Valon (20 days ago) yes, Blerim (3 days ago) no; the demo date offset changes it', async () => {
+  it('on the fixtures: Valon (20 days ago) yes, Blerim (3 days ago) no; later days change it', async () => {
     const b = await book();
     const rows = debts(b.orders, b.openings, TODAY);
     const ok = (name: string, today = TODAY) => debts(b.orders, b.openings, today).find(x => x.name === name)!.rem.ok;
@@ -131,7 +131,7 @@ describe('the green "Kujtesë" rule', () => {
     expect(ok('Ilir Gashi')).toBe(false);
     expect(ok('Mimoza Rexhepi')).toBe(false);
     expect(rows.find(x => x.name === 'Shpresa Leka')!.rem).toMatchObject({ ok: false, reason: 'unknownDue' });
-    // "Simulate: jump forward 4 days": Blerim's last reminder is now 7 days old.
+    // Four days later Blerim's last reminder is 7 days old.
     expect(ok('Blerim Hasani', d(4))).toBe(true);
     // Dritë is due in 4 days: no reminder today, one after the due date.
     expect(ok('Dritë Hyseni')).toBe(false);
@@ -166,9 +166,9 @@ describe('prepared messages', () => {
     const b = await book();
     const lir = byName(b, 'Liridona Shala');
     expect(templatesFor(lir, TODAY)).toEqual(['visit', 'deposit', 'link', 'free']);
-    const de = orderMessage('visit', lir, 'de', 'https://demo/t/abc', S, TODAY);
+    const de = orderMessage('visit', lir, 'de', 'https://example.test/t/abc', S, TODAY);
     expect(de).toContain('unser Team kommt morgen (Dienstag, 20.10.), vormittags zur Montage');
-    expect(de).toContain('https://demo/t/abc');
+    expect(de).toContain('https://example.test/t/abc');
     expect(orderMessage('visit', lir, 'sq', 'L', S, TODAY)).toContain('ekipi ynë vjen për montim nesër (të martën, 20.10), paradite.');
     expect(orderMessage('deposit', lir, 'en', 'L', S, TODAY)).toContain('thank you for your deposit of 1,500€');
     expect(orderMessage('thanks', byName(b, 'Dritë Hyseni'), 'sq', 'L', S, TODAY)).toContain('https://g.page/r/druri');
@@ -342,7 +342,7 @@ describe('"U dërgua?" logging, links, contacts, installers, templates', () => {
   });
 });
 
-/* ───────── Review fixes (Phase 4): correcting a visit marked done, reminders on the demo date ───────── */
+/* ───────── Review fixes (Phase 4): correcting a visit marked done, reminders across days ───────── */
 
 describe('correcting a visit marked done', () => {
   const dmy = (iso: string) => iso.split('-').reverse().join('.');
@@ -545,26 +545,23 @@ describe('"Nuk u krye" on a repair that cleared "Ka punë të mbetura"', () => {
   });
 });
 
-describe('reminders on the demo date', () => {
+describe('reminders across days', () => {
   const at = (iso: string, hhmm = '12:00') => new Date(`${iso}T${hhmm}:00+02:00`);
   const valonRem = async (today: string) => {
     const b = await book();
     return debts(b.orders, b.openings, today).find(x => x.name === 'Valon Hoxha')!.rem;
   };
 
-  it('a reminder logged at demo +7 suppresses the green "Kujtesë" for seven simulated days', async () => {
+  it('a reminder logged on a later day suppresses the green "Kujtesë" for seven days from that day', async () => {
     const valon = byName(await book(), 'Valon Hoxha');
-    const demo = d(7);
-    expect((await valonRem(demo)).ok).toBe(true);
-    await logCustomerMessage(db, office, { orderId: valon.id }, { type: 'reminder', channel: 'whatsapp', language: 'sq', text: 'Kujtesë' }, at(demo));
-    expect(await valonRem(demo)).toMatchObject({ ok: false, reason: 'recent', lastAt: demo });
-    expect((await valonRem(addDays(demo, 6))).ok).toBe(false);
-    expect((await valonRem(addDays(demo, 7))).ok).toBe(true);
-    // Back to the real today: the reminder is not in the past, so it is still "recent" (no green button).
-    expect(await valonRem(TODAY)).toMatchObject({ ok: false, reason: 'recent' });
-    // "Kujtesa e fundit" reads the simulated day.
+    const later = d(7);
+    expect((await valonRem(later)).ok).toBe(true);
+    await logCustomerMessage(db, office, { orderId: valon.id }, { type: 'reminder', channel: 'whatsapp', language: 'sq', text: 'Kujtesë' }, at(later));
+    expect(await valonRem(later)).toMatchObject({ ok: false, reason: 'recent', lastAt: later });
+    expect((await valonRem(addDays(later, 6))).ok).toBe(false);
+    expect((await valonRem(addDays(later, 7))).ok).toBe(true);
     const o = (await loadOrder(db, owner.companyId, valon.id))!;
-    expect(new Date(lastReminder(o.messages)!.sentAt).toISOString().slice(0, 10)).toBe(demo);
+    expect(new Date(lastReminder(o.messages)!.sentAt).toISOString().slice(0, 10)).toBe(later);
   });
 
   it('on the normal date nothing changes: a reminder sent today counts from today', async () => {
@@ -583,7 +580,7 @@ describe('reminders on the demo date', () => {
     expect(reminderCheck(t, late, false, TODAY)).toMatchObject({ ok: true });
   });
 
-  it('an installer job logged on the demo date is "dërguar" that day', async () => {
+  it('an installer job logged on a day is "dërguar" that day', async () => {
     const naim = byName(await book(), 'Naim Berisha');
     const v = naim.visits.find(x => x.date === TODAY)!;
     await logInstallerMessage(db, office, { installerId: I.Besnik, visitIds: [v.id], mode: 'visit', channel: 'whatsapp', text: 'Puna' }, at(d(3)));

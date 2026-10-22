@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Icon } from '@/components/icons';
 
-/** Any unknown address, and a record that doesn't exist with demo mode off: in Albanian, not Next's English page. */
+/** Any unknown address, and a record that doesn't exist: in Albanian, not Next's English page. */
 export default async function NotFound() {
   const t = await getTranslations('errorPage');
   return (

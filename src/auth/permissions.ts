@@ -9,10 +9,9 @@ export type Action =
   | 'edit' // edit payments, prices and any order field
   | 'delete' // delete payments, opening balances, orders without payments
   | 'export' // export all data
-  | 'settings' // users and brand settings (incl. the deposit word)
-  | 'setup'; // /setup (demo convenience; also needs the PIN)
+  | 'settings'; // users and brand settings (incl. the deposit word)
 
-const OWNER_ONLY: ReadonlySet<Action> = new Set(['delete', 'export', 'settings', 'setup']);
+const OWNER_ONLY: ReadonlySet<Action> = new Set(['delete', 'export', 'settings']);
 
 export function can(role: Role | null | undefined, action: Action): boolean {
   if (role !== 'owner' && role !== 'office') return false;

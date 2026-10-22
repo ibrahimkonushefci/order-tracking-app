@@ -164,7 +164,7 @@ test('"Nga ditët e kaluara": one tap "U krye" on yesterday’s measurement', as
   await expect(page.getByText('Nga ditët e kaluara')).toHaveCount(0);
 });
 
-/* ───────── Review fixes: correcting a visit marked done, reminders on the demo date ───────── */
+/* ───────── Review fixes: correcting a visit marked done ───────── */
 
 test('a visit marked done by mistake: "Nuk u krye" reopens it and the order; doing it again adds no payment', async ({ page }) => {
   await login(page, 'teuta@druri.test');
@@ -207,38 +207,18 @@ test('a visit marked done by mistake: "Nuk u krye" reopens it and the order; doi
   await expect(page.locator('.pay:not(.pay--deleted)', { hasText: '2,800€' })).toHaveCount(1);
 });
 
-test('demo date +7: a reminder logged then waits 7 simulated days, also after "Kthe në sot"', async ({ page }) => {
-  await login(page, 'teuta@druri.test');
-  await page.goto('/settings');
-  await page.getByRole('button', { name: '+7 ditë' }).click();
-  await expect(page.getByText(/\(\+7 ditë\)/)).toBeVisible();
-  await page.goto('/debts');
-  // Blerim's last reminder (3 days ago) is 10 days old on the demo date.
-  const blerim = () => page.locator('.debt', { hasText: 'Blerim Hasani' });
-  await blerim().getByRole('link', { name: /Kujtesë/ }).click();
-  const [popup] = await Promise.all([page.waitForEvent('popup'), page.getByRole('link', { name: 'Dërgo me WhatsApp' }).click()]);
-  await popup.close();
-  await page.getByRole('button', { name: 'Po, u dërgua' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Blerim Hasani');
-  await page.goto('/debts');
-  await expect(blerim().getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
-  await expect(blerim()).toContainText('Kujtesa e fundit: sot');
-
-  await page.goto('/settings');
-  await page.getByRole('button', { name: 'Kthe në sot' }).click();
-  await expect(page.getByText(/\(\+7 ditë\)/)).toHaveCount(0);
-  await page.goto('/debts');
-  await expect(blerim().getByRole('link', { name: /Kujtesë/ })).toHaveCount(0);
-  await expect(blerim()).toContainText('Kujtesa e fundit: sot');
-});
-
 test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" and its pause back', async ({ page, browser }, info) => {
   const shot = (name: string) => page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: true });
   await login(page, 'teuta@druri.test');
-  await page.goto('/settings');
-  await page.getByRole('button', { name: '+7 ditë' }).click();
-  await expect(page.getByText(/\(\+7 ditë\)/)).toBeVisible();
   await openOrder(page, 'Mimoza Rexhepi');
+  // The repair is planned for today (the fixtures put it on Friday, which can be in the future).
+  await page.getByRole('button', { name: 'Planifiko' }).click();
+  let sheet = page.getByRole('dialog');
+  await sheet.locator('.chip', { hasText: 'Riparim' }).click();
+  await sheet.locator('#vs-date').fill(todayIso());
+  await sheet.locator('.chip', { hasText: 'Besnik' }).click();
+  await sheet.getByRole('button', { name: 'Ruaj', exact: true }).click();
+  await expect(sheet).toHaveCount(0);
   await page.getByText('Faqja e klientit', { exact: true }).click();
   const path = new URL((await page.locator('.mono-box .ellipsis').textContent())!.trim()).pathname;
   const customer = await (await browser.newContext()).newPage();
@@ -246,7 +226,7 @@ test('a repair marked done by mistake: "Nuk u krye" puts "Ka punë të mbetura" 
 
   // Riparimi u krye with "Puna u përfundua": the flag and its pause go, the 150€ is due.
   await page.getByRole('button', { name: 'Riparimi u krye' }).click();
-  let sheet = page.getByRole('dialog');
+  sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('checkbox', { name: /Puna u përfundua/ })).toBeChecked();
   await sheet.getByRole('button', { name: 'Po, u krye' }).click();
   await expect(sheet).toHaveCount(0);

@@ -6,7 +6,7 @@ import { fmtPhone, splitPhone } from '@/lib/phone';
 
 describe('permissions (spec table)', () => {
   const daily: Action[] = ['daily', 'edit'];
-  const ownerOnly: Action[] = ['delete', 'export', 'settings', 'setup'];
+  const ownerOnly: Action[] = ['delete', 'export', 'settings'];
   it('Pronari can do everything', () => {
     for (const a of [...daily, ...ownerOnly]) expect(can('owner', a)).toBe(true);
   });

@@ -22,6 +22,13 @@
       "when": 1792489534832,
       "tag": "0002_demo_state",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792669075164,
+      "tag": "0003_drop_demo_state",
+      "breakpoints": true
     }
   ]
 }

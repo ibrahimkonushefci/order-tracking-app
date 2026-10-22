@@ -4,13 +4,14 @@
  * Also: the tracking link ("Link i ri"), the client's language and channel, installers,
  * and the company's message templates.
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { DEFAULT_TEMPLATES, LANGS, TEMPLATE_TYPES, type Lang, type TemplateType } from '@/domain/messages';
-import { client, company, installer, message, openingBalance, orders, visit, type Channel } from '@/db/schema';
+import { client, company, installer, message, openingBalance, orders, payment, visit, type Channel } from '@/db/schema';
 import type { Db } from '@/db/connect';
 import { fmtDate } from '@/lib/dates';
+import { eur } from '@/lib/money';
 import { loadOpening } from './book';
-import { allow, FieldError, log, newToken, NotFoundError, th, throwIf, toE164, tw, type Actor } from './common';
+import { allow, FieldError, log, newToken, NotFoundError, th, throwIf, toE164, tw, type Actor, type DbOrTx } from './common';
 import { checkInstaller, mustLoad } from './orders';
 
 const CHANNELS: readonly Channel[] = ['whatsapp', 'viber', 'sms'];
@@ -30,8 +31,7 @@ export interface SentInput {
 
 /**
  * "U dërgua? Po" for a customer message on an order or an opening balance. `now` is the
- * app's moment (`appNow()`, demo offset included), so the 7-day reminder gap counts in
- * the same days as the screens.
+ * moment it was sent; the 7-day reminder gap counts from it.
  */
 export async function logCustomerMessage(db: Db, actor: Actor, target: { orderId: string } | { openingId: string }, input: SentInput, now = new Date()) {
   allow(actor, 'daily');
@@ -180,7 +180,7 @@ export interface InstallerInput {
   active?: boolean;
 }
 
-/** Cilësimet → Montuesit: add or edit (both roles). Installers are never deleted, only set inactive. */
+/** Cilësimet → Montuesit: add or edit (both roles). Setting one inactive has the same checks as "Hiq nga lista". */
 export async function saveInstaller(db: Db, actor: Actor, id: string | null, input: InstallerInput) {
   allow(actor, 'daily');
   const errors: FieldError[] = [];
@@ -198,10 +198,87 @@ export async function saveInstaller(db: Db, actor: Actor, id: string | null, inp
     }
     const old = await checkInstaller(tx, actor, id);
     const active = input.active ?? old.active;
+    if (old.active && !active) assertFree((await installerUse(tx, actor.companyId, id)).get(id));
     const [row] = await tx.update(installer).set({ name, phone: phone!, channel, active }).where(eq(installer.id, id)).returning();
     if (old.name !== name || old.phone !== phone || old.channel !== channel || old.active !== active)
       await log(tx, actor, 'installer', id, th('installerEdited', { name }));
     return row;
+  });
+}
+
+/** What points to an installer: every visit, payment and message (records) and what is still open. */
+export interface InstallerUse {
+  records: number;
+  /** Not done yet, on an order that is still new or in work. */
+  openVisits: number;
+  /** Cents the installer collected and hasn't handed over. */
+  heldCash: number;
+}
+
+const NO_USE: InstallerUse = { records: 0, openVisits: 0, heldCash: 0 };
+
+export async function installerUse(db: DbOrTx, companyId: string, id?: string): Promise<Map<string, InstallerUse>> {
+  const [visits, payments, messages] = await Promise.all([
+    db
+      .select({ who: visit.installerId, doneAt: visit.doneAt, stage: orders.stage })
+      .from(visit)
+      .innerJoin(orders, eq(orders.id, visit.orderId))
+      .where(and(eq(visit.companyId, companyId), id ? eq(visit.installerId, id) : isNotNull(visit.installerId))),
+    db
+      .select({ who: payment.heldBy, amount: payment.amount, handedAt: payment.handedAt, deletedAt: payment.deletedAt })
+      .from(payment)
+      .where(and(eq(payment.companyId, companyId), id ? eq(payment.heldBy, id) : isNotNull(payment.heldBy))),
+    db
+      .select({ who: message.installerId })
+      .from(message)
+      .where(and(eq(message.companyId, companyId), id ? eq(message.installerId, id) : isNotNull(message.installerId))),
+  ]);
+  const out = new Map<string, InstallerUse>();
+  const of = (who: string | null) => {
+    const u = out.get(who!) ?? { ...NO_USE };
+    out.set(who!, u);
+    u.records++;
+    return u;
+  };
+  for (const v of visits) {
+    const u = of(v.who);
+    if (!v.doneAt && (v.stage === 'new' || v.stage === 'active')) u.openVisits++;
+  }
+  for (const p of payments) {
+    const u = of(p.who);
+    if (!p.handedAt && !p.deletedAt) u.heldCash += p.amount;
+  }
+  for (const m of messages) of(m.who);
+  return out;
+}
+
+/** Open work and cash in hand are settled by a person first: nothing is reassigned or confirmed silently. */
+function assertFree(use: InstallerUse | undefined) {
+  if (use?.heldCash) throw new FieldError('_', 'installerHoldsCash', { amount: eur(use.heldCash) });
+  if (use?.openVisits) throw new FieldError('_', 'installerHasVisits', { n: use.openVisits });
+}
+
+/**
+ * Cilësimet → Montuesit → Fshij (Pronari). Never used: the installer is deleted. Used: it leaves
+ * the list (inactive) instead, so every visit, payment and message keeps who did the work or held
+ * the money. Either way only the installer changes, never a business record.
+ */
+export async function removeInstaller(db: Db, actor: Actor, id: string): Promise<'deleted' | 'removed'> {
+  allow(actor, 'delete');
+  return db.transaction(async tx => {
+    const old = await checkInstaller(tx, actor, id);
+    const use = (await installerUse(tx, actor.companyId, id)).get(id) ?? NO_USE;
+    assertFree(use);
+    if (!use.records) {
+      await tx.delete(installer).where(eq(installer.id, id));
+      await log(tx, actor, 'installer', id, th('installerDeleted', { name: old.name }));
+      return 'deleted';
+    }
+    if (old.active) {
+      await tx.update(installer).set({ active: false }).where(eq(installer.id, id));
+      await log(tx, actor, 'installer', id, th('installerRemoved', { name: old.name }));
+    }
+    return 'removed';
   });
 }
 

@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { isDemoMode } from '@/brand/active';
-import { demoPhone, missingRecord } from '@/server/demo';
 import { openingTotals, orderTotals } from '@/domain/balances';
 import { lastReminder } from '@/domain/debts';
 import { LANGS, openingMessage, orderMessage, reminderCheck, templatesFor, type Lang, type MessageKind } from '@/domain/messages';
@@ -30,7 +28,7 @@ export default async function ComposePage({ params, searchParams }: { params: Pr
   let to, text, list: MessageKind[], type: MessageKind, lang: Lang, title: string, sub: string, back: string, check, last;
   if (kind === 'order') {
     const o = await loadOrder(db, companyId, id);
-    if (!o) missingRecord('/orders');
+    if (!o) notFound();
     list = templatesFor(o, today);
     type = list.find(x => x === q.t) ?? list[0];
     lang = LANGS.find(l => l === q.lang) ?? o.client.language;
@@ -43,7 +41,7 @@ export default async function ComposePage({ params, searchParams }: { params: Pr
     last = lastReminder(o.messages);
   } else {
     const ob = await loadOpening(db, companyId, id);
-    if (!ob || !ob.phone) missingRecord('/debts');
+    if (!ob || !ob.phone) notFound();
     list = ['reminder', 'free'];
     type = list.find(x => x === q.t) ?? 'reminder';
     lang = LANGS.find(l => l === q.lang) ?? ob.language;
@@ -72,9 +70,6 @@ export default async function ComposePage({ params, searchParams }: { params: Pr
         to={to}
         text={text}
         log={{ kind: 'customer', record: kind, id, type, language: lang }}
-        demo={isDemoMode()}
-        demoPhone={await demoPhone()}
-        sender={sender.companyName}
       >
         {list.length > 1 ? (
           <div className="field">

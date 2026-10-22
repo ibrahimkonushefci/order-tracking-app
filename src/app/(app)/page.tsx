@@ -15,7 +15,7 @@ import { pageBook, pageContext } from '@/server/context';
 
 /** Sot: the "Borxhet" headline, "Kërkon vëmendje", today's visits and the quick actions. */
 export default async function DashboardPage() {
-  const { user, today, offset } = await pageContext();
+  const { user, today } = await pageContext();
   const b = await pageBook();
   const t = await getTranslations('dashboard');
   const tt = await getTranslations('time');
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
 
   return (
     <Page nav="dashboard">
-      <PageHead title={`${hello}, ${user.firstName}`} sub={offset ? t('demoSub', { date: fmtLong(today), n: offset }) : fmtLong(today)} />
+      <PageHead title={`${hello}, ${user.firstName}`} sub={fmtLong(today)} />
       <div className="dashboard-grid">
         <div className="dashboard-primary">
           <Link className="hero" href="/debts">

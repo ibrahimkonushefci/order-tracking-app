@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { isDemoMode } from '@/brand/active';
-import { demoPhone, missingRecord } from '@/server/demo';
+import { notFound } from 'next/navigation';
 import { installerJobText } from '@/domain/messages';
 import { collectsCash, dative, toCollect } from '@/domain/visits';
 import { Compose } from '@/components/compose';
@@ -16,16 +15,16 @@ import { pageContext } from '@/server/context';
 export default async function SendVisitPage({ params, searchParams }: { params: Promise<{ orderId: string; visitId: string }>; searchParams: Promise<{ i?: string }> }) {
   const { orderId, visitId } = await params;
   const { i } = await searchParams;
-  const { db, companyId, today, user } = await pageContext();
+  const { db, companyId, today } = await pageContext();
   const o = await loadOrder(db, companyId, orderId);
   const v = o?.visits.find(x => x.id === visitId);
-  if (!o || !v) missingRecord('/schedule');
+  if (!o || !v) notFound();
   const t = await getTranslations('compose');
   const w = await getTranslations('words');
   const tt = await getTranslations('time');
   const installers = (await listInstallers(companyId)).filter(x => x.active || x.id === v.installerId);
   const inst = installers.find(x => x.id === i) ?? installers.find(x => x.id === v.installerId) ?? installers[0];
-  if (!inst) missingRecord('/schedule');
+  if (!inst) notFound();
   const amount = collectsCash(v) && !v.doneAt ? toCollect(o) : 0;
   const assign = inst.id !== v.installerId;
   return (
@@ -38,9 +37,6 @@ export default async function SendVisitPage({ params, searchParams }: { params: 
         textNoCollect={amount > 0 ? installerJobText(o, v, false) : undefined}
         collectLabel={t('collect', { amount: eur(amount) })}
         log={{ kind: 'installer', installerId: inst.id, visitIds: [v.id], mode: 'visit', assign, back: `/orders/${o.id}` }}
-        demo={isDemoMode()}
-        demoPhone={await demoPhone()}
-        sender={user.firstName}
       >
         <div className="field">
           <span className="label">{t('pick')}</span>

@@ -43,6 +43,5 @@
   "depositWord": "Avans",
   "modules": {
     "orderTracking": true
-  },
-  "demo": true
+  }
 }

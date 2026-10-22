@@ -24,7 +24,7 @@ export function Sheet({
   title: ReactNode;
   sub?: ReactNode;
   children: ReactNode;
-  /** false: focus the close button even on laptops (sheets whose first field isn't the point, e.g. the demo panel). */
+  /** false: focus the close button even on laptops (sheets whose first field isn't the point). */
   autoFocusField?: boolean;
 }) {
   const t = useTranslations('ui');

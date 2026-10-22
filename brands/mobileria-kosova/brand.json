@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 2,
+  "slug": "mobileria-kosova",
+  "companyName": "Mobileria Kosova",
+  "shortName": "Mobileria",
+  "tagline": { "sq": "Kuzhina dhe mobilje me porosi", "en": "Made-to-measure kitchens and furniture", "de": "Küchen und Möbel nach Maß" },
+  "logo": { "src": "none", "alt": "Mobileria Kosova" },
+  "colors": { "primary": "#7A4A32", "accent": "#C9A66B", "background": "#FFFFFF", "text": "#231C18" },
+  "font": "Inter",
+  "contact": {
+    "phone": "+38344100200",
+    "whatsapp": "+38344100200",
+    "viber": "+38344100200",
+    "email": "",
+    "address": "",
+    "city": "Prishtinë",
+    "mapsUrl": "",
+    "googleReviewUrl": ""
+  },
+  "legal": { "businessNumber": "", "fiscalNumber": "", "vatNumber": "", "bankName": "", "iban": "", "website": "" },
+  "languages": ["sq", "en", "de"],
+  "defaultLanguage": "sq",
+  "businessType": "kitchens",
+  "depositWord": "Avans",
+  "modules": { "orderTracking": true }
+}

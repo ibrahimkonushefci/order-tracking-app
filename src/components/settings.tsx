@@ -1,5 +1,6 @@
 'use client';
-/** Cilësimet: add/edit an installer (both roles), and the customer message templates per language (Pronari). */
+/** Cilësimet: add/edit an installer (both roles), delete or remove one (Pronari), and the customer message templates per language (Pronari). */
+import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as A from '@/app/(app)/actions';
@@ -14,11 +15,14 @@ export interface InstallerRow {
   phone: string;
   channel: 'whatsapp' | 'viber';
   active: boolean;
+  /** Pronari only (deleting is owner-only): what points to this installer, for "Fshij". */
+  use?: { records: number; openVisits: number; heldCash: string | null };
 }
 
 export function InstallerButton({ installer, className, children, ariaLabel }: { installer?: InstallerRow; className: string; children: React.ReactNode; ariaLabel?: string }) {
   const t = useTranslations('installers');
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [channel, setChannel] = useState<string>(installer?.channel ?? 'whatsapp');
   const [active, setActive] = useState(installer?.active ?? true);
   const { errors, pending, submit } = useAction(f => A.saveInstallerAction(installer?.id ?? null, f), () => setOpen(false));
@@ -27,7 +31,9 @@ export function InstallerButton({ installer, className, children, ariaLabel }: {
       <button type="button" className={className} onClick={() => setOpen(true)} aria-label={ariaLabel}>
         {children}
       </button>
-      {open ? (
+      {open && removing && installer?.use ? (
+        <RemoveInstallerSheet installer={installer} use={installer.use} onClose={() => setOpen(false)} onBack={() => setRemoving(false)} />
+      ) : open ? (
         <Sheet open onClose={() => setOpen(false)} title={installer ? t('editTitle') : t('addTitle')} sub={t('sub')}>
           <form onSubmit={submit} className="form" noValidate>
             <Field name="name" label={t('name')} req errors={errors} htmlFor="in-name">
@@ -51,10 +57,62 @@ export function InstallerButton({ installer, className, children, ariaLabel }: {
             ) : null}
             <FormAlert errors={errors} />
             <SheetActions label={installer ? t('save') : t('add')} pending={pending} onCancel={() => setOpen(false)} />
+            {installer?.use ? (
+              <button type="button" className="btn btn--ghost btn--sm btn--fit" onClick={() => setRemoving(true)}>
+                <Icon name="trash" /> {t('delete')}
+              </button>
+            ) : null}
           </form>
         </Sheet>
       ) : null}
     </>
+  );
+}
+
+/**
+ * "Fshij montuesin": never used → deleted for good; used → "Hiq nga lista" (inactive, the name
+ * stays on every visit, payment and message). Cash in hand or open visits are settled first.
+ */
+function RemoveInstallerSheet({ installer, use, onClose, onBack }: { installer: InstallerRow; use: NonNullable<InstallerRow['use']>; onClose: () => void; onBack: () => void }) {
+  const t = useTranslations('installers');
+  const { errors, pending, submit } = useAction(() => A.removeInstallerAction(installer.id), onClose);
+  const blocked = !!use.heldCash || use.openVisits > 0;
+  return (
+    <Sheet open onClose={onClose} title={use.records ? t('removeTitle', { name: installer.name }) : t('deleteTitle', { name: installer.name })}>
+      <form onSubmit={submit} className="form">
+        {blocked ? (
+          <div className="callout callout--warning">
+            <Icon name="alert" />
+            <span>
+              {use.heldCash ? (
+                <>
+                  {t('blockedCash', { name: installer.name, amount: use.heldCash })} <Link href="/cash">{t('toCash')}</Link>
+                  <br />
+                </>
+              ) : null}
+              {use.openVisits ? (
+                <>
+                  {t('blockedVisits', { name: installer.name, n: use.openVisits })} <Link href="/schedule?d=week">{t('toSchedule')}</Link>
+                </>
+              ) : null}
+            </span>
+          </div>
+        ) : (
+          <div className={`callout ${use.records ? 'callout--neutral' : 'callout--warning'}`}>
+            <Icon name={use.records ? 'help' : 'alert'} />
+            <span>{use.records ? t('removeHelp', { name: installer.name, n: use.records }) : t('deleteHelp', { name: installer.name })}</span>
+          </div>
+        )}
+        <FormAlert errors={errors} />
+        {blocked ? (
+          <button className="btn btn--secondary btn--lg" type="button" onClick={onBack}>
+            {t('back')}
+          </button>
+        ) : (
+          <SheetActions label={use.records ? t('removeYes') : t('deleteYes')} tone="danger" pending={pending} onCancel={onBack} />
+        )}
+      </form>
+    </Sheet>
   );
 }
 

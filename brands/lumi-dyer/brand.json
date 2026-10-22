@@ -22,6 +22,5 @@
   "defaultLanguage": "sq",
   "businessType": "doors_floors",
   "depositWord": "Kapar",
-  "modules": { "orderTracking": true },
-  "demo": true
+  "modules": { "orderTracking": true }
 }

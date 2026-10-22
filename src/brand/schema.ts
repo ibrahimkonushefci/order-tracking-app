@@ -48,7 +48,6 @@ export const brandSchema = z.object({
   /** Default for the company's deposit word; the setting can change it. */
   depositWord: z.enum(['Avans', 'Kapar']).default('Avans'),
   modules: z.record(z.string(), z.boolean()).default({ orderTracking: true }),
-  demo: z.boolean().default(false),
 });
 
 export type Brand = z.infer<typeof brandSchema>;

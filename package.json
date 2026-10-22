@@ -15,12 +15,13 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:demo-off": "playwright test --config playwright.demo-off.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "fixtures": "tsx scripts/fixtures.ts",
-    "demo": "tsx scripts/demo.ts",
-    "deploy:demo": "bash scripts/deploy-demo.sh",
+    "provision": "tsx scripts/provision.ts",
+    "account": "tsx scripts/account.ts",
+    "presentation:clear": "tsx scripts/presentation-clear.ts",
+    "deploy:app": "bash scripts/deploy.sh",
     "vercel-build": "tsx scripts/migrate.ts && next build --webpack"
   },
   "dependencies": {

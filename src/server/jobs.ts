@@ -3,7 +3,6 @@ import { headers } from 'next/headers';
 import { allJobs, type VisitOrder } from '@/domain/visits';
 import type { JobLite } from '@/components/sheets/visit';
 import { addDays } from '@/lib/dates';
-import { publicBase } from './demo';
 
 /** Every visit from two weeks back to two months ahead, small enough to send to the visit sheet for live load. */
 export function jobLites(orders: (VisitOrder & { client: { name: string } })[], today: string): JobLite[] {
@@ -14,10 +13,13 @@ export function jobLites(orders: (VisitOrder & { client: { name: string } })[], 
     .map(({ o, v }) => ({ id: v.id, installerId: v.installerId, date: v.date, time: v.time, type: v.type, client: o.client.name, city: o.city }));
 }
 
-/**
- * The public address of the tracking page: APP_URL when set (deployments); in demo mode on the
- * laptop, DEMO_PUBLIC_URL (the online demo, so a phone can open it); otherwise this request's host.
- */
+/** APP_URL (e.g. https://order-tracking-test.vercel.app) when it is a valid address, else null. */
+function publicBase(): string | null {
+  const v = (process.env.APP_URL ?? '').trim().replace(/\/$/, '');
+  return /^https?:\/\//.test(v) ? v : null;
+}
+
+/** The public address of the tracking page: APP_URL when set (deployments), otherwise this request's host. */
 export async function trackingUrl(token: string): Promise<string> {
   const base = publicBase();
   if (base) return `${base}/t/${token}`;

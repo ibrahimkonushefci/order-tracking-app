@@ -3,8 +3,6 @@ import fs from 'node:fs';
 import { brandSchema } from '@/brand/schema';
 import { readBrand, listBrandSlugs } from '@/brand/files';
 import { contrast, contrastRatio, darkShades, brandCssVars, heroBase } from '@/brand/theme';
-import { extractColors } from '@/brand/extract-colors';
-import { slugify } from '@/brand/slug';
 
 describe('brand.json v2', () => {
   it('every brand in /brands is valid', async () => {
@@ -85,29 +83,5 @@ describe('theme', () => {
     const v = brandCssVars({ primary: '#365C50', accent: '#B99A70', background: '#FFFFFF', text: '#1A1A1A' });
     expect(v['--brand-primary']).toBe('#365C50');
     expect(v['--brand-ink-dark']).toMatch(/^#[0-9A-F]{6}$/);
-  });
-});
-
-describe('logo colour extraction (3d_designer method)', () => {
-  const px = (r: number, g: number, b: number, a = 255) => [r, g, b, a];
-  it('skips transparent and near-white pixels and ranks the rest', () => {
-    const data = [
-      ...Array(10).fill(px(54, 92, 80)).flat(), // brand green ×10
-      ...Array(4).fill(px(185, 154, 112)).flat(), // accent ×4
-      ...Array(50).fill(px(255, 255, 255)).flat(), // white background
-      ...Array(50).fill(px(0, 0, 0, 0)).flat(), // transparent
-    ];
-    const out = extractColors(data);
-    expect(out).toHaveLength(2);
-    expect(out[0]).toBe('#406060');
-    expect(out[1]).toBe('#C0A080');
-  });
-});
-
-describe('slugify', () => {
-  it('folds Albanian letters and symbols', () => {
-    expect(slugify('Lumi Dyer & Parket')).toBe('lumi-dyer-parket');
-    expect(slugify('Çeliku Këndi')).toBe('celiku-kendi');
-    expect(slugify('  ')).toBe('');
   });
 });

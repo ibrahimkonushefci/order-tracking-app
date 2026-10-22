@@ -10,7 +10,7 @@ import { getCurrentUser } from '@/auth/session';
 import { ForbiddenError } from '@/auth/permissions';
 import { getDb } from '@/db/client';
 import type { Db } from '@/db/connect';
-import { appNow, appToday } from '@/server/today';
+import { todayIso } from '@/lib/dates';
 import { eur } from '@/lib/money';
 import { FieldError, FieldErrors, NotFoundError, type Actor } from '@/services/common';
 import * as O from '@/services/orders';
@@ -28,7 +28,7 @@ async function run(fn: (db: Db, actor: Actor, today: string) => Promise<Omit<Act
   const u = await getCurrentUser();
   if (!u?.companyId) return { errors: { _: te('forbidden') } };
   try {
-    const r = await fn(await getDb(), { id: u.id, role: u.role, companyId: u.companyId, firstName: u.firstName }, await appToday());
+    const r = await fn(await getDb(), { id: u.id, role: u.role, companyId: u.companyId, firstName: u.firstName }, todayIso());
     revalidatePath('/', 'layout');
     return { ok: true, ...(r ?? {}) };
   } catch (e) {
@@ -404,7 +404,7 @@ export async function completeVisitAction(orderId: string, visitId: string, f: F
 export async function logCustomerMessageAction(kind: 'order' | 'opening', id: string, input: M.SentInput) {
   const tt = await getTranslations('toast');
   return run(async (db, a) => {
-    await M.logCustomerMessage(db, a, kind === 'order' ? { orderId: id } : { openingId: id }, input, await appNow());
+    await M.logCustomerMessage(db, a, kind === 'order' ? { orderId: id } : { openingId: id }, input, new Date());
     return { toast: tt('messageLogged'), go: kind === 'order' ? `/orders/${id}` : `/debts/${id}` };
   });
 }
@@ -412,7 +412,7 @@ export async function logCustomerMessageAction(kind: 'order' | 'opening', id: st
 export async function logInstallerMessageAction(input: M.InstallerSentInput, back: string) {
   const tt = await getTranslations('toast');
   return run(async (db, a) => {
-    await M.logInstallerMessage(db, a, input, await appNow());
+    await M.logInstallerMessage(db, a, input, new Date());
     return { toast: tt('installerLogged'), go: back.startsWith('/') ? back : '/schedule' };
   });
 }
@@ -442,6 +442,14 @@ export async function saveInstallerAction(id: string | null, f: FormData) {
   return run(async (db, a) => {
     await M.saveInstaller(db, a, id, { name: s(f, 'name'), phoneCc: s(f, 'phoneCc'), phone: s(f, 'phone'), channel: s(f, 'channel'), active: id ? f.get('active') !== '0' : true });
     return { toast: id ? tt('installerSaved') : tt('installerAdded') };
+  });
+}
+
+export async function removeInstallerAction(id: string) {
+  const tt = await getTranslations('toast');
+  return run(async (db, a) => {
+    const r = await M.removeInstaller(db, a, id);
+    return { toast: r === 'deleted' ? tt('installerDeleted') : tt('installerRemoved') };
   });
 }
 

@@ -1,4 +1,4 @@
-/** Reading and writing /brands/<slug>/ (no Next.js imports, so scripts and tests can use it). */
+/** Reading /brands/<slug>/ (no Next.js imports, so scripts and tests can use it). Brands are added through Git. */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { FALLBACK_BRAND } from './fallback';
@@ -48,16 +48,3 @@ export async function listBrandSlugs(): Promise<string[]> {
   }
 }
 
-/** Writes a validated brand and its logo (from /setup). Never overwrites another file type's logo silently. */
-export async function writeBrand(brand: Brand, logo?: { ext: '.svg' | '.png'; data: Buffer }) {
-  const parsed = brandSchema.parse(brand);
-  const dir = path.join(BRANDS_DIR, parsed.slug);
-  await fs.mkdir(dir, { recursive: true });
-  if (logo) {
-    const name = `logo${logo.ext}`;
-    await fs.writeFile(path.join(dir, name), logo.data);
-    parsed.logo = { ...parsed.logo, src: name };
-  }
-  await fs.writeFile(path.join(dir, 'brand.json'), JSON.stringify(parsed, null, 2) + '\n');
-  return parsed;
-}
