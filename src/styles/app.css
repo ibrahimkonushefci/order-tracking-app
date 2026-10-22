@@ -105,3 +105,11 @@ button.chip[aria-pressed="true"] .chip__count {opacity:1;color:inherit}
   box-shadow:0 0 0 4px var(--color-primary-soft-2);
 }
 .trk-step--current .trk-step__label {color:var(--color-primary-ink);font-weight:600}
+
+/* Typed dates (DateInput): day first, a calendar button that opens the phone's own picker. */
+.date-wrap {position:relative}
+.date-wrap .input {padding-right:48px}
+.date-wrap__btn {position:absolute;top:0;right:0;display:grid;place-items:center;width:44px;height:100%;border:0;background:none;color:var(--color-text-muted)}
+.date-wrap__btn svg {width:17px;height:17px}
+.date-wrap__picker {position:absolute;right:0;bottom:0;width:44px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+.help--echo {color:var(--color-text)}

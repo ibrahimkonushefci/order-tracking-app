@@ -56,7 +56,7 @@ test('Planifiko vizitë shows each installer’s load on the chosen date', async
     const d = new Date();
     for (let i = 1; i <= 7; i++) {
       const x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i);
-      if (x.getDay() === 5) return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+      if (x.getDay() === 5) return `${x.getDate()}.${x.getMonth() + 1}.${x.getFullYear()}`;
     }
     return '';
   });
@@ -79,7 +79,7 @@ test('Dërgo Dritonit punët e nesërme → WhatsApp → "U dërgua?" → logged
   await page.getByRole('link', { name: /Dërgo Dritonit punët e nesërme/ }).click();
   const text = page.locator('#msg-text');
   await expect(text).toHaveValue(/^Punët për nesër,/);
-  await expect(text).toHaveValue(/Liridona Shala · \+49 15 112 345678/);
+  await expect(text).toHaveValue(/Liridona Shala · \+4915112345678/);
   await expect(text).toHaveValue(/Mblidh: 900€/);
   await page.getByText('Shto “Mblidh” në mesazh').click();
   await expect(text).not.toHaveValue(/Mblidh/);

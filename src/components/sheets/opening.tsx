@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import * as A from '@/app/(app)/actions';
 import { eur } from '@/lib/money';
-import { Field, FormAlert, SheetActions, useAction } from '../forms';
+import { DateInput, Field, FormAlert, SheetActions, useAction } from '../forms';
 import { Icon } from '../icons';
 import { Sheet } from '../sheet';
 import { NoRemindersToggle, PauseSheet } from './order';
@@ -50,7 +50,7 @@ export function SetDueButton({ id }: { id: string }) {
       <Sheet open={open} onClose={() => setOpen(false)} title={t('dueTitle')} sub={t('dueSub')}>
         <form onSubmit={submit} className="form">
           <Field name="due" errors={errors}>
-            <input className="input" type="date" name="due" aria-label={t('dueTitle')} />
+            <DateInput name="due" label={t('dueTitle')} />
           </Field>
           <FormAlert errors={errors} />
           <SheetActions label={t('saveDue')} pending={pending} onCancel={() => setOpen(false)} />

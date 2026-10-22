@@ -1,10 +1,12 @@
 'use client';
 /** Form pieces in the prototype's markup: fields, money inputs, chip radios, "Ku janë paratë?", the payment term. */
-import { useState, useTransition, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ActionResult } from '@/app/(app)/action-result';
-import { PHONE_CODES, splitPhone } from '@/lib/phone';
+import { fmtDate, fmtMonth, fmtMonthShort, fmtSpelled, parseDayInput, parseMonthInput } from '@/lib/dates';
+import { eur, parseEur } from '@/lib/money';
+import { PHONE_CODES, phoneChars, splitPhone } from '@/lib/phone';
 import { Icon } from './icons';
 import { toast } from './sheet';
 
@@ -20,6 +22,13 @@ export function useAction(action: (f: FormData) => Promise<ActionResult>, onOk?:
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (pending) return;
+    // A date typed so that it can't be read: say so there instead of saving without it.
+    const bad = e.currentTarget.querySelector<HTMLInputElement>('.input[aria-invalid="true"]');
+    if (bad) {
+      bad.focus();
+      bad.dispatchEvent(new Event('focusout', { bubbles: true }));
+      return;
+    }
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
     run(new FormData(e.currentTarget, submitter));
   };
@@ -91,8 +100,28 @@ export function Field({
   );
 }
 
-/** The amount input with the € sign after it; accepts "4500", "4,500", "1250.50" (and the older "4.500", "1250,50"). */
-/** "Prefiksi" and the number (form fields `phoneCc` and `phone`); a saved number is split into both. */
+/** `onInput` for counts (quantities): anything but digits is dropped as it's typed. */
+export function digitsOnly(e: FormEvent<HTMLInputElement>) {
+  const el = e.currentTarget;
+  const v = el.value.replace(/\D/g, '');
+  if (v !== el.value) el.value = v;
+}
+
+/** Keeps a field's own state in step with `form.reset()` ("Ruaj dhe shto tjetër"). */
+function useOnReset(ref: RefObject<HTMLInputElement | null>, onReset: () => void) {
+  const cb = useRef(onReset);
+  useEffect(() => {
+    cb.current = onReset;
+  });
+  useEffect(() => {
+    const form = ref.current?.form;
+    const h = () => cb.current();
+    form?.addEventListener('reset', h);
+    return () => form?.removeEventListener('reset', h);
+  }, [ref]);
+}
+
+/** "Prefiksi" and the number (form fields `phoneCc` and `phone`); a saved number is split into both. Letters can't be typed. */
 export function PhoneInput({ id, value, prefixLabel }: { id: string; value?: string | null; prefixLabel: string }) {
   const { cc, local } = splitPhone(value);
   return (
@@ -102,17 +131,180 @@ export function PhoneInput({ id, value, prefixLabel }: { id: string; value?: str
           <option key={c}>{c}</option>
         ))}
       </select>
-      <input className="input" id={id} name="phone" inputMode="tel" placeholder="44 123 456" defaultValue={local || undefined} autoComplete="off" />
+      <input
+        className="input"
+        id={id}
+        name="phone"
+        type="tel"
+        inputMode="tel"
+        placeholder="44123456"
+        defaultValue={local || undefined}
+        autoComplete="off"
+        onInput={e => {
+          const el = e.currentTarget;
+          const v = phoneChars(el.value);
+          if (v !== el.value) el.value = v;
+        }}
+      />
     </div>
   );
 }
 
+/**
+ * The amount input with the € sign after it. Only digits, "," and "." can be typed; "19,350", "19.350" and "19350"
+ * are the same, "1,250.50" and "10.5" have cents. What was understood shows underneath ("= 19,350€").
+ */
 export function MoneyInput({ name, defaultValue, id, autoFocus }: { name: string; defaultValue?: number | null; id?: string; autoFocus?: boolean }) {
+  const t = useTranslations('form');
   const v = defaultValue && defaultValue > 0 ? (defaultValue / 100).toFixed(defaultValue % 100 ? 2 : 0) : '';
+  const [text, setText] = useState(v);
+  const ref = useRef<HTMLInputElement>(null);
+  useOnReset(ref, () => setText(v));
+  const cents = parseEur(text);
+  // Only worth saying when the amount was typed with a separator, or can't be read.
+  const echo = !text.trim() ? null : cents == null ? t('amountInvalid') : /[.,]/.test(text) ? `= ${eur(cents)}` : null;
   return (
-    <div className="money-wrap">
-      <input className="input input--money" id={id ?? `m-${name}`} name={name} inputMode="decimal" defaultValue={v} autoComplete="off" placeholder="0" autoFocus={autoFocus} />
-    </div>
+    <>
+      <div className="money-wrap">
+        <input
+          ref={ref}
+          className="input input--money"
+          id={id ?? `m-${name}`}
+          name={name}
+          inputMode="decimal"
+          value={text}
+          onChange={e => setText(e.target.value.replace(/[^\d.,\s]/g, ''))}
+          autoComplete="off"
+          placeholder="0"
+          autoFocus={autoFocus}
+        />
+      </div>
+      {echo ? <div className={cents == null ? 'error' : 'help help--echo'}>{echo}</div> : null}
+    </>
+  );
+}
+
+/**
+ * A date typed day first, as "22.10.2026" (or "22/10/26", "1-6-2025"), or a month ("06.2025", "6/25") with `month`.
+ * The form gets yyyy-MM-dd / yyyy-MM in a hidden field `name`; the day spelled out underneath catches mix-ups.
+ * The calendar button opens the phone's own picker. Text that can't be read blocks saving (see useAction).
+ */
+export function DateInput({
+  name,
+  month,
+  id,
+  defaultValue,
+  value,
+  onChange,
+  min,
+  max,
+  label,
+}: {
+  name: string;
+  month?: boolean;
+  id?: string;
+  defaultValue?: string | null;
+  value?: string;
+  onChange?: (iso: string) => void;
+  min?: string;
+  max?: string;
+  label?: string;
+}) {
+  const t = useTranslations('form');
+  const show = (iso: string | null | undefined) => (!iso ? '' : month ? fmtMonthShort(iso) : fmtDate(iso));
+  const [text, setText] = useState(show(value ?? defaultValue));
+  const [touched, setTouched] = useState(false);
+  const ref = useRef<HTMLInputElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const parse = month ? parseMonthInput : parseDayInput;
+  const iso = parse(text);
+  // A controlled value changed from outside (e.g. "Nesër" chips): show it.
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    if (value !== (iso ?? '')) setText(show(value));
+  }
+  useOnReset(ref, () => {
+    setText(show(defaultValue));
+    setTouched(false);
+  });
+  const set = (v: string) => {
+    setText(v);
+    const next = parse(v);
+    if (onChange && (next ?? '') !== (value ?? '')) onChange(next ?? '');
+  };
+  const err = !text.trim()
+    ? null
+    : !iso
+      ? t(month ? 'monthInvalid' : 'dateInvalid')
+      : min && iso < min
+        ? t('dateMin', { date: fmtDate(min) })
+        : max && iso > max
+          ? t('dateMax', { date: fmtDate(max) })
+          : null;
+  return (
+    <>
+      <div className={month ? undefined : 'date-wrap'}>
+        <input
+          ref={ref}
+          className="input"
+          id={id}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder={month ? t('monthPh') : t('datePh')}
+          aria-label={label}
+          aria-invalid={err ? true : undefined}
+          value={text}
+          onChange={e => set(e.target.value.replace(/[^\d./\-\s]/g, ''))}
+          onBlur={() => {
+            setTouched(true);
+            // "1/7/25" is tidied to "01.07.2025", the way the app shows dates.
+            if (iso) setText(show(iso));
+          }}
+        />
+        {month ? null : (
+          <>
+            <button
+              type="button"
+              className="date-wrap__btn"
+              aria-label={t('pickDate')}
+              onClick={() => {
+                const p = picker.current;
+                if (!p) return;
+                p.value = iso ?? '';
+                try {
+                  p.showPicker();
+                } catch {
+                  p.focus();
+                }
+              }}
+            >
+              <Icon name="calendar" />
+            </button>
+            <input
+              ref={picker}
+              type="date"
+              className="date-wrap__picker"
+              tabIndex={-1}
+              aria-hidden
+              min={min}
+              max={max}
+              onChange={e => {
+                if (e.target.value) set(fmtDate(e.target.value));
+              }}
+            />
+          </>
+        )}
+      </div>
+      <input type="hidden" name={name} value={iso ?? (text.trim() ? 'invalid' : '')} />
+      {err && touched ? (
+        <div className="error" role="alert">
+          {err}
+        </div>
+      ) : iso && !err ? (
+        <div className="help help--echo">{month ? fmtMonth(iso) : fmtSpelled(iso)}</div>
+      ) : null}
+    </>
   );
 }
 
@@ -150,6 +342,8 @@ export function Chips<V extends string>({
 export interface InstallerOpt {
   id: string;
   name: string;
+  /** Where the visit's "Ruaj dhe dërgo" goes; WhatsApp when not given. */
+  channel?: 'whatsapp' | 'viber';
 }
 
 /** "Ku janë paratë?": [Te Driton] [Te Faton] … [Në zyrë]. */
@@ -197,7 +391,7 @@ export function TermField({
   return (
     <Field name="term" label={label ?? t('when')} errors={errors}>
       <Chips name="term" value={value as 'week'} onChange={onChange} options={keys.map(k => [k, w(`term.${k}`)] as const)} />
-      {withDate && value === 'date' ? <input className="input" type="date" name="termDate" aria-label={t('termDate')} defaultValue={dateDefault ?? ''} /> : null}
+      {withDate && value === 'date' ? <DateInput name="termDate" label={t('termDate')} defaultValue={dateDefault} /> : null}
       {value === 'unknown' ? <div className="help">{t('unknownHelp')}</div> : null}
     </Field>
   );

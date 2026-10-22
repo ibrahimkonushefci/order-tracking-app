@@ -3,8 +3,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createOrderAction } from '../../actions';
-import { Chips, Field, FormAlert, MethodField, MoneyInput, useAction } from '@/components/forms';
-import { fmtPhone, PHONE_CODES, splitPhone } from '@/lib/phone';
+import { Chips, digitsOnly, Field, FormAlert, MethodField, MoneyInput, useAction } from '@/components/forms';
+import { fmtPhone, PHONE_CODES, phoneChars, splitPhone } from '@/lib/phone';
 
 const UNITS = ['copë', 'm²', 'banesa'] as const;
 
@@ -59,11 +59,14 @@ export function NewOrderForm({ products, cities, homeCity, depositWord, clients 
               className="input"
               id="f-phone"
               name="phone"
+              type="tel"
               inputMode="tel"
-              placeholder="44 123 456"
+              placeholder="44123456"
               autoComplete="off"
               ref={phoneRef}
-              onChange={() => {
+              onChange={e => {
+                const v = phoneChars(e.target.value);
+                if (v !== e.target.value) e.target.value = v;
                 filled.current = false;
               }}
             />
@@ -89,7 +92,7 @@ export function NewOrderForm({ products, cities, homeCity, depositWord, clients 
           <textarea className="textarea" name="directions" aria-label={t('directions')} placeholder={t('directionsPh')} />
         </Field>
         <Field label={t('note')} opt={t('noteOpt')} htmlFor="no-note">
-          <textarea className="textarea" id="no-note" name="internalNote" style={{ minHeight: 64 }} />
+          <textarea className="textarea" id="no-note" name="internalNote" placeholder={t('notePh')} style={{ minHeight: 64 }} />
         </Field>
         <label className="check">
           <input type="checkbox" name="project" value="1" checked={project} onChange={e => setProject(e.target.checked)} />
@@ -102,7 +105,7 @@ export function NewOrderForm({ products, cities, homeCity, depositWord, clients 
           <div className="form" data-show-if="project=1">
             <Field name="quantity" label={t('quantity')} req errors={errors} help={t('quantityHelp')} htmlFor="f-qty">
               <div className="row row--wrap">
-                <input className="input" id="f-qty" name="quantity" inputMode="numeric" placeholder={t('quantityPh')} style={{ maxWidth: 120 }} />
+                <input className="input" id="f-qty" name="quantity" inputMode="numeric" onInput={digitsOnly} placeholder={t('quantityPh')} style={{ maxWidth: 120 }} />
                 <Chips name="unit" value={unit} onChange={setUnit} options={UNITS.map(u => [u, u] as const)} />
               </div>
             </Field>

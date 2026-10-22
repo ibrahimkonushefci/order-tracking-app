@@ -486,7 +486,15 @@
     "method": "Mënyra",
     "when": "Kur paguan pjesën tjetër?",
     "termDate": "Data e pagesës",
-    "unknownHelp": "Do të shfaqet si “Afat i panjohur”: në total, jo te vonesat."
+    "unknownHelp": "Do të shfaqet si “Afat i panjohur”: në total, jo te vonesat.",
+    "datePh": "p.sh. 22.10.2026",
+    "monthPh": "p.sh. 06.2025",
+    "dateInvalid": "Shkruani datën si 22.10.2026 (dita.muaji.viti).",
+    "monthInvalid": "Shkruani muajin si 06.2025 (muaji.viti).",
+    "dateMin": "Data duhet të jetë {date} ose më vonë.",
+    "dateMax": "Data duhet të jetë {date} ose më herët.",
+    "pickDate": "Zgjidh në kalendar",
+    "amountInvalid": "Shkruani vetëm shifra, p.sh. 19,350 ose 1,250.50."
   },
   "money": {
     "barTitle": "Në zyrë {office} · te montuesit {held}",
@@ -547,7 +555,8 @@
     "r1": "U regjistrua dy herë",
     "r2": "Shuma e gabuar",
     "r3": "Porosi e gabuar",
-    "r4": "Klienti nuk pagoi"
+    "r4": "Klienti nuk pagoi",
+    "notePh": "p.sh. Pagoi djali i tij"
   },
   "order": {
     "stage": "Faza",
@@ -684,7 +693,8 @@
     "pause": "Pauzo kujtesat për borxh deri në përfundim",
     "save": "Ruaj",
     "clear": "Puna u përfundua",
-    "cleared": "Puna u shënua e përfunduar."
+    "cleared": "Puna u shënua e përfunduar.",
+    "whatPh": "p.sh. Mungojnë 2 dorezat, montohen javën tjetër"
   },
   "errorPage": {
     "notFoundTitle": "Faqja nuk u gjet",
@@ -754,7 +764,8 @@
     "eachPart": "Çdo montim paguhet",
     "eachPartHelp": "Borxh bëhet vetëm vlera e pjesëve të montuara, jo gjithë kontrata.",
     "save": "Ruaj porosinë",
-    "saving": "Duke ruajtur…"
+    "saving": "Duke ruajtur…",
+    "notePh": "p.sh. Do ngjyrë më të errët; thirreni pas orës 16"
   },
   "openingForm": {
     "title": "Borxh i bartur",
@@ -922,7 +933,9 @@
     "reopenRemainingSub": "Klienti sheh sërish “Po përfundojmë detajet e fundit”.",
     "reopenRemainingWhat": "Çfarë ka mbetur?",
     "reopenPause": "Pauzo kujtesat për borxh deri më {date}",
-    "reopenPauseKept": "Kujtesat janë tashmë në pauzë deri më {date}."
+    "reopenPauseKept": "Kujtesat janë tashmë në pauzë deri më {date}.",
+    "reopenRemainingPh": "p.sh. Mungojnë 2 dorezat, montohen javën tjetër",
+    "doneNotePh": "p.sh. Klienti kërkoi edhe një raft"
   },
   "visitDone": {
     "finishRemaining": "Puna u përfundua",

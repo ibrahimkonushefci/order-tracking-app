@@ -91,10 +91,14 @@ export async function log(
   });
 }
 
-/** Phone input → E.164. "044 123 456" with +383 → "+38344123456"; null when it doesn't look like a number. */
+/**
+ * Phone input → E.164. "044 123 456" with +383 → "+38344123456"; "(+383)44123456" → "+38344123456";
+ * null when it doesn't look like a number (letters included).
+ */
 export function toE164(cc: string, raw: string): string | null {
-  const t = String(raw ?? '').trim();
+  const t = String(raw ?? '').trim().replace(/[\s()\-./]/g, '');
   if (!t) return null;
+  if (/[^\d+]/.test(t)) return null;
   if (t.startsWith('+') || t.startsWith('00')) {
     const d = t.replace(/^00/, '+').replace(/[^\d+]/g, '');
     return /^\+\d{8,15}$/.test(d) ? d : null;

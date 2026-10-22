@@ -10,7 +10,7 @@ import * as A from '@/app/(app)/actions';
 import { loadTone, definite } from '@/domain/visits';
 import { addDays, MONTHS, WEEKDAYS_ON } from '@/lib/dates';
 import { eur } from '@/lib/money';
-import { Chips, Field, FormAlert, HolderField, MethodField, MoneyInput, SheetActions, TermField, useAction, type InstallerOpt } from '../forms';
+import { Chips, DateInput, digitsOnly, Field, FormAlert, HolderField, MethodField, MoneyInput, SheetActions, TermField, useAction, type InstallerOpt } from '../forms';
 import { Icon } from '../icons';
 import { Sheet } from '../sheet';
 
@@ -99,6 +99,7 @@ function VisitSheet({ o, visit, installers, jobs, today, date: initialDate, onCl
   const initialTime = !visit?.time ? (visit ? 'none' : 'morning') : visit.time === 'morning' || visit.time === 'afternoon' ? visit.time : 'exact';
   const [time, setTime] = useState(initialTime);
   const [inst, setInst] = useState(visit ? (visit.installerId ?? 'none') : (o.lastInstallerId ?? installers[0]?.id ?? 'none'));
+  const sendCh = installers.find(i => i.id === inst)?.channel ?? 'whatsapp';
   const [confirmRemove, setConfirmRemove] = useState(false);
   const { errors, pending, submit } = useAction(f => A.saveVisitAction(o.id, visit?.id ?? null, f), onClose);
   const remove = useAction(() => A.removeVisitAction(o.id, visit!.id), onClose);
@@ -164,7 +165,7 @@ function VisitSheet({ o, visit, installers, jobs, today, date: initialDate, onCl
           <Chips name="type" value={type} onChange={setType} options={TYPES.map(k => [k, w(`visit.${k}`)] as const)} />
         </Field>
         <Field name="date" label={t('date')} req errors={errors} htmlFor="vs-date">
-          <input className="input" id="vs-date" type="date" name="date" value={date} onChange={e => setDate(e.target.value)} />
+          <DateInput id="vs-date" name="date" value={date} onChange={setDate} />
         </Field>
         <Field name="exact" label={t('time')} opt errors={errors}>
           <Chips
@@ -205,8 +206,8 @@ function VisitSheet({ o, visit, installers, jobs, today, date: initialDate, onCl
           <button className="btn btn--primary btn--lg" type="submit" name="then" value="save" disabled={pending}>
             {t('save')}
           </button>
-          <button className="btn btn--whatsapp btn--lg" type="submit" name="then" value="send" disabled={pending}>
-            <Icon name="whatsapp" /> {t('saveSend')}
+          <button className={`btn btn--${sendCh} btn--lg`} type="submit" name="then" value="send" disabled={pending}>
+            <Icon name={sendCh} /> {t('saveSend')}
           </button>
         </div>
         {visit ? (
@@ -293,7 +294,7 @@ function DoneVisitSheet({ o, visit: v, installers, today, payments, restore, onC
               {again ? (
                 <>
                   <Field name="remainingNote" label={t('reopenRemainingWhat')} req errors={back.errors} htmlFor="rv-note">
-                    <textarea className="textarea" id="rv-note" name="remainingNote" defaultValue={restore.note} />
+                    <textarea className="textarea" id="rv-note" name="remainingNote" defaultValue={restore.note} placeholder={t('reopenRemainingPh')} />
                   </Field>
                   {restore.pausedUntil ? (
                     <div className="help">{t('reopenPauseKept', { date: fmt(restore.pausedUntil) })}</div>
@@ -323,13 +324,13 @@ function DoneVisitSheet({ o, visit: v, installers, today, payments, restore, onC
     <Sheet open onClose={onClose} title={t('doneEditTitle')} sub={sub}>
       <form onSubmit={submit} className="form" noValidate>
         <Field name="date" label={t('doneDate')} req errors={errors} htmlFor="dv-date">
-          <input className="input" id="dv-date" type="date" name="date" defaultValue={v.doneAt} max={today} />
+          <DateInput id="dv-date" name="date" defaultValue={v.doneAt} max={today} />
         </Field>
         <Field name="installerId" label={t('installer')} errors={errors}>
           <Chips name="installerId" value={inst} onChange={setInst} options={[...installers.map(i => [i.id, i.name] as const), ['none', t('noInstaller')] as const]} />
         </Field>
         <Field label={t('doneNote')} opt htmlFor="dv-note">
-          <input className="input" id="dv-note" name="note" defaultValue={v.note} autoComplete="off" />
+          <input className="input" id="dv-note" name="note" defaultValue={v.note} autoComplete="off" placeholder={t('doneNotePh')} />
         </Field>
         <div className="help">{t('doneHelp')}</div>
         <FormAlert errors={errors} />
@@ -405,7 +406,7 @@ function VisitDoneSheet({ o, visit: v, installers, onClose }: { o: VisitOrderVie
       <Sheet open onClose={onClose} title={title} sub={tp('recordSub', { description: o.description, installed: p.installed, qty: p.quantity })}>
         <form onSubmit={submit} className="form" noValidate>
           <Field name="quantity" label={t('howMany', { unit: p.unit })} req errors={errors} help={tp('perUnit', { price: eur(p.unitPrice), unit: p.unit, left: p.quantity - p.installed })} htmlFor="vd-qty">
-            <input className="input input--money" id="vd-qty" name="quantity" inputMode="numeric" placeholder="0" style={{ maxWidth: 160 }} autoComplete="off" />
+            <input className="input input--money" id="vd-qty" name="quantity" inputMode="numeric" onInput={digitsOnly} placeholder="0" style={{ maxWidth: 160 }} autoComplete="off" />
           </Field>
           <label className="check">
             <input type="checkbox" checked={other} onChange={e => setOther(e.target.checked)} />

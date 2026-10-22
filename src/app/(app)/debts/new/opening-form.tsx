@@ -6,7 +6,7 @@
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { createOpeningAction } from '../../actions';
-import { Field, FormAlert, MoneyInput, PhoneInput, useAction } from '@/components/forms';
+import { DateInput, Field, FormAlert, MoneyInput, PhoneInput, useAction } from '@/components/forms';
 import { Icon } from '@/components/icons';
 
 type Mode = 'date' | 'month' | 'unknown';
@@ -68,8 +68,8 @@ export function OpeningFields({ today, errors, initial, idPrefix = 'ob', dueRese
           ['month', t('monthYear')],
           ['unknown', t('dontKnow')],
         ])}
-        {work === 'date' ? <input className="input" type="date" name="workDate" max={today} aria-label={t('workDone')} defaultValue={initial && isDate(initial.workDone) ? initial.workDone : undefined} /> : null}
-        {work === 'month' ? <input className="input" type="month" name="workMonth" aria-label={t('workDone')} defaultValue={initial && isMonth(initial.workDone) ? initial.workDone : undefined} /> : null}
+        {work === 'date' ? <DateInput name="workDate" max={today} label={t('workDone')} defaultValue={initial && isDate(initial.workDone) ? initial.workDone : undefined} /> : null}
+        {work === 'month' ? <DateInput month name="workMonth" label={t('workDone')} defaultValue={initial && isMonth(initial.workDone) ? initial.workDone : undefined} /> : null}
       </Field>
       <Field name="dueMode" label={t('due')} req errors={errors}>
         {seg('dueMode', due, setDue, [
@@ -80,12 +80,12 @@ export function OpeningFields({ today, errors, initial, idPrefix = 'ob', dueRese
         {due === '' ? <div className="help">{t('dueHelp')}</div> : null}
         {due === 'date' ? (
           <Field name="dueDate" errors={errors} help={t('dueDateHelp')}>
-            <input className="input" type="date" name="dueDate" aria-label={t('dueDate')} defaultValue={initial?.dueDate && !initial.dueApprox ? initial.dueDate : undefined} />
+            <DateInput name="dueDate" label={t('dueDate')} defaultValue={initial?.dueDate && !initial.dueApprox ? initial.dueDate : undefined} />
           </Field>
         ) : null}
         {due === 'month' ? (
           <Field name="dueMonth" errors={errors} help={t('dueMonthHelp')}>
-            <input className="input" type="month" name="dueMonth" aria-label={t('dueMonth')} defaultValue={initial?.dueDate && initial.dueApprox ? initial.dueDate.slice(0, 7) : undefined} />
+            <DateInput month name="dueMonth" label={t('dueMonth')} defaultValue={initial?.dueDate && initial.dueApprox ? initial.dueDate.slice(0, 7) : undefined} />
           </Field>
         ) : null}
         {due === 'unknown' ? (

@@ -72,7 +72,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const book = await pageBook();
   const jobs = jobLites(book.orders, today);
   const vo = visitOrderView(o);
-  const activeInst = installers.filter(i => i.active || o.visits.some(v => v.installerId === i.id)).map(i => ({ id: i.id, name: i.name }));
+  const activeInst = installers.filter(i => i.active || o.visits.some(v => v.installerId === i.id)).map(i => ({ id: i.id, name: i.name, channel: i.channel }));
+  const chOf = (id: string | null) => installers.find(i => i.id === id)?.channel ?? 'whatsapp';
   const rem = reminderCheck(tot, o, o.client.noReminders, today);
   const link = await trackingUrl(o.trackingToken);
   const firstTemplate = templatesFor(o, today)[0];
@@ -262,8 +263,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                 {t('markDone')}
               </VisitDoneButton>
             ) : null}
-            <Link className="icon-btn icon-btn--whatsapp" href={`/send/visit/${o.id}/${v.id}`} aria-label={t('sendToInstaller')}>
-              <Icon name="whatsapp" />
+            <Link className={`icon-btn icon-btn--${chOf(v.installerId)}`} href={`/send/visit/${o.id}/${v.id}`} aria-label={t('sendToInstaller')}>
+              <Icon name={chOf(v.installerId)} />
             </Link>
           </>
         ) : null}
@@ -451,7 +452,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                     </div>
                     <div className="btn-row">
                       <Link className="btn btn--soft btn--sm" href={`/compose/order/${o.id}?t=link`}>
-                        <Icon name="whatsapp" /> {t('sendLink')}
+                        <Icon name={o.client.channel === 'sms' ? 'message' : o.client.channel} /> {t('sendLink')}
                       </Link>
                       <a className="btn btn--secondary btn--sm" href={`/t/${o.trackingToken}`} target="_blank" rel="noopener">
                         <Icon name="eye" /> {t('previewLink')}

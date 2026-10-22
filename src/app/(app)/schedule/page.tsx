@@ -123,8 +123,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                       <span className="xs muted">{fmtPhone(i.phone)}</span>
                     </span>
                     {tom ? (
-                      <Link className="icon-btn icon-btn--whatsapp" href={`/send/day/${i.id}/${tomorrow}`} aria-label={t('sendTomorrow', { name: dative(i.name) })}>
-                        <Icon name="whatsapp" />
+                      <Link className={`icon-btn icon-btn--${i.channel}`} href={`/send/day/${i.id}/${tomorrow}`} aria-label={t('sendTomorrow', { name: dative(i.name) })}>
+                        <Icon name={i.channel} />
                       </Link>
                     ) : null}
                     <a className="icon-btn icon-btn--call" href={`tel:${i.phone}`} aria-label={t('call', { name: i.name })}>
@@ -190,7 +190,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
 
   const days = isDate ? [raw] : tab === 'today' ? [today] : tab === 'tomorrow' ? [tomorrow] : Array.from({ length: 7 }, (_, k) => addDays(today, k));
   const past = isDate ? [] : pastUndone(jobs, today);
-  const groups = [...b.installers.map(i => ({ id: i.id as string | null, name: i.name })), { id: null, name: w('noInstaller') }];
+  const groups = [...b.installers.map(i => ({ id: i.id as string | null, name: i.name, channel: i.channel })), { id: null, name: w('noInstaller'), channel: 'whatsapp' as const }];
   const blocks = await Promise.all(
     days.map(async day => {
       const items = jobs.filter(x => x.v.date === day && (!only || x.v.installerId === only));
@@ -245,8 +245,8 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                   </div>
                   {g.id && open.length && day >= today ? (
                     <div className="card__foot">
-                      <Link className="btn btn--whatsapp btn--block" href={`/send/day/${g.id}/${day}`}>
-                        <Icon name="whatsapp" /> {t('sendDay', { name: dative(g.name), when })}
+                      <Link className={`btn btn--${g.channel} btn--block`} href={`/send/day/${g.id}/${day}`}>
+                        <Icon name={g.channel} /> {t('sendDay', { name: dative(g.name), when })}
                       </Link>
                     </div>
                   ) : null}

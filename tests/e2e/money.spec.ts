@@ -139,8 +139,8 @@ test('a returning client: picking the name fills the phone, and each order lists
   await login(page, 'teuta@druri.test');
   await page.goto('/orders/new');
   await page.locator('#no-name').fill('Arta Krasniqi');
-  await expect(page.locator('#f-phone')).toHaveValue('44 600 700');
-  await expect(page.getByText('Klient ekzistues · +383 44 600 700')).toBeVisible();
+  await expect(page.locator('#f-phone')).toHaveValue('44600700');
+  await expect(page.getByText('Klient ekzistues · +38344600700')).toBeVisible();
   await page.locator('input[name=price]').fill('800');
   await page.getByRole('button', { name: 'Ruaj porosinë' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Arta Krasniqi');
@@ -199,7 +199,8 @@ test('Ndrysho borxhin: Zyra corrects the amount and an existing due date', async
   await expect(sheet.getByText('Shkruani shumën e borxhit.')).toBeVisible();
   await expect(sheet.getByLabel('Emri i klientit')).toHaveValue('Blerim Hasani');
   await sheet.getByLabel('Sa ka borxh?').fill('400');
-  await sheet.locator('input[name=dueDate]').fill(new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10));
+  const [y, m, d] = new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10).split('-');
+  await sheet.getByLabel('Data e pagesës').fill(`${d}/${m}/${y.slice(2)}`);
   await sheet.getByRole('button', { name: 'Ruaj ndryshimet' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.money__value')).toHaveText('400€');

@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { addPaymentAction, deletePaymentAction, editPaymentAction } from '@/app/(app)/actions';
 import { fmtDate } from '@/lib/dates';
 import { eur } from '@/lib/money';
-import { Field, FormAlert, HolderField, MethodField, MoneyInput, ReasonField, SheetActions, useAction, type InstallerOpt } from '../forms';
+import { DateInput, Field, FormAlert, HolderField, MethodField, MoneyInput, ReasonField, SheetActions, useAction, type InstallerOpt } from '../forms';
 import { Icon } from '../icons';
 import { Sheet } from '../sheet';
 
@@ -85,10 +85,10 @@ export function PaymentSheet({
         <MethodField value={method} onChange={setMethod} />
         {method === 'cash' ? <HolderField installers={installers} value={holder} onChange={setHolder} /> : <input type="hidden" name="holder" value="office" />}
         <Field name="date" label={t('date')} errors={save.errors} htmlFor="p-date">
-          <input className="input" id="p-date" type="date" name="date" defaultValue={payment?.date ?? today} max={today} />
+          <DateInput id="p-date" name="date" defaultValue={payment?.date ?? today} max={today} />
         </Field>
         <Field label={t('note')} opt htmlFor="p-note">
-          <input className="input" id="p-note" name="note" defaultValue={payment?.note ?? ''} autoComplete="off" />
+          <input className="input" id="p-note" name="note" defaultValue={payment?.note ?? ''} autoComplete="off" placeholder={t('notePh')} />
         </Field>
         <FormAlert errors={save.errors} />
         <SheetActions label={payment ? t('saveEdit') : t('save')} pending={save.pending} onCancel={close} />

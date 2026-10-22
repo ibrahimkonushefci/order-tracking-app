@@ -10,7 +10,7 @@ import { useTranslations } from 'next-intl';
 import * as A from '@/app/(app)/actions';
 import { addDays } from '@/lib/dates';
 import { eur } from '@/lib/money';
-import { Chips, Field, FormAlert, HolderField, MethodField, MoneyInput, PhoneInput, ReasonField, SheetActions, TermField, useAction, type InstallerOpt } from '../forms';
+import { Chips, DateInput, digitsOnly, Field, FormAlert, HolderField, MethodField, MoneyInput, PhoneInput, ReasonField, SheetActions, TermField, useAction, type InstallerOpt } from '../forms';
 import { Icon, type IconName } from '../icons';
 import { Sheet, toast } from '../sheet';
 
@@ -194,10 +194,10 @@ function PartSheet({ o, installers, today, onClose }: { o: OrderView; installers
     <Sheet open onClose={onClose} title={t('record')} sub={t('recordSub', { description: o.description, installed: p.installed, qty: p.quantity })}>
       <form onSubmit={submit} className="form">
         <Field name="quantity" label={t('howMany', { unit: p.unit })} req errors={errors} help={t('perUnit', { price: eur(p.unitPrice), unit: p.unit, left: p.quantity - p.installed })} htmlFor="s-qty">
-          <input className="input input--money" id="s-qty" name="quantity" inputMode="numeric" placeholder="0" style={{ maxWidth: 160 }} autoComplete="off" />
+          <input className="input input--money" id="s-qty" name="quantity" inputMode="numeric" onInput={digitsOnly} placeholder="0" style={{ maxWidth: 160 }} autoComplete="off" />
         </Field>
         <Field name="date" label={t('date')} errors={errors} htmlFor="s-date">
-          <input className="input" id="s-date" type="date" name="date" defaultValue={today} max={today} />
+          <DateInput id="s-date" name="date" defaultValue={today} max={today} />
         </Field>
         <Field label={t('installer')}>
           <Chips name="installerId" value={inst} onChange={setInst} options={installers.map(i => [i.id, i.name] as const)} />
@@ -297,7 +297,7 @@ export function PauseSheet({ kind, id, today, onClose }: { kind: 'order' | 'open
     <Sheet open onClose={onClose} title={t('title')} sub={t('sub')}>
       <form onSubmit={submit} className="form">
         <Field name="until" label={t('until')} req errors={errors} htmlFor="pz-until">
-          <input className="input" id="pz-until" type="date" name="until" min={addDays(today, 1)} defaultValue={addDays(today, 14)} />
+          <DateInput id="pz-until" name="until" min={addDays(today, 1)} defaultValue={addDays(today, 14)} />
         </Field>
         <ReasonField label={t('reason')} chips={[t('r1'), t('r2'), t('r3')]} required errors={errors} />
         <FormAlert errors={errors} />
@@ -359,7 +359,7 @@ function RemainingSheet({ id, onClose }: { id: string; onClose: () => void }) {
     <Sheet open onClose={onClose} title={t('title')} sub={t('sub')}>
       <form onSubmit={submit} className="form">
         <Field name="note" label={t('what')} req errors={errors} htmlFor="rw-note">
-          <textarea className="textarea" id="rw-note" name="note" />
+          <textarea className="textarea" id="rw-note" name="note" placeholder={t('whatPh')} />
         </Field>
         <label className="check">
           <input type="checkbox" name="pause" value="1" defaultChecked />
@@ -507,14 +507,14 @@ function EditOrderSheet({ o, products, cities, onClose }: { o: OrderView; produc
     <Sheet open onClose={onClose} title={t('title')} sub={t('sub', { number: o.number })}>
       <form onSubmit={submit} className="form">
         <Field name="name" label={tn('client')} errors={errors} htmlFor="e-name">
-          <input className="input" id="e-name" name="name" defaultValue={o.clientName} autoComplete="off" />
+          <input className="input" id="e-name" name="name" defaultValue={o.clientName} autoComplete="off" placeholder={tn('clientPh')} />
         </Field>
         <Field name="phone" label={tn('phone')} errors={errors} htmlFor="e-phone">
           <PhoneInput id="e-phone" value={o.clientPhone} prefixLabel={tn('prefix')} />
         </Field>
         <Field label={tn('product')}>
           <Chips name="productType" value={product} onChange={setProduct} options={types.map(x => [x, x] as const)} />
-          <input className="input" name="description" defaultValue={o.description} aria-label={tn('description')} />
+          <input className="input" name="description" defaultValue={o.description} aria-label={tn('description')} placeholder={tn('descriptionPh')} />
         </Field>
         <Field name="price" label={o.project ? t('contract') : tn('price')} errors={errors} htmlFor="m-price">
           <MoneyInput name="price" defaultValue={o.price} />
@@ -528,10 +528,10 @@ function EditOrderSheet({ o, products, cities, onClose }: { o: OrderView; produc
               <option key={c}>{c}</option>
             ))}
           </select>
-          <textarea className="textarea" name="directions" aria-label={tn('directions')} defaultValue={o.directions} />
+          <textarea className="textarea" name="directions" aria-label={tn('directions')} defaultValue={o.directions} placeholder={tn('directionsPh')} />
         </Field>
         <Field label={tn('note')} htmlFor="e-note">
-          <textarea className="textarea" id="e-note" name="internalNote" defaultValue={o.internalNote} style={{ minHeight: 64 }} />
+          <textarea className="textarea" id="e-note" name="internalNote" defaultValue={o.internalNote} placeholder={tn('notePh')} style={{ minHeight: 64 }} />
         </Field>
         {!o.project ? (
           <label className="check">
@@ -545,7 +545,7 @@ function EditOrderSheet({ o, products, cities, onClose }: { o: OrderView; produc
           <div className="form">
             <Field name="quantity" label={tn('quantity')} req errors={errors} help={tn('quantityHelp')} htmlFor="e-qty">
               <div className="row row--wrap">
-                <input className="input" id="e-qty" name="quantity" inputMode="numeric" defaultValue={o.project?.quantity ?? ''} style={{ maxWidth: 120 }} />
+                <input className="input" id="e-qty" name="quantity" inputMode="numeric" onInput={digitsOnly} defaultValue={o.project?.quantity ?? ''} placeholder={tn('quantityPh')} style={{ maxWidth: 120 }} />
                 <Chips name="unit" value={unit} onChange={setUnit} options={UNITS.map(u => [u, u] as const)} />
               </div>
             </Field>
@@ -674,10 +674,10 @@ function PartEditSheet({ o, part, installers, today, canDelete, planned, onClose
       ) : (
         <form onSubmit={submit} className="form" noValidate>
           <Field name="quantity" label={t('howMany', { unit: p.unit })} req errors={errors} help={t('perUnit', { price: eur(p.unitPrice), unit: p.unit, left: p.quantity - p.installed + part.quantity })} htmlFor="pe-qty">
-            <input className="input input--money" id="pe-qty" name="quantity" inputMode="numeric" defaultValue={part.quantity} style={{ maxWidth: 160 }} autoComplete="off" />
+            <input className="input input--money" id="pe-qty" name="quantity" inputMode="numeric" onInput={digitsOnly} defaultValue={part.quantity} style={{ maxWidth: 160 }} autoComplete="off" />
           </Field>
           <Field name="date" label={t('date')} errors={errors} htmlFor="pe-date">
-            <input className="input" id="pe-date" type="date" name="date" defaultValue={part.date} max={today} />
+            <DateInput id="pe-date" name="date" defaultValue={part.date} max={today} />
           </Field>
           <Field name="installerId" label={t('installer')} errors={errors}>
             <Chips name="installerId" value={inst} onChange={setInst} options={[...installers.map(i => [i.id, i.name] as const), ['', t('noInstaller')] as const]} />

@@ -182,7 +182,7 @@ describe('prepared messages', () => {
     const job = installerJobText(lir, v, true);
     expect(job.split('\n')).toEqual([
       'Montim · E martë 20.10 · paradite',
-      'Liridona Shala · +49 15 112 345678',
+      'Liridona Shala · +4915112345678',
       'Vushtrri',
       'Prindërit e Liridonës: Rr. Skënderbeu 14, kati 2. Nëna Hava: 044 207 118',
       'Garderobë deri në tavan, 3 m',
