@@ -23,8 +23,8 @@ const config: NextConfig = {
   outputFileTracingIncludes: { '*': ['brands/**'] },
   // PGlite ships WASM + data files and must be loaded by Node, not bundled.
   serverExternalPackages: ['@electric-sql/pglite'],
-  // The approved v10 prototype is a standalone design reference, never part of the app.
-  outputFileTracingExcludes: { '*': ['prototype/**', 'data/**'] },
+  // The local PGlite database folder is never part of a deployment.
+  outputFileTracingExcludes: { '*': ['data/**'] },
 };
 
 export default withSerwist(withNextIntl(config));

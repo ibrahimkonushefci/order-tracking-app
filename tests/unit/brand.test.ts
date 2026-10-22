@@ -42,7 +42,7 @@ describe('brand.json v2', () => {
 
 describe('theme', () => {
   it('derives the same dark shades as the prototype', () => {
-    // Values from prototype/js/app.js OT.darkShades for the two sample brands.
+    // Values from the v10 prototype's OT.darkShades for the two sample brands.
     expect(darkShades('#365C50')).toEqual({ ink: '#A4D6C6', fill: '#397F69' });
     expect(darkShades('#45628F')).toEqual({ ink: '#A4B7D6', fill: '#426192' });
   });

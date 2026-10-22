@@ -122,7 +122,6 @@ src/
 brands/           # One folder per brand
 drizzle/          # SQL migrations (including the append-only history trigger)
 messages/         # Albanian staff-interface strings
-prototype/        # The approved HTML design prototype (not part of the app build)
 tests/            # Vitest unit tests and Playwright end-to-end tests
 ```
 

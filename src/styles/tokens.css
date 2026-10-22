@@ -1,4 +1,4 @@
-/* Design tokens adopted from the approved v10 prototype (prototype/css/tokens.css).
+/* Design tokens adopted from the approved v10 prototype.
    Brand -> semantic -> component. The --brand-* values are replaced at runtime from
    brand.json (src/brand/theme.ts); the defaults below are Druri Design. */
 :root {
