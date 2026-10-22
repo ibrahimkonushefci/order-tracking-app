@@ -11,7 +11,7 @@ import {
   type PaymentRec,
   type VisitRec,
 } from '@/domain/balances';
-import { cashWithInstallers, debts, groupDebts, headline, type BookOpening, type BookOrder } from '@/domain/debts';
+import { cashWithInstallers, debts, groupDebts, moneyOverview, sumOf, type BookOpening, type BookOrder } from '@/domain/debts';
 import { addDays } from '@/lib/dates';
 
 const TODAY = '2026-10-19';
@@ -247,7 +247,7 @@ describe('Borxhet', () => {
     expect(r.contexts.map(c => c.kind)).toEqual(['held', 'noReminders', 'paused']);
   });
 
-  it('the Sot headline splits the money not yet in the office', () => {
+  it('cash with an installer: per installer, oldest payment first', () => {
     const cash = cashWithInstallers(
       [book(order({ stage: 'done', doneAt: d(-20), payments: [pay(120000, d(-24), { heldBy: 'faton' })], price: 120000 }))],
       [],
@@ -257,7 +257,70 @@ describe('Borxhet', () => {
     expect(cash).toHaveLength(1);
     expect(cash[0]).toMatchObject({ name: 'Faton', sum: 120000 });
     expect(cash[0].items[0].days).toBe(24);
-    const h = headline(rows, cash[0].sum);
-    expect(h).toMatchObject({ total: 425000, overdueSum: 225000, upcomingSum: 90000, unknownSum: 110000, cashSum: 120000 });
+  });
+});
+
+describe('Sot and Borxhet: one money overview', () => {
+  const installers = [
+    { id: 'faton', name: 'Faton' },
+    { id: 'besnik', name: 'Besnik' },
+  ];
+  const plain = book(order({ stage: 'done', doneAt: d(-40), payTerm: 'week', dueDate: d(-33), price: 180000 }));
+  const inTerm = book(order({ stage: 'done', doneAt: d(-2), payTerm: 'week', dueDate: d(5), price: 90000 }));
+  // Paid 500€ to Faton: the debt drops to 1,300€ and the 500€ is cash outside the office.
+  const heldPart = book(order({ stage: 'done', doneAt: d(-20), payTerm: 'week', dueDate: d(-13), price: 180000, payments: [pay(50000, d(-9), { heldBy: 'faton' })] }));
+  // Cancelled: no debt, but the cash Faton took is still outside the office.
+  const cancelled = book(order({ stage: 'cancelled', price: 100000, payments: [pay(20000, d(-2), { heldBy: 'faton' })] }));
+  // Project paid ahead through Besnik: no debt, cash held.
+  const ahead = book(order({ quantity: 10, projectPayTerm: 'week', price: 100000, visits: [part(2, d(-1))], payments: [pay(30000, TODAY, { heldBy: 'besnik' })] }));
+  // Handed over and deleted payments are not outside the office.
+  const handed = book(
+    order({
+      stage: 'done',
+      doneAt: d(-5),
+      payTerm: 'month',
+      dueDate: d(25),
+      price: 60000,
+      payments: [pay(10000, d(-5), { heldBy: 'besnik', handedAt: new Date() }), pay(5000, d(-4), { heldBy: 'besnik', deletedAt: new Date() })],
+    }),
+  );
+  const ob = opening({ amount: 40000, dueDate: d(-3), payments: [pay(15000, d(-1), { heldBy: 'besnik' })] });
+  const unknown = opening({ amount: 110000, dueDate: null });
+  const known = opening({ amount: 45000, dueDate: d(-60) });
+  const orders = [plain, inTerm, heldPart, cancelled, ahead, handed];
+  const openings = [unknown, known, ob];
+  const rows = debts(orders, openings, TODAY);
+  const m = moneyOverview(rows, cashWithInstallers(orders, openings, installers, TODAY));
+
+  it('splits the debts into the three Borxhet groups', () => {
+    expect(m.overdue.rows.map(r => r.amount)).toEqual([180000, 130000, 45000, 25000]);
+    expect(m.overdue).toMatchObject({ sum: 380000, count: 4 });
+    expect(m.upcoming).toMatchObject({ sum: 140000, count: 2 });
+    expect(m.unknown).toMatchObject({ sum: 110000, count: 1 });
+    expect(m.total).toBe(630000);
+  });
+
+  it('the three groups always add up to the total, and the total is everything customers owe', () => {
+    expect(m.overdue.sum + m.upcoming.sum + m.unknown.sum).toBe(m.total);
+    expect(m.overdue.count + m.upcoming.count + m.unknown.count).toBe(rows.length);
+    const owed = [...orders.map(orderTotals), ...openings.map(openingTotals)].reduce((s, t) => s + t.owed, 0);
+    expect(m.total).toBe(owed);
+    expect(m.total).toBe(sumOf(rows));
+  });
+
+  it('cash with installers is every unconfirmed payment, separate from the debts', () => {
+    expect(m.cash.groups.map(g => [g.name, g.sum, g.items.length, g.items[0].days])).toEqual([
+      ['Faton', 70000, 2, 9],
+      ['Besnik', 45000, 2, 1],
+    ]);
+    expect(m.cash.sum).toBe(115000);
+    const held = [...orders.map(orderTotals), ...openings.map(openingTotals)].reduce((s, t) => s + t.held, 0);
+    expect(m.cash.sum).toBe(held);
+    expect(m.outsideOffice).toBe(m.total + m.cash.sum);
+    expect(m.outsideOffice).toBe(745000);
+  });
+
+  it('nothing owed, nothing held', () => {
+    expect(moneyOverview([], [])).toMatchObject({ total: 0, overdue: { sum: 0, count: 0 }, cash: { sum: 0 }, outsideOffice: 0 });
   });
 });

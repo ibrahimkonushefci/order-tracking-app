@@ -256,15 +256,24 @@ export function cashWithInstallers(orders: BookOrder[], openings: BookOpening[],
   return [...groups.values()].sort((a, b) => b.sum - a.sum);
 }
 
-/** The Sot headline: where the money not yet in the office is (the stacked bar). */
-export function headline(rows: DebtRow[], cashSum: number) {
-  const overdue = rows.filter(d => d.overdue).sort((a, b) => b.amount - a.amount);
+export type CashGroup = ReturnType<typeof cashWithInstallers>[number];
+
+/**
+ * Every money figure on Sot and the Borxhet summary, from one place so the screens can't disagree.
+ * Debts are what customers still owe; cash with installers is already paid by the customer
+ * (it lowered their debt), so the two never overlap and "outside the office" is their sum.
+ */
+export function moneyOverview(rows: DebtRow[], cash: CashGroup[]) {
+  const g = groupDebts(rows);
+  const part = (list: DebtRow[]) => ({ rows: list, sum: sumOf(list), count: list.length });
+  const total = sumOf(rows);
+  const cashSum = cash.reduce((s, x) => s + x.sum, 0);
   return {
-    total: sumOf(rows),
-    overdue,
-    overdueSum: sumOf(overdue),
-    upcomingSum: sumOf(rows.filter(d => !d.overdue && !d.unknownDue)),
-    unknownSum: sumOf(rows.filter(d => d.unknownDue)),
-    cashSum,
+    total,
+    overdue: part(g.overdue),
+    upcoming: part(g.upcoming),
+    unknown: part(g.unknown),
+    cash: { groups: cash, sum: cashSum },
+    outsideOffice: total + cashSum,
   };
 }

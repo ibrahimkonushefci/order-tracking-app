@@ -10,7 +10,7 @@ import { loadFixtures } from '@/db/fixtures';
 import { company, history, installer, payment, user } from '@/db/schema';
 import { ForbiddenError } from '@/auth/permissions';
 import { orderTotals, openingTotals, installedQty } from '@/domain/balances';
-import { cashWithInstallers, debts, groupDebts, headline, sumOf } from '@/domain/debts';
+import { cashWithInstallers, debts, groupDebts, moneyOverview, sumOf } from '@/domain/debts';
 import { loadBook, loadHistory, loadOrder, type Book } from '@/services/book';
 import { FieldError, FieldErrors, type Actor } from '@/services/common';
 import {
@@ -81,8 +81,9 @@ describe('Phase 3 fixtures', () => {
       ['Driton', 80000, 0],
       ['Faton', 75000, 24],
     ]);
-    const h = headline(rows, sumOf(cash.map(c => ({ amount: c.sum }))));
-    expect(h).toMatchObject({ overdueSum: 1350000, unknownSum: 110000, upcomingSum: 65000, cashSum: 155000 });
+    const m = moneyOverview(rows, cash);
+    expect(m).toMatchObject({ total: 1525000, overdue: { sum: 1350000, count: 5 }, unknown: { sum: 110000 }, upcoming: { sum: 65000 }, cash: { sum: 155000 }, outsideOffice: 1680000 });
+    expect(m.total).toBe(sumOf(rows));
   });
 
   it('the 800€ case: owed 0€, 800€ with Driton, no debt row', async () => {

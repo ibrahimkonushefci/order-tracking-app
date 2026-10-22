@@ -29,9 +29,15 @@ async function openOrder(page: Page, name: string) {
 
 test('Sot and Borxhet add up', async ({ page }) => {
   await login(page, 'arben@druri.test');
-  await expect(page.locator('.hero__value')).toHaveText('13,500€');
-  await expect(page.locator('.hero__sub')).toContainText('gjithsej 15,250€');
-  await expect(page.getByText('Driton: 800€ për t’u dorëzuar')).toBeVisible();
+  // The green card is what customers owe; cash with installers is its own card, never inside it.
+  await expect(page.locator('.hero__value')).toHaveText('15,250€');
+  await expect(page.locator('.hero__sub')).toContainText('13,500€ me vonesë');
+  await expect(page.locator('.hero__parts')).toContainText('13,500€');
+  await expect(page.locator('.hero__parts')).toContainText('1,100€');
+  await expect(page.locator('.hero__parts')).toContainText('650€');
+  await expect(page.locator('.cash-card__value')).toHaveText('1,550€');
+  await expect(page.locator('.cash-card__row').filter({ hasText: 'Driton' })).toContainText('800€');
+  await expect(page.locator('.cash-card__foot')).toContainText('15,250€ borxhe + 1,550€ te montuesit = 16,800€');
   await page.goto('/debts');
   await expect(page.locator('.summary')).toContainText('13,500€');
   await expect(page.locator('.summary')).toContainText('15,250€');

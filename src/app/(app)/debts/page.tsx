@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { cashWithInstallers, debts, groupDebts, sumOf, type DebtRow as Row } from '@/domain/debts';
+import { cashWithInstallers, debts, groupDebts, moneyOverview, sumOf, type DebtRow as Row } from '@/domain/debts';
 import { DebtRow } from '@/components/debt-row';
 import { Icon } from '@/components/icons';
 import { Page, PageHead } from '@/components/shell/shell';
@@ -16,7 +16,8 @@ export default async function DebtsPage({ searchParams }: { searchParams: Promis
   const sort = q.sort === 'late' ? 'late' : 'amount';
   const all = debts(b.orders, b.openings, today);
   const g = groupDebts(all, sort);
-  const cashSum = cashWithInstallers(b.orders, b.openings, b.installers, today).reduce((s, x) => s + x.sum, 0);
+  // The same figures as Sot.
+  const M = moneyOverview(all, cashWithInstallers(b.orders, b.openings, b.installers, today));
   const flashUpcoming = !!q.flash && g.upcoming.some(d => d.id === q.flash);
   const rows = (list: Row[]) => (
     <div className="card list">
@@ -48,11 +49,11 @@ export default async function DebtsPage({ searchParams }: { searchParams: Promis
         <div className="summary card">
           <div className="summary__row">
             <span>{t('overdue')}</span>
-            <b className={`num${g.overdue.length ? ' danger' : ''}`}>{eur(sumOf(g.overdue))}</b>
+            <b className={`num${M.overdue.count ? ' danger' : ''}`}>{eur(M.overdue.sum)}</b>
           </div>
           <div className="summary__row">
             <span>{t('total')}</span>
-            <b className="num">{eur(sumOf(all))}</b>
+            <b className="num">{eur(M.total)}</b>
           </div>
         </div>
         <Link className="cash-summary card" href="/cash">
@@ -61,7 +62,7 @@ export default async function DebtsPage({ searchParams }: { searchParams: Promis
           </span>
           <span className="grow">
             <span className="small muted">{t('cashTitle')}</span>
-            <b className="num">{eur(cashSum)}</b>
+            <b className="num">{eur(M.cash.sum)}</b>
             <span className="xs muted">{t('cashSub')}</span>
           </span>
           <Icon name="right" className="chev" />

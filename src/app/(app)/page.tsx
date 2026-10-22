@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { can } from '@/auth/permissions';
 import { isProject, openingTotals, orderTotals } from '@/domain/balances';
-import { cashWithInstallers, debts, headline } from '@/domain/debts';
+import { cashWithInstallers, debts, moneyOverview } from '@/domain/debts';
+import { Badge } from '@/components/cues';
 import { Icon, type IconName } from '@/components/icons';
 import { AgendaItem } from '@/components/agenda';
 import { allJobs, jobsOnDay, pastUndone } from '@/domain/visits';
@@ -18,33 +19,30 @@ export default async function DashboardPage() {
   const { user, today } = await pageContext();
   const b = await pageBook();
   const t = await getTranslations('dashboard');
+  const d = await getTranslations('debts');
   const tt = await getTranslations('time');
   const w = await getTranslations('words');
+  const c = await getTranslations('cash');
   const hour = hourInKosovo();
   const hello = hour < 11 ? t('morning') : hour < 18 ? t('day') : t('evening');
 
   const rows = debts(b.orders, b.openings, today);
-  const cash = cashWithInstallers(b.orders, b.openings, b.installers, today);
-  const D = headline(
-    rows,
-    cash.reduce((s, g) => s + g.sum, 0),
-  );
+  const M = moneyOverview(rows, cashWithInstallers(b.orders, b.openings, b.installers, today));
+  // The bar splits the debts only; it always adds up to M.total.
   const parts = (
     [
-      ['overdue', t('barOverdue'), D.overdueSum],
-      ['term', t('barTerm'), D.upcomingSum],
-      ['unknown', t('barUnknown'), D.unknownSum],
-      ['held', t('barHeld'), D.cashSum],
+      ['overdue', d('overdue'), M.overdue],
+      ['term', d('upcoming'), M.upcoming],
+      ['unknown', d('unknownDue'), M.unknown],
     ] as const
-  ).filter(x => x[2] > 0);
-  const whole = parts.reduce((s, x) => s + x[2], 0) || 1;
+  ).filter(x => x[2].sum > 0);
 
   // Visits from the last two weeks that nobody marked done (the debts list depends on it).
   const jobs = allJobs(b.orders);
   const past = pastUndone(jobs, today);
   const todays = jobsOnDay(jobs, today);
+  const todaysDone = todays.filter(x => x.v.doneAt).length;
   const attention: [string, IconName, string, string, string][] = [];
-  for (const g of cash) attention.push(['warning', 'cash', '/cash', t('cashRow', { name: g.name, amount: eur(g.sum) }), t('cashRowSub')]);
   if (past.length) {
     const allYesterday = past.every(x => x.v.date === addDays(today, -1));
     attention.push([
@@ -84,41 +82,43 @@ export default async function DashboardPage() {
               <span>{t('hero')}</span>
               <Icon name="right" className="chev" />
             </span>
-            {D.overdue.length ? (
-              <>
-                <span className="hero__value">{eur(D.overdueSum)}</span>
-                <span className="hero__sub">{t('overdueSub', { n: D.overdue.length, total: eur(D.total) })}</span>
-              </>
-            ) : (
-              <>
-                <span className="hero__value">{eur(D.total)}</span>
-                <span className="hero__sub">{t('nothingDue')}</span>
-              </>
-            )}
+            <span className="hero__value">{eur(M.total)}</span>
+            <span className="hero__sub">
+              {!M.total
+                ? d('empty')
+                : M.overdue.count
+                  ? t.rich('totalSub', { amount: eur(M.overdue.sum), n: M.overdue.count, late: c => <b className="hero__late-sum">{c}</b> })
+                  : t('totalSubNone')}
+            </span>
             {parts.length ? (
               <>
-                <span className="stackbar" role="img" aria-label={parts.map(([, l, v]) => `${l} ${eur(v)}`).join(', ')}>
-                  {parts.map(([k, , v]) => (
-                    <span key={k} className={`sb--${k}`} style={{ flex: (v / whole).toFixed(4) }} />
+                <span className="stackbar" role="img" aria-label={parts.map(([, l, p]) => `${l} ${eur(p.sum)}`).join(', ')}>
+                  {parts.map(([k, , p]) => (
+                    <span key={k} className={`sb--${k}`} style={{ flex: (p.sum / M.total).toFixed(4) }} />
                   ))}
                 </span>
-                <span className="legend">
-                  {parts.map(([k, l, v]) => (
-                    <span className="legend__item" key={k}>
-                      <span className={`legend__dot sb--${k}`} />
-                      {l} <b>{eur(v)}</b>
+                <span className="hero__parts">
+                  {parts.map(([k, l, p]) => (
+                    <span className="hero__part" key={k}>
+                      <span className="hero__part-label">
+                        <span className={`legend__dot sb--${k}`} />
+                        {l}
+                      </span>
+                      <b className="num">{eur(p.sum)}</b>
+                      <small>{t('clients', { n: p.count })}</small>
                     </span>
                   ))}
                 </span>
               </>
             ) : null}
-            {D.overdue.length ? (
+            {M.overdue.count ? (
               <span className="hero__list">
-                {D.overdue.slice(0, 3).map(d => (
-                  <span className="hero__row" key={d.id}>
-                    <span className="grow ellipsis">{d.name}</span>
-                    <span className="num">{eur(d.amount)}</span>
-                    <span className="hero__late">{lateSpan(d.late!, tt)}</span>
+                <span className="hero__eyebrow">{t('topLate')}</span>
+                {M.overdue.rows.slice(0, 3).map(r => (
+                  <span className="hero__row" key={r.id}>
+                    <span className="grow ellipsis">{r.name}</span>
+                    <span className="hero__late">{lateSpan(r.late!, tt)}</span>
+                    <span className="num">{eur(r.amount)}</span>
                   </span>
                 ))}
               </span>
@@ -148,6 +148,47 @@ export default async function DashboardPage() {
               </span>
             </Link>
           </div>
+          <section className="card cash-card" aria-labelledby="cash-card-title">
+            <div className="cash-card__head">
+              <span className="list-row__icon tone--warning">
+                <Icon name="cash" />
+              </span>
+              <span className="grow">
+                <span className="small muted" id="cash-card-title">
+                  {d('cashTitle')}
+                </span>
+                <b className="cash-card__value num">{eur(M.cash.sum)}</b>
+                <span className="xs muted">{M.cash.sum ? t('cashHelp') : c('empty')}</span>
+              </span>
+              {M.cash.sum ? (
+                <Link className="card__link" href="/cash">
+                  {t('cashConfirm')} <Icon name="right" className="chev" />
+                </Link>
+              ) : null}
+            </div>
+            {M.cash.groups.length ? (
+              <>
+                <div className="cash-card__list">
+                  {M.cash.groups.map(g => (
+                    <Link className="cash-card__row" href="/cash" key={g.installerId}>
+                      <span className="cash-card__name ellipsis">{g.name}</span>
+                      <span className="progress">
+                        <span className="progress__held" style={{ width: `${((g.sum / M.cash.sum) * 100).toFixed(2)}%` }} />
+                      </span>
+                      <Badge tone={g.items[0].days >= 7 ? 'danger' : 'warning'} icon="clock">
+                        {g.items[0].days === 0 ? tt('agoToday') : tt('days', { n: g.items[0].days })}
+                      </Badge>
+                      <b className="num">{eur(g.sum)}</b>
+                    </Link>
+                  ))}
+                </div>
+                <div className="cash-card__foot">
+                  <span>{t('outside')}</span>
+                  <span>{t.rich('outsideSum', { debts: eur(M.total), cash: eur(M.cash.sum), sum: eur(M.outsideOffice), b: x => <b className="num">{x}</b> })}</span>
+                </div>
+              </>
+            ) : null}
+          </section>
           {attention.length ? (
             <section className="card attention-card">
               <div className="card__head">
@@ -175,7 +216,11 @@ export default async function DashboardPage() {
       <section className="card today-agenda">
         <div className="card__head">
           <h2 className="card__title">
-            {t('today')} <span className="subtle small">· {todays.length}</span>
+            {t('today')}{' '}
+            <span className="subtle small">
+              · {todays.length}
+              {todaysDone ? ` · ${t('todayDone', { n: todaysDone })}` : ''}
+            </span>
           </h2>
           <Link className="card__link" href="/schedule">
             {t('toSchedule')} <Icon name="right" className="chev" />
